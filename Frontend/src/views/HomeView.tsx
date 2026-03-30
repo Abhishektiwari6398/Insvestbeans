@@ -9,6 +9,7 @@ import { useTheme } from "@/controllers/Themecontext";
 import { useNavigate } from "react-router-dom";
 import StockWidget from "./StockWidget";
 import TradingViewWidget from "@/components/TradingViewWidget";
+import KiteChart from "@/components/Kitechart";
 import StockHeatmapWidget from "@/components/Stockheatmapwidget";
 import DecodeMarket from "./DecodeMarket";
 import BeansOfWisdomView from "./BeansOfWisdom";
@@ -227,7 +228,11 @@ const HomeView = ({ activeTab, onChangeTab }: HomeViewProps) => {
 
 
                 <div className="w-full mb-8 overflow-hidden rounded-2xl" style={{ border: widgetBorder, boxShadow: isLight ? "0 10px 30px rgba(4,20,33,0.10)" : "0 10px 36px rgba(0,0,0,0.42)" }}>
-                  <TradingViewWidget mode={activeTab} theme={isLight ? "light" : "dark"} height="600px" />
+                  {activeTab === "domestic" ? (
+                    <KiteChart height="600px" />
+                  ) : (
+                    <TradingViewWidget mode={activeTab} theme={isLight ? "light" : "dark"} height="600px" />
+                  )}
                   {/* ── Data freshness strip ── */}
                   <TVDataStamp mode={activeTab} type="chart" isLight={isLight} />
                 </div>
@@ -250,19 +255,23 @@ const HomeView = ({ activeTab, onChangeTab }: HomeViewProps) => {
                 </div>
               </div>
             </section>
-            {/* ── IPO Section ─────────────────────────────────────────────── */}
-            <section className="mt-2"><IPOSection /></section>
-
             {/* ── Decode Market ────────────────────────────────────────────── */}
             <section className="mt-12 rounded-3xl p-5 md:p-7" style={sectionPanelStyle}>
               <DecodeMarket activeTab={activeTab} />
             </section>
+            {/* ── IPO Section ─────────────────────────────────────────────── */}
+            <section className="mt-2"><IPOSection /></section>
+
 
 
             {/* ── Beans of Wisdom ──────────────────────────────────────────── */}
             <section className="mt-12 rounded-3xl p-5 md:p-7" style={sectionPanelStyle}>
               <BeansOfWisdomView />
             </section>
+                {/* ── Testimonials ─────────────────────────────────────────────── */}
+                <div className="mt-14 rounded-3xl p-5 md:p-7" style={sectionPanelStyle}>
+              <TestimonialsPage />
+            </div>
             {/* ═══════════════════════════════════════════════════════════════
               PRICING PLANS SECTION
           ═══════════════════════════════════════════════════════════════ */}
@@ -296,6 +305,8 @@ const HomeView = ({ activeTab, onChangeTab }: HomeViewProps) => {
                 </p>
               </div>
 
+        
+
               {/* ── Plan Cards ── */}
               <PlanCards
                 isLight={isLight}
@@ -305,14 +316,9 @@ const HomeView = ({ activeTab, onChangeTab }: HomeViewProps) => {
 
             </section>
 
-            {/* ── Testimonials ─────────────────────────────────────────────── */}
-            <div className="mt-14 rounded-3xl p-5 md:p-7" style={sectionPanelStyle}>
-              <TestimonialsPage />
-            </div>
-
 
             {/* ── Newsletter ───────────────────────────────────────────────── */}
-            <div className="mt-14 rounded-3xl p-5 md:p-7" style={sectionPanelStyle}>
+            <div className="mt-14 rounded-2xl px-6 py-5 sm:px-10 sm:py-6" style={sectionPanelStyle}>
               <Subscribeview
                 sectionWrapBg={sectionWrapBg}
                 sectionWrapBorder={sectionWrapBorder}

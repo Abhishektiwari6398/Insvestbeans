@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
-  Star, X, ChevronLeft, ChevronRight, Quote,
+  Star, X, Quote,
   Plus, Edit3, Trash2, Loader2,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { useTheme } from "@/controllers/Themecontext";
 import { useAuth } from "@/controllers/AuthContext";
@@ -102,7 +103,7 @@ function ActionIcon({
   );
 }
 
-// ─── Testimonial Card ──────────────────────────────────────────────────────
+// ─── Testimonial Card ─────────────────────────────────────────────────────
 function TestimonialCard({
   t, onClick, isMobile, isLight, onDelete, onEdit, canEdit, canDelete, deleting,
 }: {
@@ -112,133 +113,97 @@ function TestimonialCard({
 }) {
   const [hovered, setHovered] = useState(false);
 
-  const cardBg           = isLight ? "rgba(255,255,255,0.98)" : "rgba(28,54,86,0.25)";
-  const cardBorderNormal = isLight ? "rgba(4,20,33,0.10)" : "rgba(124,166,194,0.20)";
-  const cardBorderHover  = "#1F5F89";
-  const cardShadowNormal = isLight ? "0 2px 16px rgba(0,0,0,0.05), 0 1px 4px rgba(0,0,0,0.03)" : "0 2px 16px rgba(0,0,0,0.30)";
-  const cardShadowHover  = isLight ? "0 20px 60px rgba(10,54,86,0.14), 0 4px 16px rgba(0,0,0,0.06)" : "0 16px 48px rgba(10,54,86,0.22)";
-  const reviewTextColor  = isLight ? "#475569" : "rgba(226,232,240,1)";
-  const nameColor        = isLight ? "#0f172a" : "white";
-  const roleColor        = isLight ? "#94a3b8" : "rgba(148,163,184,1)";
-  const avatarBg         = isLight ? "rgba(31,95,137,0.10)" : "rgba(31,95,137,0.24)";
-  const sourceColor      = isLight ? "#94a3b8" : "rgba(100,116,139,1)";
-  const sourceDotColor   = isLight ? "rgba(148,163,184,0.4)" : "rgba(255,255,255,0.20)";
-  const tagBg            = isLight ? "rgba(31,95,137,0.08)" : "rgba(31,95,137,0.20)";
+  const cardBg     = isLight ? "rgba(255,255,255,0.97)" : "rgba(10,30,52,0.82)";
+  const cardBorder = hovered && !isMobile
+    ? "#1F5F89"
+    : isLight ? "rgba(4,20,33,0.09)" : "rgba(124,166,194,0.18)";
+  const cardShadow = hovered && !isMobile
+    ? isLight ? "0 8px 28px rgba(10,54,86,0.13)" : "0 8px 28px rgba(0,0,0,0.40)"
+    : isLight ? "0 2px 10px rgba(0,0,0,0.04)" : "0 2px 12px rgba(0,0,0,0.25)";
+  const textColor  = isLight ? "#374151" : "rgba(214,228,240,0.92)";
+  const nameColor  = isLight ? "#0f172a" : "#e2eef7";
+  const metaColor  = isLight ? "#94a3b8" : "rgba(148,163,184,0.85)";
+  const avatarBg   = isLight ? "rgba(31,95,137,0.10)" : "rgba(31,95,137,0.28)";
 
   return (
     <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={() => !isMobile && setHovered(true)}
+      onMouseLeave={() => !isMobile && setHovered(false)}
+      onClick={onClick}
       style={{
         background: cardBg,
-        borderRadius: "20px",
-        border: `1.5px solid ${hovered && !isMobile ? cardBorderHover : cardBorderNormal}`,
-        boxShadow: hovered && !isMobile ? cardShadowHover : cardShadowNormal,
-        padding: isMobile ? "24px 20px 22px" : "32px 30px 28px",
-        transition: "all 0.22s ease",
-        transform: hovered && !isMobile ? "translateY(-4px)" : "translateY(0)",
-        display: "flex", flexDirection: "column" as const, gap: "16px",
-        width: "100%", boxSizing: "border-box" as const,
-        position: "relative" as const, overflow: "hidden",
+        borderRadius: "14px",
+        border: `1px solid ${cardBorder}`,
+        boxShadow: cardShadow,
+        padding: isMobile ? "20px 18px" : "16px 18px",
+        transition: "all 0.20s ease",
+        transform: hovered && !isMobile ? "translateY(-3px)" : "translateY(0)",
+        display: "flex", flexDirection: "column" as const, gap: "12px",
+        // Desktop: fixed marquee width. Mobile: fill the swipe slot
+        width: isMobile ? "100%" : "300px",
+        flexShrink: 0,
+        boxSizing: "border-box" as const,
+        cursor: "pointer",
+        position: "relative" as const,
       }}
     >
-      {/* Watermark */}
-      <div style={{ position: "absolute", bottom: "-8px", right: "-4px", opacity: 0.06, pointerEvents: "none" }}>
-        <Quote size={isMobile ? 80 : 120} style={{ color: "#1F5F89" }} />
+      {/* Top: Stars + action icons */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <Stars rating={t.rating} size={isMobile ? 15 : 13} isLight={isLight} />
+        {(canEdit || canDelete) && t._id && (
+          <div style={{ display: "flex", gap: "5px" }} onClick={e => e.stopPropagation()}>
+            {canEdit && (
+              <ActionIcon icon={Edit3} title="Edit your review" color="#1F5F89"
+                bg="rgba(31,95,137,0.10)" border="1px solid rgba(31,95,137,0.30)"
+                onClick={(e) => { e.stopPropagation(); onEdit?.(); }} />
+            )}
+            {canDelete && (
+              <ActionIcon icon={Trash2} title="Delete review" color="#ef4444"
+                bg="rgba(239,68,68,0.08)" border="1px solid rgba(239,68,68,0.28)"
+                onClick={(e) => { e.stopPropagation(); onDelete?.(); }} loading={deleting} />
+            )}
+          </div>
+        )}
       </div>
-
-      {/* Top row: Tag + Stars + Action icons */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-        <span style={{
-          fontSize: "11px", fontWeight: 600, letterSpacing: "0.05em",
-          textTransform: "uppercase" as const, color: "#1F5F89",
-          background: tagBg, borderRadius: "20px", padding: "3px 11px", whiteSpace: "nowrap" as const,
-          flexShrink: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis",
-        }}>
-          {t.tag}
-        </span>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-          <Stars rating={t.rating} size={isMobile ? 14 : 16} isLight={isLight} />
-
-          {/* Icon actions — only for owner (edit) or admin (delete) */}
-          {(canEdit || canDelete) && t._id && (
-            <div style={{ display: "flex", gap: "6px" }}>
-              {canEdit && (
-                <ActionIcon
-                  icon={Edit3}
-                  title="Edit your review"
-                  color="#1F5F89"
-                  bg="rgba(31,95,137,0.12)"
-                  border="1px solid rgba(31,95,137,0.35)"
-                  onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
-                />
-              )}
-              {canDelete && (
-                <ActionIcon
-                  icon={Trash2}
-                  title="Delete review"
-                  color="#ef4444"
-                  bg="rgba(239,68,68,0.08)"
-                  border="1px solid rgba(239,68,68,0.3)"
-                  onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
-                  loading={deleting}
-                />
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Quote icon */}
-      <Quote size={isMobile ? 20 : 24} style={{ color: "#E8C45A", fill: "#E8C45A", marginBottom: "-4px" }} />
 
       {/* Review text */}
-      <p
-        onClick={onClick}
-        style={{
-          margin: 0, fontSize: isMobile ? "14px" : "15px",
-          color: reviewTextColor, lineHeight: 1.75,
-          display: "-webkit-box", WebkitLineClamp: 4,
-          WebkitBoxOrient: "vertical" as any, overflow: "hidden",
-          fontStyle: "italic", cursor: "pointer",
-        }}
-      >
-        {t.preview}
+      <p style={{
+        margin: 0,
+        fontSize: isMobile ? "14px" : "13px",
+        color: textColor, lineHeight: 1.65,
+        display: "-webkit-box",
+        WebkitLineClamp: isMobile ? 4 : 3,
+        WebkitBoxOrient: "vertical" as any,
+        overflow: "hidden",
+      }}>
+        "{t.preview}"
       </p>
 
-      {/* Read more */}
-      <p onClick={onClick} style={{ margin: 0, fontSize: "12px", color: "#1F5F89", fontWeight: 600, cursor: "pointer" }}>
-        Read full review →
-      </p>
-
-      {/* Author */}
-      <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", gap: "12px", paddingTop: "4px", flexWrap: isMobile ? "wrap" : "nowrap" }}>
+      {/* Author row */}
+      <div style={{ display: "flex", alignItems: "center", gap: "9px", marginTop: "2px" }}>
         <div style={{
-          width: "40px", height: "40px", borderRadius: "50%",
-          background: avatarBg, display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: "14px", fontWeight: 700, color: "#1F5F89", flexShrink: 0,
+          width: isMobile ? "36px" : "32px", height: isMobile ? "36px" : "32px",
+          borderRadius: "50%", flexShrink: 0,
+          background: avatarBg, display: "flex", alignItems: "center",
+          justifyContent: "center", fontSize: "11px", fontWeight: 700, color: "#1F5F89",
         }}>
           {t.avatar}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: nameColor }}>{t.name}</p>
-          <p style={{ margin: "2px 0 0", fontSize: "12px", color: roleColor }}>
-            {[t.role, t.company].filter(Boolean).join(" · ")}
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <p style={{ margin: 0, fontSize: isMobile ? "13px" : "12px", fontWeight: 700, color: nameColor, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {t.name}
           </p>
-          {isMobile && (
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
-              <div style={{ width: "4px", height: "4px", borderRadius: "50%", background: sourceDotColor }} />
-              <span style={{ fontSize: "11px", color: sourceColor }}>{t.source}</span>
-            </div>
-          )}
+          <p style={{ margin: "1px 0 0", fontSize: "11px", color: metaColor, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {[t.role, t.company].filter(Boolean).join(" · ") || t.source}
+          </p>
         </div>
-        {!isMobile && (
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
-            <div style={{ width: "4px", height: "4px", borderRadius: "50%", background: sourceDotColor }} />
-            <span style={{ fontSize: "11px", color: sourceColor }}>{t.source}</span>
-          </div>
-        )}
+        <span style={{
+          fontSize: "10px", fontWeight: 600, color: "#1F5F89",
+          background: isLight ? "rgba(31,95,137,0.08)" : "rgba(31,95,137,0.22)",
+          borderRadius: "20px", padding: "2px 8px", flexShrink: 0, whiteSpace: "nowrap",
+        }}>
+          {t.tag}
+        </span>
       </div>
     </div>
   );
@@ -306,7 +271,6 @@ export default function TestimonialsPage() {
   const [index, setIndex] = useState(0);
   const [modal, setModal] = useState<Testimonial | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [cardsHovered, setCardsHovered] = useState(false);
 
   // Touch swipe
   const touchStartX = useRef<number | null>(null);
@@ -399,18 +363,19 @@ export default function TestimonialsPage() {
   const totalDots = Math.max(1, Math.ceil(allTestimonials.length / perPage));
   const visible  = allTestimonials.slice(index * perPage, index * perPage + perPage);
 
-  const prev = useCallback(() => setIndex(i => (i - 1 + totalDots) % totalDots), [totalDots]);
-  const next = useCallback(() => setIndex(i => (i + 1) % totalDots), [totalDots]);
+  const prev = useCallback(() => setIndex(i => (i - 1 + allTestimonials.length) % allTestimonials.length), [allTestimonials.length]);
+  const next = useCallback(() => setIndex(i => (i + 1) % allTestimonials.length), [allTestimonials.length]);
 
   useEffect(() => { setIndex(0); }, [allTestimonials.length]);
 
+  // Auto-advance on mobile only
   useEffect(() => {
-    if (cardsHovered || allTestimonials.length === 0) return;
-    const id = setInterval(next, 5000);
+    if (!isMobile || allTestimonials.length === 0) return;
+    const id = setInterval(next, 4500);
     return () => clearInterval(id);
-  }, [next, cardsHovered, allTestimonials.length]);
+  }, [next, isMobile, allTestimonials.length]);
 
-  // ── Touch swipe ───────────────────────────────────────────────────────────
+  // ── Touch swipe (mobile) ──────────────────────────────────────────────────
   const onTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
@@ -419,7 +384,7 @@ export default function TestimonialsPage() {
     if (touchStartX.current === null || touchStartY.current === null) return;
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     const dy = e.changedTouches[0].clientY - touchStartY.current;
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 35) {
       dx < 0 ? next() : prev();
     }
     touchStartX.current = null;
@@ -440,121 +405,196 @@ export default function TestimonialsPage() {
   const subHeadingColor = isLight ? "#4f6a80" : "rgba(255,255,255,0.50)";
   const badgeBg         = isLight ? "rgba(31,95,137,0.08)" : "rgba(31,95,137,0.22)";
   const badgeBorder     = isLight ? "1px solid rgba(31,95,137,0.20)" : "1px solid rgba(124,166,194,0.28)";
+  const dotActive       = isLight ? "#0A3656" : "#74A8C9";
   const dotInactive     = isLight ? "rgba(203,213,225,0.7)" : "rgba(255,255,255,0.18)";
+
+  // Desktop marquee: split into two rows
+  const half = Math.ceil(allTestimonials.length / 2);
+  const row1 = allTestimonials.slice(0, half);
+  const row2 = allTestimonials.slice(half);
+
+  // Fade edge colors matching the parent panel bg
+  const fadeL = isLight
+    ? "linear-gradient(to right, rgba(252,253,254,0.96) 0%, transparent 100%)"
+    : "linear-gradient(to right, rgba(8,31,49,0.92) 0%, transparent 100%)";
+  const fadeR = isLight
+    ? "linear-gradient(to left, rgba(252,253,254,0.96) 0%, transparent 100%)"
+    : "linear-gradient(to left, rgba(8,31,49,0.92) 0%, transparent 100%)";
+
+  const marqueeCSS = `
+    @keyframes marquee-left  { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    @keyframes marquee-right { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  `;
+
+  const renderMarqueeRow = (items: Testimonial[], direction: "left" | "right") => {
+    if (items.length === 0) return null;
+    const doubled = [...items, ...items];
+    return (
+      <div style={{ overflow: "hidden", width: "100%" }}>
+        <div
+          style={{
+            display: "flex", gap: "14px", width: "max-content",
+            animation: `marquee-${direction} ${Math.max(20, items.length * 7)}s linear infinite`,
+          }}
+          onMouseEnter={e => (e.currentTarget.style.animationPlayState = "paused")}
+          onMouseLeave={e => (e.currentTarget.style.animationPlayState = "running")}
+        >
+          {doubled.map((t, i) => {
+            const isMyCard  = !!t._id && t.userId === user?._id;
+            const isApiCard = !!t._id;
+            return (
+              <TestimonialCard
+                key={`${t.id}-${i}`} t={t}
+                isMobile={false} isLight={isLight}
+                onClick={() => setModal(t)}
+                canEdit={isLoggedIn && isMyCard && !isAdmin}
+                canDelete={isAdmin && isApiCard}
+                onEdit={() => openEdit(t)}
+                onDelete={() => handleDelete(t._id!)}
+                deleting={deletingId === t._id}
+              />
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <section
       id="testimonials"
-      style={{ background: "transparent", padding: isMobile ? "56px 0 48px" : "80px 0 72px", overflow: "hidden" }}
+      style={{ background: "transparent", padding: isMobile ? "36px 0 32px" : "48px 0 40px", overflow: "hidden" }}
     >
+      <style>{marqueeCSS}</style>
+
       {/* ── Header ── */}
-      <div style={{ textAlign: "center", marginBottom: isMobile ? "36px" : "52px", padding: "0 20px" }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: badgeBg, border: badgeBorder, borderRadius: "100px", padding: "5px 14px", marginBottom: "14px" }}>
+      <div style={{ textAlign: "center", marginBottom: isMobile ? "24px" : "32px", padding: "0 20px" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: badgeBg, border: badgeBorder, borderRadius: "100px", padding: "5px 14px", marginBottom: "12px" }}>
           <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#1F5F89" }} />
           <span style={{ fontSize: "11px", fontWeight: 600, color: "#1F5F89", letterSpacing: "0.06em", textTransform: "uppercase" }}>User Reviews</span>
         </div>
-        <h2 style={{ margin: "0 0 10px", fontSize: isMobile ? "26px" : "clamp(28px, 4.5vw, 42px)", fontWeight: 800, color: headingColor, letterSpacing: "-0.025em", lineHeight: 1.15 }}>
+        <h2 style={{ margin: "0 0 8px", fontSize: isMobile ? "22px" : "clamp(24px,3.5vw,36px)", fontWeight: 800, color: headingColor, letterSpacing: "-0.02em", lineHeight: 1.15 }}>
           What Our Users are Saying
         </h2>
-        <p style={{ margin: "0 auto 20px", fontSize: isMobile ? "14px" : "clamp(14px,2vw,17px)", color: subHeadingColor, maxWidth: "460px", lineHeight: 1.6 }}>
+        <p style={{ margin: "0 auto 16px", fontSize: isMobile ? "13px" : "15px", color: subHeadingColor, maxWidth: "420px", lineHeight: 1.6 }}>
           Trusted by thousands of investors and professionals across India
         </p>
 
         {/* Auth-aware CTA */}
         {!authLoading && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
-
             {showWriteBtn && (
               <button
                 onClick={openCreate}
-                style={{ display: "inline-flex", alignItems: "center", gap: "7px", padding: "10px 22px", borderRadius: "12px", fontSize: "14px", fontWeight: 700, background: "linear-gradient(135deg,#0A3656,#1F5F89)", border: "none", color: "#fff", cursor: "pointer", boxShadow: "0 4px 16px rgba(10,54,86,0.25)" }}
+                style={{ display: "inline-flex", alignItems: "center", gap: "7px", padding: "9px 20px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, background: "linear-gradient(135deg,#0A3656,#1F5F89)", border: "none", color: "#fff", cursor: "pointer", boxShadow: "0 4px 14px rgba(10,54,86,0.28)" }}
               >
-                <Plus size={16} /> Write a Review
+                <Plus size={15} /> Write a Review
               </button>
             )}
             {showEditBtn && (
               <button
                 onClick={() => openEdit(toUnified(myTestimonial!))}
-                style={{ display: "inline-flex", alignItems: "center", gap: "7px", padding: "10px 22px", borderRadius: "12px", fontSize: "14px", fontWeight: 700, background: "transparent", border: "1px solid #1F5F89", color: "#1F5F89", cursor: "pointer" }}
+                style={{ display: "inline-flex", alignItems: "center", gap: "7px", padding: "9px 20px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, background: "transparent", border: "1px solid #1F5F89", color: "#1F5F89", cursor: "pointer" }}
               >
-                <Edit3 size={15} /> Edit My Review
+                <Edit3 size={14} /> Edit My Review
               </button>
             )}
           </div>
         )}
       </div>
 
-      {/* ── Carousel ── */}
-      <div style={{ width: "100%", maxWidth: "1400px", margin: "0 auto", padding: isMobile ? "0 12px" : "0 20px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "24px" }}>
+      {/* ── Loading ── */}
+      {loadingApi && (
+        <div style={{ display: "flex", justifyContent: "center", padding: "40px" }}>
+          <Loader2 size={26} style={{ color: "#1F5F89", animation: "spin 1s linear infinite" }} />
+        </div>
+      )}
 
-        {/* Loading spinner */}
-        {loadingApi && (
-          <div style={{ display: "flex", justifyContent: "center", padding: "48px" }}>
-            <Loader2 size={28} style={{ color: "#1F5F89", animation: "spin 1s linear infinite" }} />
-          </div>
-        )}
+      {/* ── Empty state ── */}
+      {!loadingApi && allTestimonials.length === 0 && (
+        <div style={{ textAlign: "center", padding: "40px 20px", color: subHeadingColor }}>
+          <Quote size={36} style={{ color: "#1F5F89", opacity: 0.3, display: "block", margin: "0 auto 10px" }} />
+          <p style={{ margin: 0, fontSize: "14px" }}>No reviews yet. Be the first to share your experience!</p>
+        </div>
+      )}
 
-        {/* Empty state */}
-        {!loadingApi && allTestimonials.length === 0 && (
-          <div style={{ textAlign: "center", padding: "48px 20px", color: subHeadingColor }}>
-            <Quote size={40} style={{ color: "#1F5F89", opacity: 0.3, display: "block", margin: "0 auto 12px" }} />
-            <p style={{ margin: 0, fontSize: "15px" }}>No reviews yet. Be the first to share your experience!</p>
-          </div>
-        )}
-
-        {/* Cards + arrows */}
-        {!loadingApi && allTestimonials.length > 0 && (
+      {/* ════════════════════════════════════════
+          MOBILE: Single-card finger swipe
+      ════════════════════════════════════════ */}
+      {!loadingApi && allTestimonials.length > 0 && isMobile && (
+        <div style={{ padding: "0 16px" }}>
+          {/* Swipe area */}
           <div
-            style={{ display: "flex", alignItems: "center", gap: isMobile ? "0" : "20px" }}
-            onMouseEnter={() => !isMobile && setCardsHovered(true)}
-            onMouseLeave={() => !isMobile && setCardsHovered(false)}
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
+            style={{ position: "relative" as const, userSelect: "none" as const }}
           >
-            {!isMobile && (
-              <button onClick={prev} style={{ width: "48px", height: "48px", minWidth: "48px", borderRadius: "50%", border: "none", background: isLight ? "#0A3656" : "#1F5F89", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: isLight ? "0 4px 16px rgba(10,54,86,0.30)" : "0 4px 16px rgba(31,95,137,0.40)", flexShrink: 0, opacity: cardsHovered ? 1 : 0, pointerEvents: cardsHovered ? "auto" : "none", transition: "opacity 0.22s ease" }}>
-                <ChevronLeft size={22} />
-              </button>
-            )}
-
-            <div style={{ flex: 1, display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? "16px" : "24px", minWidth: 0, width: "100%" }}>
-              {visible.map(t => {
-                const isMyCard  = !!t._id && t.userId === user?._id;
-                const isApiCard = !!t._id;
-                return (
-                  <TestimonialCard
-                    key={t.id} t={t}
-                    isMobile={isMobile} isLight={isLight}
-                    onClick={() => setModal(t)}
-                    canEdit={isLoggedIn && isMyCard && !isAdmin}
-                    canDelete={isAdmin && isApiCard}
-                    onEdit={() => openEdit(t)}
-                    onDelete={() => handleDelete(t._id!)}
-                    deleting={deletingId === t._id}
-                  />
-                );
-              })}
+           
+            {/* Card — animated slide */}
+            <div style={{ overflow: "hidden", borderRadius: "14px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  transition: "transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94)",
+                  transform: `translateX(-${index * 100}%)`,
+                  willChange: "transform",
+                }}
+              >
+                {allTestimonials.map(t => {
+                  const isMyCard  = !!t._id && t.userId === user?._id;
+                  const isApiCard = !!t._id;
+                  return (
+                    <div key={t.id} style={{ minWidth: "100%", boxSizing: "border-box" as const }}>
+                      <TestimonialCard
+                        t={t} isMobile={true} isLight={isLight}
+                        onClick={() => setModal(t)}
+                        canEdit={isLoggedIn && isMyCard && !isAdmin}
+                        canDelete={isAdmin && isApiCard}
+                        onEdit={() => openEdit(t)}
+                        onDelete={() => handleDelete(t._id!)}
+                        deleting={deletingId === t._id}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
-            {!isMobile && (
-              <button onClick={next} style={{ width: "48px", height: "48px", minWidth: "48px", borderRadius: "50%", border: "none", background: isLight ? "#0A3656" : "#1F5F89", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: isLight ? "0 4px 16px rgba(10,54,86,0.30)" : "0 4px 16px rgba(31,95,137,0.40)", flexShrink: 0, opacity: cardsHovered ? 1 : 0, pointerEvents: cardsHovered ? "auto" : "none", transition: "opacity 0.22s ease" }}>
-                <ChevronRight size={22} />
-              </button>
-            )}
           </div>
-        )}
 
-        {/* Dots */}
-        {!loadingApi && totalDots > 1 && (
-          <div style={{ display: "flex", justifyContent: "center", gap: "6px", alignItems: "center" }}>
-            {Array.from({ length: totalDots }).map((_, i) => (
-              <button key={i} onClick={() => setIndex(i)} style={{ width: i === index ? "24px" : "8px", height: "8px", borderRadius: "100px", border: "none", background: i === index ? (isLight ? "#0A3656" : "#74A8C9") : dotInactive, cursor: "pointer", padding: 0, transition: "all 0.3s ease" }} />
-            ))}
-          </div>
-        )}
+          {/* Dots */}
+          {allTestimonials.length > 1 && (
+            <div style={{ display: "flex", justifyContent: "center", gap: "6px", marginTop: "16px", alignItems: "center" }}>
+              {allTestimonials.map((_, i) => (
+                <button
+                  key={i} onClick={() => setIndex(i)}
+                  style={{
+                    width: i === index ? "20px" : "7px", height: "7px",
+                    borderRadius: "100px", border: "none", padding: 0, cursor: "pointer",
+                    background: i === index ? dotActive : dotInactive,
+                    transition: "all 0.3s ease",
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
+      {/* ════════════════════════════════════════
+          DESKTOP: Dual-row infinite marquee
+      ════════════════════════════════════════ */}
+      {!loadingApi && allTestimonials.length > 0 && !isMobile && (
+        <div style={{ position: "relative" as const, display: "flex", flexDirection: "column" as const, gap: "14px" }}>
+          {/* Left + right fade masks */}
+          <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "80px", zIndex: 2, pointerEvents: "none", background: fadeL }} />
+          <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "80px", zIndex: 2, pointerEvents: "none", background: fadeR }} />
 
-      </div>
+          {renderMarqueeRow(row1.length > 0 ? row1 : allTestimonials, "left")}
+          {row2.length > 0 && renderMarqueeRow(row2, "right")}
+        </div>
+      )}
 
       {modal && <Modal t={modal} onClose={() => setModal(null)} isLight={isLight} />}
 

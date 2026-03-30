@@ -39,13 +39,8 @@ interface SubscribeviewProps {
 }
 
 const Subscribeview = ({
-  sectionWrapBg,
-  sectionWrapBorder,
-  sectionTopLine,
-  glow1,
   headingCls,
   subTextCls,
-  GOLD,
   emailInputBg,
   emailInputBorder,
   emailInputText,
@@ -82,7 +77,6 @@ const Subscribeview = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
-    // Reset server-level status when user edits
     if (status === "error" || status === "duplicate") {
       setStatus("idle");
       setServerMessage("");
@@ -90,7 +84,6 @@ const Subscribeview = ({
   };
 
   const handleSubmit = async () => {
-    // Force validate before submit
     setTouched(true);
     const error = validateEmail(email);
     setFieldError(error);
@@ -105,21 +98,17 @@ const Subscribeview = ({
         { email: email.trim().toLowerCase(), source: "homepage" },
         { withCredentials: true }
       );
-
       setStatus("success");
       setServerMessage(data.message);
     } catch (err: any) {
       const responseData = err.response?.data;
       const httpStatus = err.response?.status;
-
       if (httpStatus === 409 || responseData?.alreadySubscribed) {
         setStatus("duplicate");
         setServerMessage(responseData?.message || "This email is already subscribed!");
       } else {
         setStatus("error");
-        setServerMessage(
-          responseData?.message || "Something went wrong. Please try again."
-        );
+        setServerMessage(responseData?.message || "Something went wrong. Please try again.");
       }
     }
   };
@@ -128,7 +117,6 @@ const Subscribeview = ({
     if (e.key === "Enter") handleSubmit();
   };
 
-  // ── Input border color based on state ─────────────────────────────────
   const inputBorderStyle = () => {
     if (fieldError) return "1px solid #ef4444";
     if (status === "success") return "1px solid #22c55e";
@@ -136,175 +124,121 @@ const Subscribeview = ({
     return emailInputBorder;
   };
 
-  // ── Success screen ─────────────────────────────────────────────────────
+  // ── Success state ──────────────────────────────────────────────────────
+  // No wrapper card — HomeView's outer rounded-3xl panel is the card
   if (status === "success") {
     return (
-      <section className="mt-10">
-        <div
-          className="rounded-2xl p-10 md:p-12 relative overflow-hidden"
-          style={{ background: sectionWrapBg, border: sectionWrapBorder }}
-        >
-          <div className="absolute top-0 left-0 right-0 h-px" style={{ background: sectionTopLine }} />
-          <div className="absolute top-0 right-0 w-72 h-72 rounded-full blur-[100px] pointer-events-none" style={{ background: glow1 }} />
-
-          <div className="relative z-10 max-w-xl mx-auto text-center py-6">
-            {/* Animated success icon */}
-            <div
-              className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-6 mx-auto"
-              style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)" }}
-            >
-              <CheckCircle className="w-10 h-10 text-green-400" />
-            </div>
-
-            <h3 className={`text-3xl md:text-4xl font-bold mb-3 ${headingCls}`}>
-              You're{" "}
-              <span className="text-[#0A3656] dark:text-[#9bc1da]">
-                In!
-              </span>
-            </h3>
-
-            <p className={`text-base mb-2 ${subTextCls}`}>{serverMessage}</p>
-
-            <div
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full mt-4 text-sm"
-              style={{ background: "rgba(10,54,86,0.10)", border: "1px solid rgba(10,54,86,0.25)" }}
-            >
-              <Mail className="w-4 h-4 text-[#0A3656] dark:text-[#74A8C9]" />
-              <span className="text-[#0A3656] dark:text-[#74A8C9] font-medium">Check your inbox for a welcome email 🫘</span>
-            </div>
-
-            <p className={`text-xs mt-6 ${subTextCls}`}>
-              Subscribed as <strong className="text-[#0A3656] dark:text-[#74A8C9]">{email.trim().toLowerCase()}</strong>
+      <div className="flex flex-col sm:flex-row items-center gap-5 sm:gap-8">
+        {/* Left: icon + message */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <CheckCircle className="w-7 h-7 text-green-400 flex-shrink-0" />
+          <div className="text-left">
+            <p className={`text-base font-bold leading-tight ${headingCls}`}>
+              You're <span className="text-[#0A3656] dark:text-[#9bc1da]">In!</span>
             </p>
+            <p className={`text-xs mt-0.5 ${subTextCls}`}>{serverMessage}</p>
           </div>
         </div>
-      </section>
+        {/* Right: inbox note */}
+        <div className="flex items-center gap-2 px-4 py-2 rounded-full text-sm"
+          style={{ background: "rgba(10,54,86,0.10)", border: "1px solid rgba(10,54,86,0.25)" }}>
+          <Mail className="w-4 h-4 text-[#0A3656] dark:text-[#74A8C9] flex-shrink-0" />
+          <span className="text-[#0A3656] dark:text-[#74A8C9] font-medium text-xs">
+            Welcome email sent to <strong>{email.trim().toLowerCase()}</strong> 🫘
+          </span>
+        </div>
+      </div>
     );
   }
 
-  // ── Main subscribe form ────────────────────────────────────────────────
+  // ── Main form ──────────────────────────────────────────────────────────
+  // No wrapper card — HomeView's outer rounded-3xl panel is the card
   return (
-    <section className="mt-10">
-      <div
-        className="rounded-2xl p-8 sm:p-10 md:p-12 relative overflow-hidden"
-        style={{ background: sectionWrapBg, border: sectionWrapBorder }}
-      >
-          {/* Top line */}
-        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: sectionTopLine }} />
+    <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-10">
 
-        {/* Ambient glow */}
-        <div
-          className="absolute top-0 right-0 w-72 h-72 rounded-full blur-[100px] pointer-events-none"
-          style={{ background: glow1 }}
-        />
-
-        <div className="relative z-10 max-w-3xl mx-auto text-center">
-          {/* Mail icon */}
-          <div
-            className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-5 mx-auto"
-            style={{ background: "rgba(10,54,86,0.10)", border: "1px solid rgba(10,54,86,0.25)" }}
-          >
-            <Mail className="w-7 h-7 text-[#0A3656] dark:text-[#74A8C9]" />
-          </div>
-
-          {/* Heading */}
-          <h3
-          
-           className={`text-3xl md:text-4xl font-bold mb-3 ${headingCls}`}>
+      {/* Left: mail icon + copy */}
+      <div className="flex items-center gap-3 flex-shrink-0">
+        <Mail className="w-7 h-7 text-[#0A3656] dark:text-[#74A8C9] flex-shrink-0" />
+        <div className="text-left">
+          <h3 className={`text-base font-bold leading-tight ${headingCls}`}>
             Stay Ahead in the{" "}
-            <span className="text-[#0A3656] dark:text-[#9bc1da]">
-              Market
-            </span>
+            <span className="text-[#0A3656] dark:text-[#9bc1da]">Market</span>
           </h3>
-
-          <p className={`mb-8 ${subTextCls}`}>
-            Subscribe for daily insights, market trends, and expert analysis delivered to your inbox
-          </p>
-
-          {/* Logged-in hint */}
-          {isAuthenticated && user?.email && (
-            <div
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-5 text-xs"
-              style={{ background: "rgba(10,54,86,0.08)", border: "1px solid rgba(10,54,86,0.20)" }}
-            >
-              <CheckCircle className="w-3.5 h-3.5 text-[#0A3656] dark:text-[#74A8C9]" />
-              <span className="text-[#0A3656] dark:text-[#74A8C9]">Using your account email</span>
-            </div>
-          )}
-
-          {/* Email form */}
-          <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-            <div className="flex-1 relative">
-              <input
-                type="email"
-                value={email}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                onKeyDown={handleKeyDown}
-                placeholder="Enter your email"
-                disabled={status === "loading"}
-                className="w-full h-12 px-4 rounded-xl text-sm focus:outline-none placeholder:text-slate-400 disabled:opacity-60"
-                style={{
-                  background: emailInputBg,
-                  border: inputBorderStyle(),
-                  color: emailInputText,
-                  transition: "border-color 0.2s ease",
-                }}
-                aria-label="Email address"
-                aria-invalid={!!fieldError}
-                aria-describedby={fieldError ? "email-error" : undefined}
-              />
-            </div>
-
-            <button
-              onClick={handleSubmit}
-              disabled={status === "loading" || !!fieldError}
-              className="h-12 px-6 rounded-xl font-semibold text-sm text-white whitespace-nowrap flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed transition-all hover:bg-[#072a44] hover:shadow-lg hover:shadow-[#0A3656]/25"
-              style={{ background: "#0A3656", minWidth: "130px" }}
-              aria-label="Subscribe"
-            >
-              {status === "loading" ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Subscribing…
-                </>
-              ) : (
-                "Subscribe"
-              )}
-            </button>
-          </div>
-
-          {/* Field-level validation error */}
-          {fieldError && (
-            <div
-              id="email-error"
-              className="flex items-center justify-center gap-1.5 mt-2 text-xs text-red-400"
-              role="alert"
-            >
-              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-              <span>{fieldError}</span>
-            </div>
-          )}
-
-          {/* Server-level error / duplicate */}
-          {(status === "error" || status === "duplicate") && serverMessage && (
-            <div
-              className="flex items-center justify-center gap-1.5 mt-2 text-xs"
-              style={{ color: status === "duplicate" ? "#f59e0b" : "#ef4444" }}
-              role="alert"
-            >
-              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-              <span>{serverMessage}</span>
-            </div>
-          )}
-
-          {/* Social proof */}
-          <p className={`text-xs mt-5 ${subTextCls}`}>
-            🔒 No spam, ever. Join 50,000+ investors getting daily market insights.
+          <p className={`text-xs mt-0.5 ${subTextCls}`}>
+            Daily insights, market trends &amp; expert analysis
           </p>
         </div>
       </div>
-    </section>
+
+      {/* Right: input + button + hints */}
+      <div className="flex-1 w-full sm:w-auto min-w-0">
+        {/* Logged-in hint */}
+        {isAuthenticated && user?.email && (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-2 text-xs"
+            style={{ background: "rgba(10,54,86,0.08)", border: "1px solid rgba(10,54,86,0.20)" }}>
+            <CheckCircle className="w-3 h-3 text-[#0A3656] dark:text-[#74A8C9]" />
+            <span className="text-[#0A3656] dark:text-[#74A8C9]">Using your account email</span>
+          </div>
+        )}
+
+        {/* Input + button side by side */}
+        <div className="flex gap-2">
+          <input
+            type="email"
+            value={email}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            placeholder="Enter your email"
+            disabled={status === "loading"}
+            className="flex-1 min-w-0 h-10 px-4 rounded-lg text-sm focus:outline-none placeholder:text-slate-400 disabled:opacity-60"
+            style={{
+              background: emailInputBg,
+              border: inputBorderStyle(),
+              color: emailInputText,
+              transition: "border-color 0.2s ease",
+            }}
+            aria-label="Email address"
+            aria-invalid={!!fieldError}
+            aria-describedby={fieldError ? "email-error" : undefined}
+          />
+          <button
+            onClick={handleSubmit}
+            disabled={status === "loading" || !!fieldError}
+            className="h-10 px-5 rounded-lg font-semibold text-sm text-white whitespace-nowrap flex items-center gap-2 flex-shrink-0 disabled:opacity-60 disabled:cursor-not-allowed transition-all hover:bg-[#072a44] hover:shadow-lg hover:shadow-[#0A3656]/25"
+            style={{ background: "#0A3656" }}
+            aria-label="Subscribe"
+          >
+            {status === "loading"
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> Subscribing…</>
+              : "Subscribe"}
+          </button>
+        </div>
+
+        {/* Field error */}
+        {fieldError && (
+          <div id="email-error" className="flex items-center gap-1.5 mt-1.5 text-xs text-red-400" role="alert">
+            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>{fieldError}</span>
+          </div>
+        )}
+
+        {/* Server error / duplicate */}
+        {(status === "error" || status === "duplicate") && serverMessage && (
+          <div className="flex items-center gap-1.5 mt-1.5 text-xs"
+            style={{ color: status === "duplicate" ? "#f59e0b" : "#ef4444" }}
+            role="alert">
+            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>{serverMessage}</span>
+          </div>
+        )}
+
+        {/* Social proof */}
+        <p className={`text-xs mt-1.5 ${subTextCls}`}>
+          🔒 No spam, ever. Join 50,000+ investors getting daily market insights.
+        </p>
+      </div>
+    </div>
   );
 };
 

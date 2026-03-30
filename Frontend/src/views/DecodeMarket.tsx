@@ -26,7 +26,6 @@ interface InsightData {
   credits: { source: string; author?: string; url?: string; publishedDate?: string };
 }
 
-// ── Toast ─────────────────────────────────────────────────────────────────────
 interface ToastState { message: string; type: "success" | "error"; visible: boolean }
 
 const Toast = ({ toast, onClose }: { toast: ToastState; onClose: () => void }) => {
@@ -39,14 +38,12 @@ const Toast = ({ toast, onClose }: { toast: ToastState; onClose: () => void }) =
         background: isSuccess ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.12)",
         border: isSuccess ? "1px solid rgba(16,185,129,0.35)" : "1px solid rgba(239,68,68,0.35)",
         backdropFilter: "blur(12px)",
-        minWidth: 240,
-        maxWidth: 340,
+        minWidth: 240, maxWidth: 340,
       }}
     >
       {isSuccess
         ? <CheckCircle className="w-5 h-5 flex-shrink-0" style={{ color: "#10b981" }} />
-        : <XCircle    className="w-5 h-5 flex-shrink-0" style={{ color: "#ef4444" }} />
-      }
+        : <XCircle className="w-5 h-5 flex-shrink-0" style={{ color: "#ef4444" }} />}
       <span className="text-sm font-medium flex-1" style={{ color: isSuccess ? "#10b981" : "#ef4444" }}>
         {toast.message}
       </span>
@@ -57,16 +54,16 @@ const Toast = ({ toast, onClose }: { toast: ToastState; onClose: () => void }) =
   );
 };
 
-const INITIAL_VISIBLE = 6;
+const MAX_HOMEPAGE_CARDS = 4;
 
 const DecodeMarket = ({ activeTab }: DecodeMarketProps) => {
   const { isAdmin } = useAuth();
-  const { theme }   = useTheme();
-  const isLight     = theme === "light";
-  const navigate    = useNavigate();
+  const { theme } = useTheme();
+  const isLight = theme === "light";
+  const navigate = useNavigate();
 
-  const [insights, setInsights]           = useState<InsightData[]>([]);
-  const [loading, setLoading]             = useState(true);
+  const [insights, setInsights] = useState<InsightData[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedInsight, setSelectedInsight] = useState<InsightData | null>(null);
   const [showInsightModal, setShowInsightModal] = useState(false);
   const [showAdminForm, setShowAdminForm] = useState(false);
@@ -74,7 +71,7 @@ const DecodeMarket = ({ activeTab }: DecodeMarketProps) => {
   const [loadingInsight, setLoadingInsight] = useState(false);
   const [toast, setToast] = useState<ToastState>({ message: "", type: "success", visible: false });
   const hasFetchedRef = useRef(false);
-  const toastTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = useCallback((message: string, type: "success" | "error" = "success") => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -91,7 +88,9 @@ const DecodeMarket = ({ activeTab }: DecodeMarketProps) => {
     try {
       setLoading(true);
       const endpoint = isAdmin ? "/insights/admin/all" : "/insights";
-      const response = await api.get(endpoint, { params: { marketType: activeTab, limit: 100, page: 1 } });
+      const response = await api.get(endpoint, {
+        params: { marketType: activeTab, limit: MAX_HOMEPAGE_CARDS + 1, page: 1 },
+      });
       if (response.data?.success && response.data?.data) {
         setInsights(response.data.data.insights || []);
       } else { setInsights([]); }
@@ -129,19 +128,14 @@ const DecodeMarket = ({ activeTab }: DecodeMarketProps) => {
     }
   };
 
-  const handleEdit = (insight: InsightData) => {
-    setEditingInsight(insight);
-    setShowAdminForm(true);
-  };
+  const handleEdit = (insight: InsightData) => { setEditingInsight(insight); setShowAdminForm(true); };
 
   const handleDelete = async (id: string) => {
     try {
       await api.delete(`/insights/admin/${id}`);
       await fetchInsights();
       showToast("Insight deleted successfully", "success");
-    } catch {
-      showToast("Failed to delete insight", "error");
-    }
+    } catch { showToast("Failed to delete insight", "error"); }
   };
 
   const handleFormSuccess = async (isEdit: boolean) => {
@@ -150,26 +144,23 @@ const DecodeMarket = ({ activeTab }: DecodeMarketProps) => {
     showToast(isEdit ? "Insight updated successfully" : "Insight created successfully", "success");
   };
 
-  const visibleInsights = insights.slice(0, INITIAL_VISIBLE);
-  const hasMore         = insights.length > INITIAL_VISIBLE;
+  const visibleInsights = insights.slice(0, MAX_HOMEPAGE_CARDS);
+  const hasMore = insights.length > MAX_HOMEPAGE_CARDS;
 
   const tabConfig = {
     domestic: {
       badge: { color: "#34d399", bg: "rgba(52,211,153,0.07)", border: "rgba(52,211,153,0.18)" },
-      label: "Domestic Market Insights",
-      heading: "Indian Markets",
+      label: "Domestic Market Insights", heading: "Indian Markets",
       sub: "Analysis of NSE, BSE, and sectoral performance",
     },
     global: {
       badge: { color: "#7fb1cf", bg: "rgba(127,177,207,0.10)", border: "rgba(127,177,207,0.24)" },
-      label: "Global Market Insights",
-      heading: "International Markets",
+      label: "Global Market Insights", heading: "International Markets",
       sub: "Global economic trends and their impact on investments",
     },
     commodities: {
       badge: { color: "#f59e0b", bg: "rgba(245,158,11,0.07)", border: "rgba(245,158,11,0.18)" },
-      label: "Commodities Insights",
-      heading: "Commodities Markets",
+      label: "Commodities Insights", heading: "Commodities Markets",
       sub: "Gold, silver, crude oil, and other commodity trends",
     },
   };
@@ -177,57 +168,25 @@ const DecodeMarket = ({ activeTab }: DecodeMarketProps) => {
   const tab = tabConfig[activeTab];
 
   return (
-    <section id="decode-markets" className="mb-12 sm:mb-16 md:mb-20 relative overflow-hidden">
+    <section id="decode-markets" className="relative overflow-hidden py-5 sm:py-6">
 
-      {/* Toast */}
       <Toast toast={toast} onClose={hideToast} />
 
       {/* Ambient glows */}
-      <div className="absolute top-0 right-0 w-[min(450px,80vw)] h-[min(450px,80vw)] rounded-full blur-[80px] sm:blur-[120px] pointer-events-none"
+      <div className="absolute top-0 right-0 w-[min(450px,80vw)] h-[min(450px,80vw)] rounded-full blur-[120px] pointer-events-none"
         style={{ background: "radial-gradient(circle,rgba(10,54,86,0.10) 0%,transparent 70%)" }} />
-      <div className="absolute bottom-0 left-0 w-[min(350px,70vw)] h-[min(350px,70vw)] rounded-full blur-[60px] sm:blur-[100px] pointer-events-none"
+      <div className="absolute bottom-0 left-0 w-[min(350px,70vw)] h-[min(350px,70vw)] rounded-full blur-[100px] pointer-events-none"
         style={{ background: "radial-gradient(circle,rgba(127,177,207,0.10) 0%,transparent 70%)" }} />
 
-      <div className="relative z-10">
+      <div className="relative z-10 px-4 sm:px-6 lg:px-8">
 
-        {/* Section header */}
-        <div className="text-center mb-8 sm:mb-10 relative px-4 sm:px-6 lg:px-8">
+        {/* ── Section header ── */}
+        <div className="text-center mb-3 sm:mb-4 relative">
           {isAdmin && (
-            <div className="hidden sm:flex absolute top-1/2 right-4 sm:right-6 lg:right-8 -translate-y-1/2">
+            <div className="hidden sm:flex absolute top-1/2 right-0 -translate-y-1/2">
               <button
                 onClick={() => { setEditingInsight(null); setShowAdminForm(true); }}
-                className="inline-flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold text-white transition-all hover:opacity-90 whitespace-nowrap shadow-lg"
-                style={{ background: "linear-gradient(135deg,#22c55e,#16a34a)" }}
-              >
-                <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Create Insight
-              </button>
-            </div>
-          )}
-
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full mb-4 sm:mb-5"
-            style={{ background: isLight ? "rgba(10,54,86,0.10)" : "rgba(116,168,201,0.12)", border: isLight ? "1px solid rgba(10,54,86,0.22)" : "1px solid rgba(116,168,201,0.22)" }}>
-            <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0A3656] dark:text-[#74A8C9]" />
-            <span className="text-[11px] sm:text-xs font-semibold text-[#0A3656] dark:text-[#74A8C9] uppercase tracking-wide">Market Intelligence</span>
-          </div>
-
-          <h2 className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 leading-tight ${isLight ? "text-slate-900" : "text-white"}`}>
-            Decode the{" "}
-            <span className="text-[#0A3656] dark:text-[#9bc1da]">
-              Market
-            </span>
-          </h2>
-
-          <p className="text-slate-400 text-sm sm:text-base md:text-lg max-w-xl sm:max-w-2xl lg:max-w-3xl mx-auto leading-relaxed px-2 sm:px-0">
-            Expert insights and analysis to help you understand market movements and make informed investment decisions
-          </p>
-        </div>
-
-        <div className="px-4 sm:px-6 lg:px-8">
-          {isAdmin && (
-            <div className="flex justify-center mb-4 sm:hidden">
-              <button
-                onClick={() => { setEditingInsight(null); setShowAdminForm(true); }}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 shadow-lg"
                 style={{ background: "linear-gradient(135deg,#22c55e,#16a34a)" }}
               >
                 <Plus className="w-4 h-4" /> Create Insight
@@ -235,69 +194,119 @@ const DecodeMarket = ({ activeTab }: DecodeMarketProps) => {
             </div>
           )}
 
-          {/* Sub-header */}
-          <div className="flex flex-col items-center gap-2 sm:gap-3 mb-6 sm:mb-8">
-            <div
-              className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium"
-              style={{ color: tab.badge.color, background: tab.badge.bg, border: `1px solid ${tab.badge.border}` }}
-            >
-              <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              {tab.label}
-            </div>
-            <div className="text-center">
-              <h3 className={`text-xl sm:text-2xl font-bold mb-1 ${isLight ? "text-navy" : "text-white"}`}>
-                {tab.heading}
-              </h3>
-              <p className="text-slate-400 text-xs sm:text-sm">{tab.sub}</p>
-            </div>
+          <div
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-2"
+            style={{
+              background: isLight ? "rgba(10,54,86,0.10)" : "rgba(116,168,201,0.12)",
+              border: isLight ? "1px solid rgba(10,54,86,0.22)" : "1px solid rgba(116,168,201,0.22)",
+            }}
+          >
+            <Sparkles className="w-3 h-3 text-[#0A3656] dark:text-[#74A8C9]" />
+            <span className="text-[11px] font-semibold text-[#0A3656] dark:text-[#74A8C9] uppercase tracking-wide">
+              Market Intelligence
+            </span>
           </div>
 
-          {/* Cards */}
-          {loading ? (
-            <div className="text-center py-12 sm:py-16">
-              <div className="inline-block animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12"
-                style={{ border: isLight ? "2px solid rgba(10,54,86,0.15)" : "2px solid rgba(116,168,201,0.15)", borderTopColor: isLight ? "#0A3656" : "#74A8C9" }} />
-              <p className="mt-4 text-slate-400 text-sm">Loading insights...</p>
-            </div>
-          ) : insights.length === 0 ? (
-            <div className="text-center py-12 sm:py-16">
-              <p className="text-slate-400 mb-4 text-sm sm:text-base">No insights available at the moment.</p>
-              {isAdmin && (
-                <button
-                  onClick={() => { setEditingInsight(null); setShowAdminForm(true); }}
-                  className="inline-flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl text-sm font-semibold text-white"
-                  style={{ background: "#0A3656" }}
-                >
-                  <Plus className="w-4 h-4" /> Create First Insight
-                </button>
-              )}
-            </div>
-          ) : (
-            <>
-              <div className="hidden lg:grid lg:grid-cols-2 gap-6 xl:gap-8">
-                {visibleInsights.map(insight => (
-                  <InsightCard key={insight._id} insight={insight} isAdmin={isAdmin}
-                    onReadMore={handleReadMore} onLike={handleLike} onEdit={handleEdit} onDelete={handleDelete} />
-                ))}
-              </div>
-              <div className="block lg:hidden space-y-4 sm:space-y-5">
-                {visibleInsights.map(insight => (
-                  <InsightCard key={insight._id} insight={insight} isAdmin={isAdmin}
-                    onReadMore={handleReadMore} onLike={handleLike} onEdit={handleEdit} onDelete={handleDelete} />
-                ))}
-              </div>
-            </>
-          )}
+          <h2 className={`text-2xl sm:text-3xl md:text-4xl font-bold mb-1.5 leading-tight ${isLight ? "text-slate-900" : "text-white"}`}>
+            Decode the{" "}
+            <span className="text-[#0A3656] dark:text-[#9bc1da]">Market</span>
+          </h2>
+
+          <p className="text-slate-400 text-sm max-w-2xl mx-auto leading-relaxed">
+            Expert insights and analysis to help you understand market movements and make informed investment decisions
+          </p>
         </div>
 
+        {/* Mobile admin button */}
+        {isAdmin && (
+          <div className="flex justify-center mb-3 sm:hidden">
+            <button
+              onClick={() => { setEditingInsight(null); setShowAdminForm(true); }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white"
+              style={{ background: "linear-gradient(135deg,#22c55e,#16a34a)" }}
+            >
+              <Plus className="w-4 h-4" /> Create Insight
+            </button>
+          </div>
+        )}
+
+        {/* ── Sub-header ── */}
+        <div className="flex flex-col items-center gap-1.5 mb-3 sm:mb-4">
+          <div
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium"
+            style={{ color: tab.badge.color, background: tab.badge.bg, border: `1px solid ${tab.badge.border}` }}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            {tab.label}
+          </div>
+          <div className="text-center">
+            <h3 className={`text-lg font-bold mb-0.5 ${isLight ? "text-navy" : "text-white"}`}>
+              {tab.heading}
+            </h3>
+            <p className="text-slate-400 text-xs">{tab.sub}</p>
+          </div>
+        </div>
+
+        {/* ── Cards ── */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div
+              className="animate-spin rounded-full h-10 w-10"
+              style={{
+                border: isLight ? "2px solid rgba(10,54,86,0.15)" : "2px solid rgba(116,168,201,0.15)",
+                borderTopColor: isLight ? "#0A3656" : "#74A8C9",
+              }}
+            />
+            <p className="mt-3 text-slate-400 text-sm">Loading insights...</p>
+          </div>
+        ) : insights.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <p className="text-slate-400 mb-4 text-sm">No insights available at the moment.</p>
+            {isAdmin && (
+              <button
+                onClick={() => { setEditingInsight(null); setShowAdminForm(true); }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white"
+                style={{ background: "#0A3656" }}
+              >
+                <Plus className="w-4 h-4" /> Create First Insight
+              </button>
+            )}
+          </div>
+        ) : (
+          /*
+           * Big card style (Image 2) — 2-column grid
+           * compact=false keeps full card size
+           * gap reduced (gap-3) so 2×2 grid fits without scrolling
+           */
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {visibleInsights.map(insight => (
+              <InsightCard
+                key={insight._id}
+                insight={insight}
+                isAdmin={isAdmin}
+                compact={false}
+                onReadMore={handleReadMore}
+                onLike={handleLike}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* ── Load More ── */}
         {hasMore && insights.length > 0 && (
-          <div className="mt-8 sm:mt-12 text-center px-4">
+          <div className="mt-4 text-center">
             <button
               onClick={() => navigate(`/insights/${activeTab}`)}
-              className="px-6 sm:px-8 py-2.5 sm:py-3 rounded-full text-sm font-semibold transition-all active:scale-95 text-[#0A3656] dark:text-[#74A8C9]"
-              style={{ background: isLight ? "rgba(10,54,86,0.08)" : "rgba(116,168,201,0.10)", border: isLight ? "1px solid rgba(10,54,86,0.24)" : "1px solid rgba(116,168,201,0.24)" }}
+              className="inline-flex items-center gap-2 px-8 py-2.5 rounded-full text-sm font-semibold transition-all active:scale-95"
+              style={{
+                color: isLight ? "#0A3656" : "#74A8C9",
+                background: isLight ? "rgba(10,54,86,0.08)" : "rgba(116,168,201,0.10)",
+                border: isLight ? "1px solid rgba(10,54,86,0.24)" : "1px solid rgba(116,168,201,0.24)",
+              }}
             >
-              Show More
+              Load More <TrendingUp className="w-3.5 h-3.5" />
             </button>
           </div>
         )}

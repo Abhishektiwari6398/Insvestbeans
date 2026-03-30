@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/controllers/AuthContext';
 import { useTheme } from '@/controllers/Themecontext';
@@ -159,7 +160,8 @@ function FormModal({
   saving: boolean;
 }) {
   const { theme } = useTheme();
-  const isDark = theme !== 'light';
+  const isDark  = theme !== 'light';
+  const isLight = !isDark;
 
   const [form,     setForm]     = useState<Omit<IPO, '_id'>>(initial ? { ...initial } : { ...BLANK });
   const [errors,   setErrors]   = useState<Record<string, string>>({});
@@ -240,8 +242,9 @@ function FormModal({
   const ER = 'text-xs mt-1 text-red-400';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm" onClick={onClose}>
-      <div className="rounded-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto shadow-2xl"
+    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/65 backdrop-blur-sm" onClick={onClose}>
+      <div className="flex min-h-full items-start justify-center px-4 pt-16 pb-8">
+      <div className="rounded-2xl w-full max-w-2xl shadow-2xl"
         style={{ background: modalBg, border: `1px solid ${modalBdr}` }}
         onClick={e => e.stopPropagation()}>
 
@@ -557,6 +560,7 @@ function FormModal({
           </button>
         </div>
       </div>
+      </div>
     </div>
   );
 }
@@ -650,8 +654,9 @@ function DetailModal({
     : 'text-slate-400 hover:text-white hover:bg-white/10 rounded-lg p-2 transition-colors';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm" onClick={onClose}>
-      <div className="rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+    <div className="fixed inset-0  z-[50] items-center justify-center p-4 bg-black/65 backdrop-blur-sm" onClick={onClose}>
+      <div className="flex min-h-full items-start justify-center px-4 pt-16 pb-8">
+      <div className="rounded-2xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto"
         style={{ background: modalBg, border: modalBorder, boxShadow: isLight ? '0 32px 80px rgba(0,0,0,0.12)' : '0 32px 80px rgba(0,0,0,0.5)' }}
         onClick={e => e.stopPropagation()}>
 
@@ -798,6 +803,7 @@ function DetailModal({
             <FileText className="w-4 h-4" />View RHP / DRHP
           </button>
         </div>
+      </div>
       </div>
     </div>
   );
@@ -976,8 +982,7 @@ const IPOSection = () => {
       if (v === null || v === undefined) return;
       fd.append(k, String(v));
     });
-    // 'logoText' carries the 2-char initials; 'logo' carries the image file
-    // Backend controller reads req.body.logoText for initials, req.file for image
+  
     fd.append('logoText', data.logo || '');
     // swot as JSON string — backend will JSON.parse it
     if (data.swot) fd.append('swot', JSON.stringify(data.swot));
@@ -1078,19 +1083,7 @@ const IPOSection = () => {
                 ))}
               </div>
 
-              {/* Sort dropdown */}
-              <select
-                value={sortBy}
-                onChange={e => { setSortBy(e.target.value); }}
-                className="flex-shrink-0 text-xs font-semibold rounded-xl px-3 py-2 focus:outline-none transition-all cursor-pointer"
-                style={isLight
-                  ? { background: 'rgba(248,250,252,0.9)', color: '#64748b', border: '1px solid rgba(226,232,240,0.9)' }
-                  : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.65)', border: '1px solid rgba(124,166,194,0.20)' }}>
-                <option value="default">Default</option>
-                <option value="gmp">GMP ↓</option>
-                <option value="rating">Rating ↓</option>
-                <option value="subscribed">Subscribed ↓</option>
-              </select>
+
 
               {/* Add IPO (desktop) */}
               {isAdmin && (
@@ -1178,7 +1171,15 @@ const IPOSection = () => {
 
           {!loading && !error && ipos.length > 0 && (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className={`grid gap-4 ${
+                displayed.length === 1
+                  ? 'grid-cols-1 max-w-xs mx-auto'
+                  : displayed.length === 2
+                  ? 'grid-cols-1 sm:grid-cols-2 max-w-xl mx-auto'
+                  : displayed.length === 3
+                  ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-3xl mx-auto'
+                  : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+              }`}>
                 {displayed.map(ipo => (
                   <IPOCard key={ipo._id} ipo={ipo} isAdmin={isAdmin} isLight={isLight}
                     onViewDetail={() => { setSelectedIPO(ipo); setDetailOpen(true); }}
@@ -1199,42 +1200,70 @@ const IPOSection = () => {
             </>
           )}
 
-          {/* Info Cards */}
-          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className={`p-6 rounded-2xl ${isLight ? "bg-slate-50 border border-slate-200" : ""}`} style={!isLight ? { background: 'rgba(10,54,86,0.12)', border: '1px solid rgba(124,166,194,0.20)' } : {}}>
-              <Shield className="w-10 h-10 text-[#0A3656] dark:text-[#74A8C9] mb-4" />
-              <h3 className={`text-lg font-bold mb-2 ${isLight ? 'text-slate-800' : 'text-white'}`}>SEBI Regulated</h3>
-              <p className={`text-sm ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>All IPOs listed are SEBI-regulated with complete RHP transparency for informed decisions.</p>
-            </div>
-            <div className={`p-6 rounded-2xl ${isLight ? "bg-sky-50 border border-sky-100" : ""}`} style={!isLight ? { background: 'rgba(31,95,137,0.14)', border: '1px solid rgba(116,168,201,0.20)' } : {}}>
-              <BarChart3 className="w-10 h-10 text-emerald-400 mb-4" />
-              <h3 className={`text-lg font-bold mb-2 ${isLight ? 'text-slate-800' : 'text-white'}`}>Live GMP & Subscription</h3>
-              <p className={`text-sm ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Real-time grey market premium, subscription data, and day-wise allotment tracking.</p>
-            </div>
-            <div className={`p-6 rounded-2xl ${isLight ? "bg-slate-50 border border-slate-200" : ""}`} style={!isLight ? { background: 'rgba(10,54,86,0.12)', border: '1px solid rgba(124,166,194,0.20)' } : {}}>
-              <FileText className="w-10 h-10 text-[#0A3656] dark:text-[#74A8C9] mb-4" />
-              <h3 className={`text-lg font-bold mb-2 ${isLight ? 'text-slate-800' : 'text-white'}`}>Expert Analysis</h3>
-              <p className={`text-sm ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Detailed IPO reviews, DRHP financials, and exclusive investbeans insight analysis by a certified experts.</p>
+          {/* Info Strip — compact horizontal layout instead of large cards */}
+          <div className="mt-12 rounded-2xl overflow-hidden"
+            style={{ background: isLight ? 'rgba(10,54,86,0.04)' : 'rgba(10,54,86,0.18)', border: isLight ? '1px solid rgba(10,54,86,0.10)' : '1px solid rgba(124,166,194,0.18)' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x"
+              style={{ '--tw-divide-opacity': 1, borderColor: isLight ? 'rgba(10,54,86,0.08)' : 'rgba(124,166,194,0.12)' } as any}>
+
+              {/* SEBI Regulated */}
+              <div className="flex items-start gap-3 px-6 py-5">
+                <div className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center mt-0.5"
+                  style={{ background: isLight ? 'rgba(10,54,86,0.10)' : 'rgba(116,168,201,0.12)' }}>
+                  <Shield className="w-4 h-4 text-[#0A3656] dark:text-[#74A8C9]" />
+                </div>
+                <div>
+                  <p className={`text-sm font-bold mb-0.5 ${isLight ? 'text-slate-800' : 'text-white'}`}>SEBI Regulated</p>
+                  <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>All IPOs listed with complete RHP transparency for informed decisions.</p>
+                </div>
+              </div>
+
+              {/* Live GMP */}
+              <div className="flex items-start gap-3 px-6 py-5">
+                <div className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center mt-0.5"
+                  style={{ background: isLight ? 'rgba(16,185,129,0.10)' : 'rgba(16,185,129,0.12)' }}>
+                  <BarChart3 className="w-4 h-4 text-emerald-500" />
+                </div>
+                <div>
+                  <p className={`text-sm font-bold mb-0.5 ${isLight ? 'text-slate-800' : 'text-white'}`}>Live GMP & Subscription</p>
+                  <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Real-time grey market premium, subscription data, and day-wise allotment tracking.</p>
+                </div>
+              </div>
+
+              {/* Expert Analysis */}
+              <div className="flex items-start gap-3 px-6 py-5">
+                <div className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center mt-0.5"
+                  style={{ background: isLight ? 'rgba(10,54,86,0.10)' : 'rgba(116,168,201,0.12)' }}>
+                  <FileText className="w-4 h-4 text-[#0A3656] dark:text-[#74A8C9]" />
+                </div>
+                <div>
+                  <p className={`text-sm font-bold mb-0.5 ${isLight ? 'text-slate-800' : 'text-white'}`}>Expert Analysis</p>
+                  <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Detailed IPO reviews, DRHP financials, and exclusive InvestBeans insight by certified experts.</p>
+                </div>
+              </div>
+
             </div>
           </div>
         </section>
       </div>
 
-      {detailOpen && selectedIPO && !formOpen && (
+      {detailOpen && selectedIPO && !formOpen && ReactDOM.createPortal(
         <DetailModal ipo={selectedIPO}
           onClose={() => { setDetailOpen(false); setSelectedIPO(null); }}
           onEdit={() => { setEditIPO(selectedIPO); setFormOpen(true); }}
           onDelete={() => handleDelete(selectedIPO)}
           deleting={deleting} isAdmin={isAdmin}
-        />
+        />,
+        document.body
       )}
 
-      {formOpen && isAdmin && (
+      {formOpen && isAdmin && ReactDOM.createPortal(
         <FormModal initial={editIPO ?? undefined}
           onSave={editIPO ? handleEdit : handleAdd}
           onClose={() => { setFormOpen(false); setEditIPO(null); }}
           saving={saving}
-        />
+        />,
+        document.body
       )}
     </>
   );

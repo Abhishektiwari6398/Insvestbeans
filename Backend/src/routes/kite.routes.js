@@ -306,15 +306,6 @@ router.get("/fo/instruments", async (req, res) => {
 });
 
 
-
-
-
-
-
-
-
-
-
 // ── NSE CORPORATE ACTIONS PROXY ───────────────────────────────────
 let _nseSession = { cookies: "", ts: 0 };
 
@@ -334,6 +325,33 @@ const NSE_COMMON = {
   "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
   "sec-ch-ua-mobile": "?0", "sec-ch-ua-platform": '"Windows"',
 };
+
+// ─────────────────────────────────────────────────────────────────
+// ✅ FIX: Universal NSE array extractor
+// NSE API response shapes vary: { data: [...] } or { data: { NIFTY: [...] } }
+// or { NIFTY: [...] } or plain [...]. This handles all formats.
+// ─────────────────────────────────────────────────────────────────
+function extractNseRows(raw) {
+  // Shape 1: direct array
+  if (Array.isArray(raw)) return raw;
+  // Shape 2: { data: [...] }
+  if (Array.isArray(raw?.data)) return raw.data;
+  // Shape 3: { data: { NIFTY: [...], NIFTY500: [...], ... } }
+  // Shape 4: { NIFTY: [...], NIFTY_BANK: [...], ... }
+  const src = (raw?.data && typeof raw.data === "object" && !Array.isArray(raw.data))
+    ? raw.data
+    : (typeof raw === "object" && raw !== null ? raw : null);
+  if (src) {
+    // Try well-known NSE index keys first
+    for (const key of ["NIFTY", "NIFTY500", "NIFTY_500", "FO", "FNO", "NIFTY50", "NIFTY_100", "ALL"]) {
+      if (Array.isArray(src[key]) && src[key].length > 0) return src[key];
+    }
+    // Fall back to first array value found
+    const anyArr = Object.values(src).find(v => Array.isArray(v) && v.length > 0);
+    if (anyArr) return anyArr;
+  }
+  return [];
+}
 
 function mergeCookies(existing, incoming = []) {
   const map = {};
@@ -355,18 +373,37 @@ async function refreshNseSession() {
   let cookies = mergeCookies("", r1.headers["set-cookie"] || []);
   await new Promise(r => setTimeout(r, 1200));
 
-  // ✅ KEY FIX: Warm up the exact FII-DII page — NSE checks Referer chain
-  // Production servers get blocked because they skip this warm-up step
-  try {
-    const r2 = await axios.get("https://www.nseindia.com/market-data/fii-dii-activity", {
-      timeout: 12000,
-      headers: { ...dynamicCommon, Accept: "text/html,application/xhtml+xml,*/*;q=0.8",
-        Referer: "https://www.nseindia.com/",
-        Cookie: cookies, "sec-fetch-dest": "document", "sec-fetch-mode": "navigate",
-        "sec-fetch-site": "same-origin", "Upgrade-Insecure-Requests": "1" },
-    });
-    cookies = mergeCookies(cookies, r2.headers["set-cookie"] || []);
-  } catch (e) { console.warn("  NSE fii-dii page warmup failed:", e.message); }
+  // ✅ FIX: Try multiple warmup pages — NSE changes URLs, single URL causes 404 spam
+  // These pages warm up the NSE session so subsequent API calls work on VPS/production
+  const WARMUP_PAGES = [
+    "https://www.nseindia.com/market-data/live-equity-market",
+    "https://www.nseindia.com/market-data/most-active-securities",
+    "https://www.nseindia.com/market-data/top-gainers-losers",
+    "https://www.nseindia.com/get-quotes/equity?symbol=RELIANCE",
+  ];
+
+  for (const wUrl of WARMUP_PAGES) {
+    try {
+      const r2 = await axios.get(wUrl, {
+        timeout: 10000,
+        headers: {
+          ...dynamicCommon,
+          Accept:                   "text/html,application/xhtml+xml,*/*;q=0.8",
+          Referer:                  "https://www.nseindia.com/",
+          Cookie:                   cookies,
+          "sec-fetch-dest":         "document",
+          "sec-fetch-mode":         "navigate",
+          "sec-fetch-site":         "same-origin",
+          "Upgrade-Insecure-Requests": "1",
+        },
+      });
+      cookies = mergeCookies(cookies, r2.headers["set-cookie"] || []);
+      console.log(`  ✅ NSE warmup OK: ${wUrl}`);
+      break; // First success is enough
+    } catch (e) {
+      console.warn(`  NSE warmup failed [${wUrl.split("/").pop()}]:`, e.message);
+    }
+  }
 
   await new Promise(r => setTimeout(r, 600));
   _nseSession = { cookies, ts: Date.now() };
@@ -379,12 +416,26 @@ async function getNseSession(forceRefresh = false) {
   return refreshNseSession();
 }
 
+// ── Shared NSE request helper with standard headers ───────────────
+function nseApiHeaders(cookies, referer) {
+  const ua = getUA();
+  return {
+    ...NSE_COMMON,
+    "User-Agent":       ua,
+    Accept:             "application/json, text/plain, */*",
+    Referer:            referer,
+    Cookie:             cookies,
+    "sec-fetch-dest":   "empty",
+    "sec-fetch-mode":   "cors",
+    "sec-fetch-site":   "same-origin",
+    "X-Requested-With": "XMLHttpRequest",
+  };
+}
+
 async function fetchNseCorpActions(cookies, fromDate, toDate) {
   const r = await axios.get(
     `https://www.nseindia.com/api/corporates-corporateActions?index=equities&from_date=${fromDate}&to_date=${toDate}`,
-    { timeout: 15000, headers: { ...NSE_COMMON, Accept: "application/json, text/plain, */*",
-        Referer: "https://www.nseindia.com/companies-listing/corporate-filings-actions",
-        Cookie: cookies, "sec-fetch-dest": "empty", "sec-fetch-mode": "cors", "sec-fetch-site": "same-origin", "X-Requested-With": "XMLHttpRequest" } }
+    { timeout: 15000, headers: nseApiHeaders(cookies, "https://www.nseindia.com/companies-listing/corporate-filings-actions") }
   );
   const raw = r.data;
   return Array.isArray(raw) ? raw : (raw?.data ?? raw?.body ?? []);
@@ -450,7 +501,7 @@ const YF_HEADERS_LIVE = {
   "Referer":         "https://finance.yahoo.com/",
   "Cache-Control":   "no-cache",
 };
- 
+
 /**
  * Fetch a single Yahoo Finance symbol.
  * Returns { price, changePct, currency } or throws.
@@ -465,8 +516,8 @@ async function fetchYahooSymbol(symbol) {
   const changePct = prevClose ? ((price - prevClose) / prevClose) * 100 : 0;
   return { price, changePct, currency: meta.currency ?? "USD" };
 }
- 
- 
+
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 1.  FII / DII  —  live from NSE API
 //     GET /api/v1/kite/fii-dii
@@ -487,59 +538,99 @@ async function fetchYahooSymbol(symbol) {
 const _fiiDiiCache = { data: null, ts: 0 };
 
 // ── TIER 0: MoneyControl public API — works from VPS/datacenter IPs ──────────
-// This is the KEY fix: MC scrapes NSE and serves it via their own CDN.
-// No IP blocking, no session required, no bot detection for server IPs.
+// ✅ FIX: Added multiple MC endpoint attempts + robust shape parsing
+// MC sometimes returns HTML (blocked) or different JSON shapes
 async function fetchFiiDiiFromMoneyControl() {
-  // MC exposes a public JSON endpoint used by their own charts widget.
-  // It requires no cookies, no Referer tricks — just a plain GET.
-  const r = await axios.get(
+  const MC_ENDPOINTS = [
     "https://www.moneycontrol.com/stocks/marketstats/fii_dii_activity/index.php?type=json",
-    {
-      timeout: 10000,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        Accept: "application/json, text/plain, */*",
-        Referer: "https://www.moneycontrol.com/",
-      },
-    }
-  );
+    "https://www.moneycontrol.com/get-data/fii-dii-activity.json",
+  ];
 
-  // MC response shape: { FII: { buy, sell, net, date }, DII: { ... } }
-  // OR array format: [{ category: "FII", buyVal: "...", ... }, ...]
-  const raw = r.data;
+  const MC_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept":     "application/json, text/plain, */*",
+    "Referer":    "https://www.moneycontrol.com/",
+    "Origin":     "https://www.moneycontrol.com",
+  };
+
+  let raw = null;
+  for (const url of MC_ENDPOINTS) {
+    try {
+      const r = await axios.get(url, { timeout: 10000, headers: MC_HEADERS });
+      // Reject HTML responses (MC returns HTML when endpoint is blocked/moved)
+      if (typeof r.data === "string" && r.data.trim().startsWith("<")) {
+        console.warn("[FII-DII MC] Endpoint returned HTML (blocked):", url);
+        continue;
+      }
+      raw = r.data;
+      break;
+    } catch (e) {
+      console.warn("[FII-DII MC] Endpoint failed:", url, e.message);
+    }
+  }
+
+  if (!raw) throw new Error("MC: all endpoints failed or returned HTML");
+
   const parse = (v) => parseFloat(String(v ?? "0").replace(/,/g, "")) || 0;
 
-  // Handle array format (like NSE)
+  // ── Shape A: array [ { category: "FII", buyValue, sellValue, netValue, date }, ... ]
   if (Array.isArray(raw)) {
     const fiiRow = raw.find((d) => /FII|FPI/i.test(d.category ?? d.Category ?? ""));
     const diiRow = raw.find((d) => /\bDII\b/i.test(d.category ?? d.Category ?? ""));
-    if (!fiiRow && !diiRow) throw new Error("MC: no FII/DII rows in array response");
+    if (!fiiRow && !diiRow) throw new Error("MC array: no FII/DII rows found");
     return {
-      fii: {
-        buy:  fiiRow ? parse(fiiRow.buyValue  ?? fiiRow.buy_value  ?? fiiRow.BuyValue)  : null,
-        sell: fiiRow ? parse(fiiRow.sellValue ?? fiiRow.sell_value ?? fiiRow.SellValue) : null,
-        net:  fiiRow ? parse(fiiRow.netValue  ?? fiiRow.net_value  ?? fiiRow.NetValue)  : null,
-        date: fiiRow?.date ?? fiiRow?.Date ?? null,
-      },
-      dii: {
-        buy:  diiRow ? parse(diiRow.buyValue  ?? diiRow.buy_value  ?? diiRow.BuyValue)  : null,
-        sell: diiRow ? parse(diiRow.sellValue ?? diiRow.sell_value ?? diiRow.SellValue) : null,
-        net:  diiRow ? parse(diiRow.netValue  ?? diiRow.net_value  ?? diiRow.NetValue)  : null,
-        date: diiRow?.date ?? diiRow?.Date ?? null,
-      },
+      fii: fiiRow ? {
+        buy:  parse(fiiRow.buyValue  ?? fiiRow.buy_value  ?? fiiRow.BuyValue  ?? fiiRow.Purchases),
+        sell: parse(fiiRow.sellValue ?? fiiRow.sell_value ?? fiiRow.SellValue ?? fiiRow.Sales),
+        net:  parse(fiiRow.netValue  ?? fiiRow.net_value  ?? fiiRow.NetValue  ?? fiiRow.Net),
+        date: fiiRow.date ?? fiiRow.Date ?? fiiRow.tradeDate ?? null,
+      } : null,
+      dii: diiRow ? {
+        buy:  parse(diiRow.buyValue  ?? diiRow.buy_value  ?? diiRow.BuyValue  ?? diiRow.Purchases),
+        sell: parse(diiRow.sellValue ?? diiRow.sell_value ?? diiRow.SellValue ?? diiRow.Sales),
+        net:  parse(diiRow.netValue  ?? diiRow.net_value  ?? diiRow.NetValue  ?? diiRow.Net),
+        date: diiRow.date ?? diiRow.Date ?? diiRow.tradeDate ?? null,
+      } : null,
       source: "MoneyControl",
     };
   }
 
-  // Handle object format: { FII: {...}, DII: {...} }
-  const fii = raw?.FII ?? raw?.fii;
+  // ── Shape B: { FII: { buy, sell, net, date }, DII: {...} }
+  const fii = raw?.FII ?? raw?.fii ?? raw?.["FII/FPI"] ?? raw?.fpi;
   const dii = raw?.DII ?? raw?.dii;
-  if (!fii && !dii) throw new Error("MC: unexpected response shape");
-  return {
-    fii: fii ? { buy: parse(fii.buy ?? fii.buyValue), sell: parse(fii.sell ?? fii.sellValue), net: parse(fii.net ?? fii.netValue), date: fii.date ?? null } : null,
-    dii: dii ? { buy: parse(dii.buy ?? dii.buyValue), sell: parse(dii.sell ?? dii.sellValue), net: parse(dii.net ?? dii.netValue), date: dii.date ?? null } : null,
-    source: "MoneyControl",
-  };
+  if (fii || dii) {
+    return {
+      fii: fii ? {
+        buy:  parse(fii.buy  ?? fii.buyValue  ?? fii.Purchases),
+        sell: parse(fii.sell ?? fii.sellValue ?? fii.Sales),
+        net:  parse(fii.net  ?? fii.netValue  ?? fii.Net),
+        date: fii.date ?? null,
+      } : null,
+      dii: dii ? {
+        buy:  parse(dii.buy  ?? dii.buyValue  ?? dii.Purchases),
+        sell: parse(dii.sell ?? dii.sellValue ?? dii.Sales),
+        net:  parse(dii.net  ?? dii.netValue  ?? dii.Net),
+        date: dii.date ?? null,
+      } : null,
+      source: "MoneyControl",
+    };
+  }
+
+  // ── Shape C: { data: [ ... ] } wrapper
+  if (Array.isArray(raw?.data)) {
+    const rows = raw.data;
+    const fiiRow = rows.find(d => /FII|FPI/i.test(d.category ?? d.Category ?? ""));
+    const diiRow = rows.find(d => /\bDII\b/i.test(d.category ?? d.Category ?? ""));
+    if (fiiRow || diiRow) {
+      return {
+        fii: fiiRow ? { buy: parse(fiiRow.buyValue), sell: parse(fiiRow.sellValue), net: parse(fiiRow.netValue), date: fiiRow.date ?? null } : null,
+        dii: diiRow ? { buy: parse(diiRow.buyValue), sell: parse(diiRow.sellValue), net: parse(diiRow.netValue), date: diiRow.date ?? null } : null,
+        source: "MoneyControl",
+      };
+    }
+  }
+
+  throw new Error("MC: unexpected response shape — " + JSON.stringify(raw).slice(0, 120));
 }
 
 // ── Fallback: BSE also publishes FII/DII activity ──────────────────────────
@@ -590,7 +681,7 @@ router.get("/fii-dii", async (req, res) => {
         ...NSE_COMMON,
         "User-Agent":       ua,
         Accept:             "application/json, text/plain, */*",
-        Referer:            "https://www.nseindia.com/market-data/fii-dii-activity",
+        Referer:            "https://www.nseindia.com/market-data/institutional-trading",
         Cookie:             cookies,
         "sec-fetch-dest":   "empty",
         "sec-fetch-mode":   "cors",
@@ -617,8 +708,6 @@ router.get("/fii-dii", async (req, res) => {
   };
 
   // ── TIER 0: MoneyControl — VPS-friendly, no IP blocking ────────────────────
-  // ✅ THIS IS THE PRIMARY FIX for production 500 errors.
-  // MoneyControl re-serves NSE data via their own CDN without IP restrictions.
   try {
     const data = await fetchFiiDiiFromMoneyControl();
     _fiiDiiCache.data = data;
@@ -676,8 +765,6 @@ router.get("/fii-dii", async (req, res) => {
   }
 
   // ── TIER 5: Static placeholder — NEVER return 500 to frontend ──────────────
-  // Returning 500 crashes the UI widget. Return a valid shape with null values
-  // so the frontend can render "Data unavailable" gracefully instead of erroring.
   console.error("[FII-DII] ❌ All tiers failed — returning null placeholder (no 500)");
   return res.json({
     status: "success",
@@ -690,8 +777,8 @@ router.get("/fii-dii", async (req, res) => {
     message: "FII-DII data temporarily unavailable. NSE/BSE block VPS IPs intermittently. Will auto-recover.",
   });
 });
- 
- 
+
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 2.  GIFT NIFTY  —  Kite NSE_IFSC first,  Yahoo Finance fallback
 //     GET /api/v1/kite/gift-nifty
@@ -701,11 +788,11 @@ router.get("/fii-dii", async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 const _giftMeta  = { symbol: null, ts: 0 };
 const _giftCache = { data: null,   ts: 0 };
- 
+
 async function resolveGiftNiftySymbol() {
   const FOUR_H = 4 * 60 * 60 * 1000;
   if (_giftMeta.symbol && Date.now() - _giftMeta.ts < FOUR_H) return _giftMeta.symbol;
- 
+
   console.log("[GIFT NIFTY] Fetching NSE_IFSC instrument list…");
   const r     = await axios.get("https://api.kite.trade/instruments/NSE_IFSC", {
     headers: headers(), timeout: 15000, responseType: "text",
@@ -714,7 +801,7 @@ async function resolveGiftNiftySymbol() {
   const lines = r.data.split("\n");
   const hdrs  = lines[0].split(",").map((h) => h.trim());
   const col   = (row, name) => row[hdrs.indexOf(name)]?.trim() ?? "";
- 
+
   const contracts = lines
     .slice(1).filter((l) => l.trim())
     .map((l) => {
@@ -723,20 +810,20 @@ async function resolveGiftNiftySymbol() {
     })
     .filter((c) => c.type === "FUT" && /^NIFTY[^A-Z]/i.test(c.symbol) && c.expiry >= today)
     .sort((a, b) => a.expiry.localeCompare(b.expiry));
- 
+
   if (!contracts.length) throw new Error("No active GIFT NIFTY contracts on NSE_IFSC");
   console.log(`[GIFT NIFTY] Resolved → ${contracts[0].symbol} (expiry: ${contracts[0].expiry})`);
   _giftMeta.symbol = contracts[0].symbol;
   _giftMeta.ts     = Date.now();
   return _giftMeta.symbol;
 }
- 
+
 router.get("/gift-nifty", async (req, res) => {
   // 30-second cache
   if (_giftCache.data && Date.now() - _giftCache.ts < 30 * 1000) {
     return res.json({ status: "success", data: _giftCache.data, cached: true });
   }
- 
+
   // ── Try Kite NSE_IFSC first ───────────────────────────────────────────────
   try {
     const sym        = await resolveGiftNiftySymbol();
@@ -747,22 +834,22 @@ router.get("/gift-nifty", async (req, res) => {
     );
     const q = r.data?.data?.[kiteSymbol];
     if (!q) throw new Error(`No data for ${kiteSymbol} — plan may not include NSE_IFSC`);
- 
+
     const lastPrice = q.last_price;
     const prevClose = q.ohlc?.close ?? null;
     const changePct = q.change != null ? q.change
       : (lastPrice && prevClose ? ((lastPrice - prevClose) / prevClose) * 100 : null);
- 
+
     const data = { symbol: sym, last_price: lastPrice, change_percent: changePct, ohlc: q.ohlc, source: "kite" };
     _giftCache.data = data;
     _giftCache.ts   = Date.now();
     return res.json({ status: "success", data });
- 
+
   } catch (kiteErr) {
     // 403 = not subscribed to NSE_IFSC; any other error → try Yahoo
     console.warn(`[GIFT NIFTY] Kite failed (${kiteErr.message}) — falling back to Yahoo ^NSEI`);
     _giftMeta.symbol = null; // force re-resolve next time
- 
+
     try {
       const { price, changePct } = await fetchYahooSymbol("^NSEI");
       const data = {
@@ -783,8 +870,8 @@ router.get("/gift-nifty", async (req, res) => {
     }
   }
 });
- 
- 
+
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 3.  COMMODITIES  —  Gold & Silver  —  3-tier priority
 //     GET /api/v1/kite/commodities
@@ -1066,6 +1153,644 @@ router.get("/commodities", async (req, res) => {
       return res.status(500).json({ status: "error", message: yahooErr.message });
     }
   }
+});
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INDIA VIX
+// GET /api/v1/kite/vix
+// Priority: WebSocket tick → Kite REST → null (never fake data)
+// ─────────────────────────────────────────────────────────────────────────────
+router.get("/vix", async (req, res) => {
+  // 1. WebSocket (real-time, already subscribed to token 264969)
+  const tick = kiteWS.getVixTick?.() ?? kiteWS.getLastTicks()["NSE:INDIA VIX"];
+  if (tick?.last_price > 0) {
+    const prevClose = tick.ohlc?.close ?? tick.last_price;
+    return res.json({
+      status: "success",
+      data: {
+        last_price: tick.last_price,
+        change_pct: prevClose > 0 ? ((tick.last_price - prevClose) / prevClose) * 100 : 0,
+        change_abs: tick.change ?? (tick.last_price - prevClose),
+        ohlc:       tick.ohlc ?? null,
+        source:     "kite-ws",
+      },
+    });
+  }
+
+  // 2. Kite REST fallback
+  try {
+    const r = await axios.get(
+      `https://api.kite.trade/quote?i=${encodeURIComponent("NSE:INDIA VIX")}`,
+      { headers: headers(), timeout: 8000 }
+    );
+    const q = r.data?.data?.["NSE:INDIA VIX"];
+    if (q?.last_price > 0) {
+      const prevClose = q.ohlc?.close ?? q.last_price;
+      return res.json({
+        status: "success",
+        data: {
+          last_price: q.last_price,
+          change_pct: prevClose > 0 ? ((q.last_price - prevClose) / prevClose) * 100 : 0,
+          change_abs: q.net_change ?? (q.last_price - prevClose),
+          ohlc:       q.ohlc ?? null,
+          source:     "kite-rest",
+        },
+      });
+    }
+  } catch (e) {
+    console.warn("[VIX] Kite REST failed:", e.message);
+  }
+
+  // 3. Not available — return null shape (no fake data)
+  return res.json({ status: "success", data: null });
+});
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MARKET BREADTH — Advance / Decline / Unchanged + 52-week H/L counts
+// GET /api/v1/kite/market-breadth
+//
+// Source: NSE /api/allIndices → A/D for NIFTY 500 (powers nseindia.com/market-data/advance)
+// 52W H/L: NSE /api/equity-stockIndices?index=NIFTY%20500
+// Cache: 60 seconds
+// ─────────────────────────────────────────────────────────────────────────────
+const _breadthCache = { data: null, ts: 0 };
+
+async function fetchMarketBreadth(cookies) {
+  // NSE allIndices — powers the /market-data/advance page
+  const r1 = await axios.get("https://www.nseindia.com/api/allIndices", {
+    timeout: 12000,
+    headers: nseApiHeaders(cookies, "https://www.nseindia.com/market-data/live-equity-market"),
+  });
+
+  // ✅ FIX: Use extractNseRows which handles { data: [...] } or { data: { NIFTY: [...] } }
+  const indicesRaw = r1.data;
+  // allIndices always returns { data: [ ...index objects... ] }
+  const indices = Array.isArray(indicesRaw?.data)
+    ? indicesRaw.data
+    : extractNseRows(indicesRaw);
+
+  // Prefer NIFTY 500 (most stocks), fall back to NIFTY 50, then first available
+  const nifty500 = indices.find(i =>
+    /NIFTY\s*500/i.test(i.indexSymbol ?? i.key ?? i.index ?? "")
+  );
+  const nifty50 = indices.find(i =>
+    /^NIFTY\s*50$/i.test(i.indexSymbol ?? i.key ?? i.index ?? "")
+  );
+  const src = nifty500 ?? nifty50 ?? indices[0];
+
+  const advances  = src?.advances  ?? src?.advances_count  ?? null;
+  const declines  = src?.declines  ?? src?.declines_count  ?? null;
+  const unchanged = src?.unchanged ?? src?.unchanged_count ?? null;
+  const total     = (Number(advances) || 0) + (Number(declines) || 0) + (Number(unchanged) || 0);
+  const adRatio   = advances && declines
+    ? (Number(advances) / Number(declines)).toFixed(2)
+    : null;
+
+  // 52-week H/L counts from NIFTY 500 equity-stockIndices endpoint
+  let hh52 = null, ll52 = null;
+  try {
+    const r2 = await axios.get(
+      "https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%20500",
+      {
+        timeout: 12000,
+        headers: nseApiHeaders(cookies, "https://www.nseindia.com/market-data/live-equity-market"),
+      }
+    );
+    // ✅ FIX: Use extractNseRows for robust parsing
+    const stocks = Array.isArray(r2.data?.data) ? r2.data.data : extractNseRows(r2.data);
+    // Filter out the index summary row itself
+    const equities = stocks.filter(s =>
+      s.symbol && s.symbol !== "NIFTY 500" && (s.series === "EQ" || s.priority === 1)
+    );
+    hh52 = equities.filter(s => {
+      if (s.nearWKH) return true;
+      const ltp = s.lastPrice ?? s.last_price ?? 0;
+      const hi  = s.yearHigh  ?? s.year_high  ?? 0;
+      return hi > 0 && ltp >= hi * 0.99;
+    }).length || null;
+    ll52 = equities.filter(s => {
+      if (s.nearWKL) return true;
+      const ltp = s.lastPrice ?? s.last_price ?? 0;
+      const lo  = s.yearLow   ?? s.year_low   ?? 0;
+      return lo > 0 && ltp <= lo * 1.01;
+    }).length || null;
+  } catch (e) {
+    console.warn("[Breadth] 52-week count failed:", e.message);
+  }
+
+  return {
+    advances:  advances  != null ? Number(advances)  : null,
+    declines:  declines  != null ? Number(declines)  : null,
+    unchanged: unchanged != null ? Number(unchanged) : null,
+    total:     total > 0 ? total : null,
+    ad_ratio:  adRatio,
+    high_52w:  hh52,
+    low_52w:   ll52,
+    index:     src?.indexSymbol ?? src?.index ?? "NIFTY 500",
+    source:    "NSE",
+  };
+}
+
+router.get("/market-breadth", async (req, res) => {
+  if (_breadthCache.data && Date.now() - _breadthCache.ts < 60_000) {
+    return res.json({ status: "success", data: _breadthCache.data, cached: true });
+  }
+
+  try {
+    const cookies = await getNseSession();
+    const data    = await fetchMarketBreadth(cookies);
+    _breadthCache.data = data;
+    _breadthCache.ts   = Date.now();
+    return res.json({ status: "success", data });
+  } catch (err) {
+    console.warn("[Breadth] Attempt 1 failed:", err.message);
+    try {
+      _nseSession.cookies = ""; _nseSession.ts = 0;
+      const fresh = await getNseSession(true);
+      const data  = await fetchMarketBreadth(fresh);
+      _breadthCache.data = data;
+      _breadthCache.ts   = Date.now();
+      return res.json({ status: "success", data });
+    } catch (err2) {
+      console.warn("[Breadth] Attempt 2 failed:", err2.message);
+      if (_breadthCache.data) {
+        return res.json({ status: "success", data: _breadthCache.data, stale: true });
+      }
+      return res.json({
+        status: "success",
+        data: { advances: null, declines: null, unchanged: null, total: null, ad_ratio: null, high_52w: null, low_52w: null, source: "unavailable" },
+        unavailable: true,
+      });
+    }
+  }
+});
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TOP GAINERS & LOSERS  (Cash Market)
+// GET /api/v1/kite/gainers-losers
+// Source: NSE /api/live-analysis-variations (powers nseindia.com/market-data/advance page)
+// Cache: 60 seconds
+// ─────────────────────────────────────────────────────────────────────────────
+const _gainersCache = { data: null, ts: 0 };
+
+async function fetchGainersLosers(cookies) {
+  const [gRes, lRes] = await Promise.allSettled([
+    axios.get("https://www.nseindia.com/api/live-analysis-variations?index=gainers", {
+      timeout: 12000,
+      headers: nseApiHeaders(cookies, "https://www.nseindia.com/market-data/top-gainers-losers"),
+    }),
+    axios.get("https://www.nseindia.com/api/live-analysis-variations?index=loosers", {
+      timeout: 12000,
+      headers: nseApiHeaders(cookies, "https://www.nseindia.com/market-data/top-gainers-losers"),
+    }),
+  ]);
+
+  // ✅ FIX: extractNseRows handles all NSE response shapes
+  // Previously: raw?.data ?? raw?.NIFTY ?? array — fails when data is { NIFTY: [...] }
+  const parseRows = (res) => {
+    if (res.status !== "fulfilled") return [];
+    const raw  = res.value?.data;
+    const rows = extractNseRows(raw);
+    return rows.slice(0, 20).map(r => ({
+      symbol:     r.symbol      ?? r.stock      ?? "",
+      last_price: parseFloat(r.lastPrice   ?? r.ltp      ?? "0") || 0,
+      change_pct: parseFloat(r.pChange     ?? r.changePct ?? r.perChange ?? "0") || 0,
+      change_abs: parseFloat(r.change      ?? r.netChange  ?? "0") || 0,
+      volume:     parseInt(r.totalTradedVolume ?? r.volume ?? "0", 10) || 0,
+    })).filter(r => r.symbol && r.last_price > 0);
+  };
+
+  return {
+    gainers: parseRows(gRes),
+    losers:  parseRows(lRes),
+    source:  "NSE",
+  };
+}
+
+router.get("/gainers-losers", async (req, res) => {
+  if (_gainersCache.data && Date.now() - _gainersCache.ts < 60_000) {
+    return res.json({ status: "success", data: _gainersCache.data, cached: true });
+  }
+
+  try {
+    const cookies = await getNseSession();
+    const data    = await fetchGainersLosers(cookies);
+    if (data.gainers.length === 0 && data.losers.length === 0) throw new Error("Empty response after extraction");
+    _gainersCache.data = data;
+    _gainersCache.ts   = Date.now();
+    console.log(`[Gainers-Losers] ✅ NSE: ${data.gainers.length} gainers, ${data.losers.length} losers`);
+    return res.json({ status: "success", data });
+  } catch (err) {
+    console.warn("[Gainers-Losers] Attempt 1 failed:", err.message);
+    try {
+      _nseSession.cookies = ""; _nseSession.ts = 0;
+      const fresh = await getNseSession(true);
+      const data  = await fetchGainersLosers(fresh);
+      _gainersCache.data = data;
+      _gainersCache.ts   = Date.now();
+      console.log(`[Gainers-Losers] ✅ NSE (fresh session): ${data.gainers.length} gainers`);
+      return res.json({ status: "success", data });
+    } catch (err2) {
+      console.warn("[Gainers-Losers] Attempt 2 failed:", err2.message);
+      if (_gainersCache.data) return res.json({ status: "success", data: _gainersCache.data, stale: true });
+      return res.json({ status: "success", data: { gainers: [], losers: [], source: "unavailable" }, unavailable: true });
+    }
+  }
+});
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MOST ACTIVE STOCKS  (by Volume + by Value)
+// GET /api/v1/kite/most-active
+//
+// Primary:  NSE /api/live-analysis-volume
+// Fallback: NSE /api/equity-stockIndices?index=NIFTY%20500 sorted by volume
+//           (used when primary returns 404 — NSE sometimes changes endpoints)
+// Cache: 60 seconds
+// ─────────────────────────────────────────────────────────────────────────────
+const _activeCache = { data: null, ts: 0 };
+
+async function fetchMostActive(cookies) {
+  let raw = null;
+
+  // ✅ FIX: Primary endpoint with 404 fallback
+  try {
+    const r = await axios.get("https://www.nseindia.com/api/live-analysis-volume", {
+      timeout: 12000,
+      headers: nseApiHeaders(cookies, "https://www.nseindia.com/market-data/most-active-securities"),
+    });
+    raw = r.data;
+  } catch (e) {
+    if (e?.response?.status === 404 || e?.response?.status === 403) {
+      // ✅ FIX FALLBACK: Use NIFTY 500 index stocks and sort by volume
+      console.warn(`[MostActive] Primary endpoint failed (${e.response?.status}) — using NIFTY 500 fallback`);
+      const r2 = await axios.get(
+        "https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%20500",
+        {
+          timeout: 12000,
+          headers: nseApiHeaders(cookies, "https://www.nseindia.com/market-data/live-equity-market"),
+        }
+      );
+      raw = r2.data;
+    } else {
+      throw e;
+    }
+  }
+
+  // ✅ FIX: extractNseRows handles all NSE response shapes
+  const rows = extractNseRows(raw);
+
+  const byVolume = rows
+    .map(r => ({
+      symbol:     r.symbol     ?? r.stock    ?? "",
+      last_price: parseFloat(r.lastPrice   ?? r.ltp      ?? "0") || 0,
+      change_pct: parseFloat(r.pChange     ?? r.changePct ?? "0") || 0,
+      volume:     parseInt(r.totalTradedVolume ?? r.totalTradedVol ?? r.volume ?? "0", 10) || 0,
+      value:      parseFloat(r.totalTradedValue ?? r.totalTradedVal ?? r.turnover ?? "0") || 0,
+    }))
+    .filter(r => r.symbol && r.volume > 0)
+    .sort((a, b) => b.volume - a.volume)
+    .slice(0, 20);
+
+  // By value: sort the same set by value descending
+  const byValue = [...byVolume]
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 20);
+
+  return { by_volume: byVolume, by_value: byValue, source: "NSE" };
+}
+
+router.get("/most-active", async (req, res) => {
+  if (_activeCache.data && Date.now() - _activeCache.ts < 60_000) {
+    return res.json({ status: "success", data: _activeCache.data, cached: true });
+  }
+
+  try {
+    const cookies = await getNseSession();
+    const data    = await fetchMostActive(cookies);
+    _activeCache.data = data;
+    _activeCache.ts   = Date.now();
+    console.log(`[MostActive] ✅ NSE: ${data.by_volume.length} stocks`);
+    return res.json({ status: "success", data });
+  } catch (err) {
+    console.warn("[MostActive] Attempt 1 failed:", err.message);
+    try {
+      _nseSession.cookies = ""; _nseSession.ts = 0;
+      const fresh = await getNseSession(true);
+      const data  = await fetchMostActive(fresh);
+      _activeCache.data = data;
+      _activeCache.ts   = Date.now();
+      console.log(`[MostActive] ✅ NSE (fresh session): ${data.by_volume.length} stocks`);
+      return res.json({ status: "success", data });
+    } catch (err2) {
+      console.warn("[MostActive] Attempt 2 failed:", err2.message);
+      if (_activeCache.data) return res.json({ status: "success", data: _activeCache.data, stale: true });
+      return res.json({ status: "success", data: { by_volume: [], by_value: [], source: "unavailable" }, unavailable: true });
+    }
+  }
+});
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PCR + MAX PAIN  (NIFTY / BANKNIFTY)
+// GET /api/v1/kite/pcr-maxpain?name=NIFTY
+//
+// Algorithm:
+//   1. Fetch NFO instrument list for given name (near expiry)
+//   2. Batch-quote all CE + PE strikes via Kite /quote (up to 500)
+//   3. PCR = Total Put OI / Total Call OI
+//   4. Max Pain = strike where total option buyer loss is minimised
+//      (equivalently: where option seller P&L is maximised)
+//
+// Cache: 3 minutes — OI updates on the exchange every few minutes
+// ─────────────────────────────────────────────────────────────────────────────
+const _pcrCache = {};
+
+router.get("/pcr-maxpain", async (req, res) => {
+  const name = ((req.query.name ?? "NIFTY")).toString().toUpperCase();
+  const cacheKey = name;
+
+  if (_pcrCache[cacheKey]?.data && Date.now() - _pcrCache[cacheKey].ts < 3 * 60_000) {
+    return res.json({ status: "success", data: _pcrCache[cacheKey].data, cached: true });
+  }
+
+  try {
+    // Step 1: Instruments
+    const instrRes = await axios.get("https://api.kite.trade/instruments/NFO", {
+      headers: headers(), responseType: "text", timeout: 15000,
+    });
+    const lines = instrRes.data.split("\n").filter(l => l.trim());
+    const hdrs  = lines[0].split(",");
+    const toObj = (line) => {
+      const v = line.split(","), o = {};
+      hdrs.forEach((h, i) => { o[h] = (v[i] ?? "").trim(); });
+      return o;
+    };
+
+    const today     = new Date().toISOString().split("T")[0];
+    const allItems  = lines.slice(1).map(toObj).filter(o => o.tradingsymbol?.startsWith(name));
+    const expiries  = [...new Set(allItems.map(o => o.expiry).filter(e => e >= today))].sort();
+    const nearExp   = expiries[0];
+    if (!nearExp) throw new Error(`No active expiry found for ${name}`);
+
+    const contracts = allItems.filter(o =>
+      o.expiry === nearExp &&
+      (o.instrument_type === "CE" || o.instrument_type === "PE") &&
+      parseFloat(o.strike) > 0
+    );
+
+    if (contracts.length === 0) throw new Error("No CE/PE contracts found");
+
+    // Step 2: Batch quote (Kite allows up to 500 per request)
+    const symbols = contracts.slice(0, 500).map(c => `NFO:${c.tradingsymbol}`);
+    const qRes    = await axios.get(
+      `https://api.kite.trade/quote?${symbols.map(s => `i=${encodeURIComponent(s)}`).join("&")}`,
+      { headers: headers(), timeout: 20000 }
+    );
+    const quotes = qRes.data?.data ?? {};
+
+    // Step 3: Aggregate OI by strike
+    const strikeMap = {}; // strike → { ce_oi, pe_oi, ce_ltp, pe_ltp }
+    contracts.forEach(c => {
+      const strike = parseFloat(c.strike);
+      if (!strikeMap[strike]) strikeMap[strike] = { ce_oi: 0, pe_oi: 0, ce_ltp: 0, pe_ltp: 0 };
+      const q = quotes[`NFO:${c.tradingsymbol}`];
+      if (!q) return;
+      const oi  = q.oi          ?? 0;
+      const ltp = q.last_price  ?? 0;
+      if (c.instrument_type === "CE") {
+        strikeMap[strike].ce_oi  += oi;
+        strikeMap[strike].ce_ltp  = ltp;
+      } else {
+        strikeMap[strike].pe_oi  += oi;
+        strikeMap[strike].pe_ltp  = ltp;
+      }
+    });
+
+    const strikes = Object.keys(strikeMap).map(Number).sort((a, b) => a - b);
+    let totalCeOI = 0, totalPeOI = 0;
+    strikes.forEach(s => {
+      totalCeOI += strikeMap[s].ce_oi;
+      totalPeOI += strikeMap[s].pe_oi;
+    });
+
+    const pcr = totalCeOI > 0 ? +(totalPeOI / totalCeOI).toFixed(3) : null;
+
+    // Step 4: Max Pain — strike where total buyer loss is maximised (seller wins most)
+    let maxPain = null;
+    if (strikes.length > 0) {
+      let minLoss = Infinity;
+      for (const testStrike of strikes) {
+        let totalLoss = 0;
+        for (const s of strikes) {
+          const ceValue = Math.max(0, testStrike - s);
+          const peValue = Math.max(0, s - testStrike);
+          totalLoss += (strikeMap[s].ce_oi * ceValue) + (strikeMap[s].pe_oi * peValue);
+        }
+        if (totalLoss < minLoss) { minLoss = totalLoss; maxPain = testStrike; }
+      }
+    }
+
+    // Highest OI strikes
+    const sortedByCeOI = [...strikes].sort((a, b) => strikeMap[b].ce_oi - strikeMap[a].ce_oi);
+    const sortedByPeOI = [...strikes].sort((a, b) => strikeMap[b].pe_oi - strikeMap[a].pe_oi);
+
+    const data = {
+      name,
+      expiry:         nearExp,
+      pcr,
+      max_pain:       maxPain,
+      total_ce_oi:    totalCeOI,
+      total_pe_oi:    totalPeOI,
+      top_ce_strikes: sortedByCeOI.slice(0, 5).map(s => ({ strike: s, oi: strikeMap[s].ce_oi, ltp: strikeMap[s].ce_ltp })),
+      top_pe_strikes: sortedByPeOI.slice(0, 5).map(s => ({ strike: s, oi: strikeMap[s].pe_oi, ltp: strikeMap[s].pe_ltp })),
+      strike_data:    strikes.map(s => ({ strike: s, ce_oi: strikeMap[s].ce_oi, pe_oi: strikeMap[s].pe_oi, ce_ltp: strikeMap[s].ce_ltp, pe_ltp: strikeMap[s].pe_ltp })),
+      source:         "kite-nfo",
+    };
+
+    _pcrCache[cacheKey] = { data, ts: Date.now() };
+    return res.json({ status: "success", data });
+
+  } catch (err) {
+    console.error("[PCR-MaxPain] Error:", err.message);
+    if (_pcrCache[cacheKey]?.data) {
+      return res.json({ status: "success", data: _pcrCache[cacheKey].data, stale: true });
+    }
+    return res.json({
+      status: "success",
+      data: { name, pcr: null, max_pain: null, total_ce_oi: 0, total_pe_oi: 0, top_ce_strikes: [], top_pe_strikes: [], strike_data: [], source: "unavailable" },
+      unavailable: true,
+      message: err.message,
+    });
+  }
+});
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MACRO INDICATORS
+// GET /api/v1/kite/macro
+//
+// Data sources:
+//   INR/USD          → Yahoo Finance USDINR=X  (live, ~15s delay)
+//   10Y Bond Yield   → Yahoo Finance IN10YT=RR → NSE G-Sec (fallback chain)
+//   RBI Repo Rate    → Env variable KITE_RBI_REPO_RATE
+//   CPI Inflation    → World Bank API (latest annual figure)
+//   GDP Growth       → World Bank API (latest annual figure)
+//
+// Cache: 15 minutes for macro data (changes daily/quarterly at most)
+// INR/USD: 60-second cache (exchange-rate updated more frequently)
+// ─────────────────────────────────────────────────────────────────────────────
+const _macroCache = { data: null, ts: 0, fxTs: 0 };
+
+async function fetchWorldBankIndicator(indicator) {
+  // World Bank open data API — returns latest value for India
+  const r = await axios.get(
+    `https://api.worldbank.org/v2/country/IN/indicator/${indicator}?format=json&mrv=1&gapfill=Y`,
+    { timeout: 10000 }
+  );
+  // Response is an array: [meta, [dataArray]]
+  const arr = Array.isArray(r.data) ? r.data[1] : null;
+  if (!arr?.length) return null;
+  const latest = arr.find(d => d.value !== null);
+  return latest ? { value: latest.value, date: latest.date } : null;
+}
+
+async function fetchRbiRepoRate() {
+  // Try env variable first (operator should keep this updated after RBI meetings)
+  if (process.env.KITE_RBI_REPO_RATE) {
+    return parseFloat(process.env.KITE_RBI_REPO_RATE);
+  }
+  // No reliable free live API for RBI policy rate
+  return null;
+}
+
+// ✅ FIX: Bond yield now uses Yahoo Finance IN10YT=RR as primary
+// NSE /api/governmentSecurities was returning 404 — Yahoo is more reliable
+async function fetchBondYield10Y(cookies) {
+  // ── Primary: Yahoo Finance — India 10Y Government Bond Yield ──
+  try {
+    const yf = await fetchYahooSymbol("IN10YT=RR");
+    if (yf?.price > 0) {
+      console.log(`[Macro] Bond yield from Yahoo: ${yf.price.toFixed(4)}%`);
+      return +yf.price.toFixed(4);
+    }
+  } catch (e) {
+    console.warn("[Macro] Bond yield Yahoo failed:", e.message);
+  }
+
+  // ── Fallback: NSE G-Sec API (try multiple endpoint variants) ──
+  const NSE_GSEC_ENDPOINTS = [
+    "https://www.nseindia.com/api/governmentSecurities",
+    "https://www.nseindia.com/api/gb-securities",
+    "https://www.nseindia.com/api/bonds-debt",
+  ];
+
+  for (const endpoint of NSE_GSEC_ENDPOINTS) {
+    try {
+      const r = await axios.get(endpoint, {
+        timeout: 8000,
+        headers: nseApiHeaders(cookies, "https://www.nseindia.com/market-data/government-securities"),
+      });
+      const rows = Array.isArray(r.data?.data) ? r.data.data
+        : Array.isArray(r.data)                 ? r.data
+        : extractNseRows(r.data);
+
+      if (!rows.length) continue;
+
+      // Find bond nearest to 10Y maturity
+      const now          = new Date();
+      const tenYrTarget  = new Date(now);
+      tenYrTarget.setFullYear(now.getFullYear() + 10);
+
+      let closest = null, minDiff = Infinity;
+      for (const b of rows) {
+        const mat = b.maturityDate ?? b.maturity ?? b.MaturityDate ?? "";
+        if (!mat) continue;
+        const matDate = new Date(mat);
+        if (isNaN(matDate.getTime())) continue;
+        const diff = Math.abs(matDate - tenYrTarget);
+        if (diff < minDiff) { minDiff = diff; closest = b; }
+      }
+
+      const yld = closest
+        ? parseFloat(closest.yield ?? closest.ytm ?? closest.Yield ?? closest.couponRate ?? "0")
+        : 0;
+
+      if (yld > 0) {
+        console.log(`[Macro] Bond yield from NSE ${endpoint.split("/").pop()}: ${yld.toFixed(4)}%`);
+        return +yld.toFixed(4);
+      }
+    } catch (e) {
+      // Suppress 404s — only log non-404 errors
+      if (e?.response?.status !== 404) {
+        console.warn(`[Macro] Bond yield NSE ${endpoint.split("/").pop()} failed:`, e.message);
+      }
+    }
+  }
+
+  return null;
+}
+
+router.get("/macro", async (req, res) => {
+  // INR/USD has its own 60s cache; other macro data cached 15 min
+  const fxCacheValid   = _macroCache.data?.inr_usd && Date.now() - _macroCache.fxTs < 60_000;
+  const macroCacheValid = _macroCache.data && Date.now() - _macroCache.ts < 15 * 60_000;
+
+  if (macroCacheValid && fxCacheValid) {
+    return res.json({ status: "success", data: _macroCache.data, cached: true });
+  }
+
+  const results = { ...(_macroCache.data ?? {}) };
+
+  // INR/USD — always refresh if stale (60s)
+  if (!fxCacheValid) {
+    try {
+      const fx = await fetchYahooSymbol("USDINR=X");
+      results.inr_usd = fx.price
+        ? { rate: +fx.price.toFixed(4), change_pct: +fx.changePct.toFixed(3), source: "yahoo" }
+        : null;
+      _macroCache.fxTs = Date.now();
+    } catch (_) {
+      results.inr_usd = _macroCache.data?.inr_usd ?? null;
+    }
+  }
+
+  // If only FX was stale and macro data is still valid, return early
+  if (macroCacheValid) {
+    _macroCache.data = { ..._macroCache.data, inr_usd: results.inr_usd };
+    return res.json({ status: "success", data: _macroCache.data });
+  }
+
+  // Fetch all macro data in parallel
+  const [repoRes, cpiRes, gdpRes] = await Promise.allSettled([
+    fetchRbiRepoRate(),
+    fetchWorldBankIndicator("FP.CPI.TOTL.ZG"),   // CPI inflation annual %
+    fetchWorldBankIndicator("NY.GDP.MKTP.KD.ZG"), // GDP growth annual %
+  ]);
+
+  results.rbi_repo_rate = repoRes.status === "fulfilled" ? repoRes.value : (_macroCache.data?.rbi_repo_rate ?? null);
+  results.cpi = cpiRes.status === "fulfilled" && cpiRes.value
+    ? { value: +cpiRes.value.value.toFixed(2), year: cpiRes.value.date, source: "worldbank" }
+    : (_macroCache.data?.cpi ?? null);
+  results.gdp = gdpRes.status === "fulfilled" && gdpRes.value
+    ? { value: +gdpRes.value.value.toFixed(2), year: gdpRes.value.date, source: "worldbank" }
+    : (_macroCache.data?.gdp ?? null);
+
+  // Bond yield — Yahoo primary, NSE fallback
+  try {
+    const cookies = await getNseSession();
+    const yld = await fetchBondYield10Y(cookies);
+    results.bond_yield_10y = yld;
+  } catch (_) {
+    results.bond_yield_10y = _macroCache.data?.bond_yield_10y ?? null;
+  }
+
+  _macroCache.data = results;
+  _macroCache.ts   = Date.now();
+  return res.json({ status: "success", data: results });
 });
 
 export default router;

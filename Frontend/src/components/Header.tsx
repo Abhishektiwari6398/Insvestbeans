@@ -105,59 +105,7 @@ function useIndianTicker(): IndianTick[] {
   });
 }
 
-// ─── Market Ticker — 5 Root Cause Fixes ──────────────────────────────────────
-//
-// WHY IT WAS STUTTERING (5 bugs, all compounding each other):
-//
-// BUG 1 — Throttle was bypassed by WS ticks:
-//   useIndianTicker() calls useKiteTicks() INSIDE MarketTickerInline.
-//   Every Kite WS tick (5–10/sec) called useKiteTicks setState, which
-//   re-rendered MarketTickerInline directly — completely bypassing the
-//   400ms throttle. Result: 5–10 re-renders/sec hitting the DOM.
-//   FIX: useThrottledMarkets now uses a proper ref+interval pattern that
-//   truly limits display state updates to once per 400ms, and the strip
-//   is wrapped in React.memo so it never re-renders on unchanged data.
-//
-// BUG 2 — <style> tag inside JSX re-parsed @keyframes on every render:
-//   React sees a new template literal string object each render. Some
-//   browser/React combos remove+re-add the <style> DOM node, causing
-//   the browser to re-parse @keyframes and restart the animation from
-//   translateX(0) → hard jump visible as ticker "resetting".
-//   FIX: CSS injected once into document.head via useEffect on mount.
-//   The <style> tag is completely gone from JSX.
-//
-// BUG 3 — translateX(-50%) on a dynamic-width strip (PRIMARY stutter):
-//   strip uses `width: max-content`. Price strings like "24,567.80" vs
-//   "24,568.10" have different pixel widths in proportional fonts. When
-//   any price span updates, the strip's total pixel width shifts by 2–5px.
-//   translateX(-50%) = -50% of the element's own width. When width changes
-//   mid-animation, the browser recalculates the absolute pixel endpoint.
-//   The CSS compositor re-syncs with the main thread → 1–2 dropped frames
-//   visible as a stutter or brief pause. This happened on EVERY price tick.
-//   FIX: Every item gets `minWidth: 220px` so the strip total width is a
-//   constant. -50% always resolves to the exact same pixel forever.
-//   Additionally: price and change spans get fixed inline widths so text
-//   reflow never propagates up to the strip at all.
-//
-// BUG 4 — allMarkets.length === 0 causes unmount/remount:
-//   On initial load, before data arrives, the component returned null.
-//   When data loaded the strip was freshly mounted — animation started
-//   from 0. If data briefly cleared (refetch/error), the strip unmounted
-//   and re-mounted again, resetting the animation position.
-//   FIX: Render the strip container unconditionally. Items are only shown
-//   once data is available. The animation host node is never torn down.
-//
-// BUG 5 — Index-based keys on doubled array:
-//   `doubled.map((market, index) => key={symbol}-{index < len ? "a":"b"}`
-//   Index changes position when the array is rebuilt each render. If any
-//   market shifts position (e.g. global data reorders), React sees a
-//   different key and tears down + recreates that DOM node, briefly
-//   removing the animation host and resetting the animation.
-//   FIX: Keys are derived from symbol+"a"/"b" via a _half field added
-//   before mapping. Symbol is stable, half is stable → DOM nodes survive
-//   all re-renders and only their text content ever changes.
 
-// ── CSS injected ONCE on mount — never inside render ─────────────────────────
 const TICKER_CSS = `
   @keyframes mktTicker {
     from { transform: translateX(0); }
@@ -182,24 +130,18 @@ function injectTickerCSS() {
   document.head.appendChild(el);
 }
 
-// ── Throttle hook — truly limits display updates to once per `ms` ────────────
-// The key difference from the old version: the setInterval callback checks
-// whether buf.current is actually different before calling setDisp. This
-// means if data hasn't changed in the last 400ms, no re-render is triggered.
+
 function useThrottledMarkets<T extends { symbol?: string; name: string }>(
   live: T[], ms = 400
 ): T[] {
   const buf    = useRef<T[]>(live);
   const [disp, setDisp] = useState<T[]>(live);
 
-  // Sync latest live data into the buffer WITHOUT triggering a render.
-  // Using useLayoutEffect instead of useEffect to sync before browser paint.
+
   useEffect(() => { buf.current = live; });
 
   useEffect(() => {
     const id = setInterval(() => {
-      // Only flush to display state if the buffer content actually changed.
-      // Compare by serialising the key values to avoid object identity issues.
       setDisp(prev => {
         const next = buf.current;
         if (prev.length !== next.length) return [...next];
@@ -207,7 +149,7 @@ function useThrottledMarkets<T extends { symbol?: string; name: string }>(
           (item as any).value  !== (prev[i] as any).value  ||
           (item as any).change !== (prev[i] as any).change
         );
-        return changed ? [...next] : prev; // if unchanged, return SAME ref → no React re-render
+        return changed ? [...next] : prev; 
       });
     }, ms);
     return () => clearInterval(id);
@@ -216,11 +158,7 @@ function useThrottledMarkets<T extends { symbol?: string; name: string }>(
   return disp;
 }
 
-// ── Pure strip renderer — React.memo means it ONLY re-renders when data changes
-// This is the crucial fix for BUG 1: even though MarketTickerInline re-renders
-// on every WS tick (because useIndianTicker subscribes to useKiteTicks), the
-// TickerStrip component below is isolated by memo — it re-renders only when
-// allMarkets actually changes value (controlled by the 400ms throttle).
+
 interface TickerItem {
   symbol: string; name: string; value: string;
   change: string; isPositive: boolean;
@@ -241,8 +179,7 @@ const TickerStrip = React.memo(({
         key={`${market.symbol || market.name}-${market._half}`}
         onClick={() => onNavigate(market.route)}
         title={`View on ${market.route === "/domestic" ? "Domestic" : "Global"} Markets`}
-        // FIX 3a: minWidth locks each item's size → strip total width never changes
-        // → translateX(-50%) always resolves to the same pixel → no compositor resync
+      
         className="flex items-center gap-4 whitespace-nowrap group hover:scale-110 transition-transform cursor-pointer"
         style={{ padding: "0 6px", minWidth: "220px", flexShrink: 0 }}
       >
@@ -256,9 +193,7 @@ const TickerStrip = React.memo(({
           >
             {market.name}
           </span>
-          {/* FIX 3b: fixed-width inline-block on price span — text content changes
-              but the span's layout box never changes size, so no reflow propagates
-              up to the strip. 90px covers all Indian indices at max digits. */}
+       
           <span
             className="font-bold text-sm"
             style={{
@@ -724,24 +659,10 @@ const Header = () => {
                   src={isLight ? "/images/investbeans logo-03.png" : "/images/Untitled-6-04.png"}
                   alt="InvestBeans Logo"
                   className={`h-9 sm:h-9 w-auto max-w-[168px] sm:max-w-[180px] md:max-w-none object-contain relative -top-0.5 transition-all ${
-                    !isLight ? "brightness-[1.3] contrast-[1.5]" : ""
+                    !isLight ? " contrast-[1.5]" : ""
                   }`}
                 />
-                <div
-                  aria-hidden="true"
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    right: 0,
-                    width: "50%",
-                    height: "100%",
-                    background: "#1F5F89",
-                    mixBlendMode: "hue",
-                    opacity: 0.85,
-                    borderRadius: "0 4px 4px 0",
-                    pointerEvents: "none",
-                  }}
-                />
+               
               </div>
             </Link>
 
@@ -766,9 +687,11 @@ const Header = () => {
                   <DropSection label="Equity" theme={theme} />
                   <DropLink to="/domestic" onClick={segments.close} theme={theme}>Domestic</DropLink>
                   <DropLink to="/global"   onClick={segments.close} theme={theme}>Global</DropLink>
-                  <DropLink to="/markets"   onClick={segments.close} theme={theme}>Commodities</DropLink>
-                  <DropLink to="/currency" onClick={segments.close} theme={theme}>Currency</DropLink>
-               
+                  <DropdownMenuSeparator className="my-1" />
+                  <DropSection label="Commodity" theme={theme} />
+                  <DropLink to="/markets?tab=domestic"  onClick={segments.close} theme={theme}>Domestic</DropLink>
+                  <DropLink to="/markets?tab=global"    onClick={segments.close} theme={theme}>Global</DropLink>
+                  <DropLink to="/currency"              onClick={segments.close} theme={theme}>Currency</DropLink>
                 </div>
               </NavItem>
 
@@ -776,23 +699,19 @@ const Header = () => {
 
               {/* 4. LEARN */}
               <NavItem label="Learn" dd={learn} theme={theme} href="/education">
-                <div className="min-w-[220px]">
-                  <DropSection label="Financial" theme={theme} />
-                  <DropLink to="/education#financial-ebooks"        onClick={learn.close} theme={theme}>E-books</DropLink>
-                  <DropLink to="/education#financial-tutorials"     onClick={learn.close} theme={theme}>Tutorials</DropLink>
-                  <DropLink to="/education#financial-certifications" onClick={learn.close} theme={theme}>Certifications</DropLink>
-                  <DropdownMenuSeparator className="my-1" />
-                  <DropSection label="Non-Financial" theme={theme} />
-                  <DropLink to="/education#nonfinancial-ebooks"     onClick={learn.close} theme={theme}>E-books</DropLink>
-                  <DropLink to="/education#nonfinancial-tutorials"  onClick={learn.close} theme={theme}>Tutorials</DropLink>
+                <div className="min-w-[180px]">
+                  <DropBtn theme={theme} onClick={() => { learn.close(); navigate("/education?section=financial"); }}>Financial</DropBtn>
+                  <DropBtn theme={theme} onClick={() => { learn.close(); navigate("/education?section=nonfinancial"); }}>Non-Financial</DropBtn>
                 </div>
               </NavItem>
 
               {/* 5. EVENTS */}
-              <NavItem label="Events" dd={events} theme={theme}>
-                <div className="min-w-[160px]">
-                  <DropLink to="/domestic" onClick={events.close} theme={theme}>Domestic</DropLink>
-                  <DropLink to="/global"   onClick={events.close} theme={theme}>Global</DropLink>
+              <NavItem label="Events" dd={events} theme={theme} href="/events">
+                <div className="min-w-[175px]">
+                  <DropBtn theme={theme} onClick={() => { events.close(); navigate("/events?region=india"); }}>India Events</DropBtn>
+                  <DropBtn theme={theme} onClick={() => { events.close(); navigate("/events?region=global"); }}>Global Events</DropBtn>
+                  <DropdownMenuSeparator className="my-1" />
+                  <DropBtn theme={theme} onClick={() => { events.close(); navigate("/events?section=holidays"); }}>Market Holidays</DropBtn>
                 </div>
               </NavItem>
 
@@ -1010,24 +929,22 @@ const Header = () => {
                   <MobileSectionLabel label="Equity" />
                   <MobileLink to="/domestic">Domestic</MobileLink>
                   <MobileLink to="/global">Global</MobileLink>
-                  <MobileLink to="/markets">Commodities</MobileLink>
+                  <MobileSectionLabel label="Commodity" />
+                  <MobileLink to="/markets?tab=domestic">Domestic</MobileLink>
+                  <MobileLink to="/markets?tab=global">Global</MobileLink>
                   <MobileLink to="/currency">Currency</MobileLink>
                 </MobileAccordion>
 
               
                 <MobileAccordion label="Learn" isOpen={mobileLearnOpen} toggle={() => setMobileLearnOpen(s => !s)}>
-                  <MobileSectionLabel label="Financial" />
-                  <MobileLink to="/education#financial-ebooks">E-books</MobileLink>
-                  <MobileLink to="/education#financial-tutorials">Tutorials</MobileLink>
-                  <MobileLink to="/education#financial-certifications">Certifications</MobileLink>
-                  <MobileSectionLabel label="Non-Financial" />
-                  <MobileLink to="/education#nonfinancial-ebooks">E-books</MobileLink>
-                  <MobileLink to="/education#nonfinancial-tutorials">Tutorials</MobileLink>
+                  <MobileLink to="/education?section=financial">Financial</MobileLink>
+                  <MobileLink to="/education?section=nonfinancial">Non-Financial</MobileLink>
                 </MobileAccordion>
 
                 <MobileAccordion label="Events" isOpen={mobileEventsOpen} toggle={() => setMobileEventsOpen(s => !s)}>
-                  <MobileLink to="/domestic">Domestic</MobileLink>
-                  <MobileLink to="/global">Global</MobileLink>
+                  <MobileLink to="/events?region=india">India Events</MobileLink>
+                  <MobileLink to="/events?region=global">Global Events</MobileLink>
+                  <MobileLink to="/events?section=holidays">Market Holidays</MobileLink>
                 </MobileAccordion>
 
                 <li>

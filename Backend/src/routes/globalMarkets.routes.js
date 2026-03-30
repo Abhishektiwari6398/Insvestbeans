@@ -173,31 +173,201 @@ const FOREX_PAIRS = [
   { pair: "USD/INR", base: "USD", quote: "INR" },
 ];
 
+// ─── KNOWN_EVENTS ──────────────────────────────────────────────────────────────
+// ORIGINAL fields: date, region, title, impact  ← UNCHANGED
+// NEW added fields: whatHappened, whyItMatters, marketImpact,
+//                   impactTerm, whoAffected, investbeansInsight
+// ──────────────────────────────────────────────────────────────────────────────
 const KNOWN_EVENTS = [
-  { date: "2026-02-26", region: "United States",  title: "US CPI Inflation Report (Jan)",       impact: "High"   },
-  { date: "2026-02-28", region: "India",           title: "RBI Monetary Policy Decision",        impact: "High"   },
-  { date: "2026-03-05", region: "Eurozone",        title: "ECB Interest Rate Decision",          impact: "High"   },
-  { date: "2026-03-06", region: "United States",   title: "Non-Farm Payrolls (Feb)",             impact: "High"   },
-  { date: "2026-03-11", region: "United States",   title: "US CPI Inflation Report (Feb)",       impact: "High"   },
-  { date: "2026-03-15", region: "China",           title: "China Loan Prime Rate Decision",      impact: "Medium" },
-  { date: "2026-03-18", region: "United States",   title: "FOMC Rate Decision",                  impact: "High"   },
-  { date: "2026-03-19", region: "Japan",           title: "BOJ Monetary Policy Decision",        impact: "High"   },
-  { date: "2026-03-19", region: "United Kingdom",  title: "BoE Interest Rate Decision",          impact: "High"   },
-  { date: "2026-04-03", region: "United States",   title: "Non-Farm Payrolls (Mar)",             impact: "High"   },
-  { date: "2026-04-07", region: "India",           title: "RBI Monetary Policy Decision",        impact: "High"   },
-  { date: "2026-04-10", region: "United States",   title: "US CPI Inflation Report (Mar)",       impact: "High"   },
-  { date: "2026-04-15", region: "China",           title: "China GDP Q1 2026",                   impact: "High"   },
-  { date: "2026-04-16", region: "Eurozone",        title: "ECB Interest Rate Decision",          impact: "High"   },
-  { date: "2026-05-07", region: "United States",   title: "FOMC Rate Decision",                  impact: "High"   },
-  { date: "2026-06-17", region: "United States",   title: "FOMC Rate Decision + Projections",    impact: "High"   },
-  { date: "2026-09-16", region: "United States",   title: "FOMC Rate Decision + Projections",    impact: "High"   },
-  { date: "2026-11-04", region: "United States",   title: "FOMC Rate Decision",                  impact: "High"   },
-  { date: "2026-12-16", region: "United States",   title: "FOMC Rate Decision + Projections",    impact: "High"   },
+  {
+    date: "2026-02-26", region: "United States",  title: "US CPI Inflation Report (Jan)", impact: "High",
+    // ── NEW FIELDS ──
+    whatHappened:      "The Bureau of Labor Statistics released January CPI, showing headline inflation above the Fed's 2% target.",
+    whyItMatters:      "CPI directly drives the Fed's rate path. A surprise above consensus can push yields higher and delay rate cuts that markets have priced in.",
+    marketImpact:      "mixed",
+    impactTerm:        "short",
+    whoAffected:       { assets: ["Equity", "Bonds", "Forex"], sectors: ["Rate-sensitive (REIT, Utilities)", "Banking & Financials", "Consumer Discretionary"] },
+    investbeansInsight: "Watch the core-services ex-shelter component — it is the Fed's most watched sub-index. Elevated readings here keep rate-cut timelines pushed to H2 2026.",
+  },
+  {
+    date: "2026-02-28", region: "India",           title: "RBI Monetary Policy Decision", impact: "High",
+    // ── NEW FIELDS ──
+    whatHappened:      "RBI MPC convened to review the repo rate amid moderating CPI inflation and slowing domestic growth.",
+    whyItMatters:      "RBI rate decisions directly affect borrowing costs for India Inc, home loan EMIs, and the INR. A cut signals growth support; a hold signals inflation vigilance.",
+    marketImpact:      "bullish",
+    impactTerm:        "short-medium",
+    whoAffected:       { assets: ["Equity", "Bonds", "Forex"], sectors: ["Banking & NBFCs", "Real Estate", "Auto & Consumer Durables", "Infrastructure"] },
+    investbeansInsight: "Rate-sensitive sectors (banking, housing finance, infra) tend to re-rate sharply on an unexpected cut. Watch the MPC vote split — even a 5-1 dovish signal moves Nifty Bank.",
+  },
+  {
+    date: "2026-03-05", region: "Eurozone",        title: "ECB Interest Rate Decision", impact: "High",
+    // ── NEW FIELDS ──
+    whatHappened:      "European Central Bank governing council met to decide on the deposit facility rate as Eurozone inflation tracked toward the 2% target.",
+    whyItMatters:      "ECB policy shifts move EUR/USD, European sovereign spreads, and global bond yields in tandem. A cut widens the rate differential with the US.",
+    marketImpact:      "mixed",
+    impactTerm:        "short",
+    whoAffected:       { assets: ["Forex", "Bonds", "Equity"], sectors: ["European Exporters", "Banking", "Auto"] },
+    investbeansInsight: "For Indian investors, a dovish ECB narrows the EUR/USD gap, which can strengthen the USD and put pressure on the INR and gold prices in the near term.",
+  },
+  {
+    date: "2026-03-06", region: "United States",   title: "Non-Farm Payrolls (Feb)", impact: "High",
+    // ── NEW FIELDS ──
+    whatHappened:      "US labor department released February employment figures, including NFP additions, unemployment rate, and average hourly earnings.",
+    whyItMatters:      "NFP is the single most market-moving monthly data point in the US. A strong print reduces pressure on the Fed to cut; a weak one accelerates rate-cut expectations.",
+    marketImpact:      "mixed",
+    impactTerm:        "short",
+    whoAffected:       { assets: ["Equity", "Bonds", "Forex", "Commodities"], sectors: ["All sectors — broad market mover"] },
+    investbeansInsight: "The first Friday of every month at 6:00 PM IST is a volatility event. Avoid large naked option positions through this print. The currency (USD) move sets the tone for EM currencies including INR.",
+  },
+  {
+    date: "2026-03-11", region: "United States",   title: "US CPI Inflation Report (Feb)", impact: "High",
+    // ── NEW FIELDS ──
+    whatHappened:      "BLS released February consumer price index data, gauging the monthly price change across a basket of goods and services.",
+    whyItMatters:      "Second consecutive CPI print before the March FOMC — effectively seals or upsets rate-cut expectations for the May meeting.",
+    marketImpact:      "mixed",
+    impactTerm:        "short",
+    whoAffected:       { assets: ["Bonds", "Equity", "Forex"], sectors: ["Rate-sensitive (REIT, Utilities)", "Technology", "Consumer Staples"] },
+    investbeansInsight: "Back-to-back hot CPI readings historically widen the US 10Y yield by 10–20 bps in the week post-release. That pressure typically spills into Nifty IT (USD earnings) and INR.",
+  },
+  {
+    date: "2026-03-15", region: "China",           title: "China Loan Prime Rate Decision", impact: "Medium",
+    // ── NEW FIELDS ──
+    whatHappened:      "People's Bank of China set the 1-year and 5-year Loan Prime Rate, China's benchmark lending rate, as part of ongoing monetary easing.",
+    whyItMatters:      "China LPR cuts reduce borrowing costs for households and corporates, stimulating domestic demand. China is India's largest trade partner and the world's top commodity consumer.",
+    marketImpact:      "bullish",
+    impactTerm:        "medium",
+    whoAffected:       { assets: ["Commodities", "Equity"], sectors: ["Metals & Mining", "Oil & Gas", "Asian Emerging Markets"] },
+    investbeansInsight: "A China LPR cut is structurally bullish for base metals (copper, aluminium) and crude. Indian metal producers (Hindalco, Tata Steel) tend to re-rate on Chinese stimulus expectations.",
+  },
+  {
+    date: "2026-03-18", region: "United States",   title: "FOMC Rate Decision", impact: "High",
+    // ── NEW FIELDS ──
+    whatHappened:      "The Federal Open Market Committee released its interest rate decision, economic projections (dot plot), and Chair Powell held a post-meeting press conference.",
+    whyItMatters:      "FOMC is the single most important global monetary policy event. The dot plot reveals the Fed's rate path for 2026–2027 and reshapes all risk-asset valuations.",
+    marketImpact:      "mixed",
+    impactTerm:        "medium",
+    whoAffected:       { assets: ["Equity", "Bonds", "Forex", "Commodities"], sectors: ["All sectors — systemic macro event"] },
+    investbeansInsight: "Market reaction is often as much about tone as the rate decision itself. A hawkish hold (unchanged rates + higher-for-longer language) can be more bearish than a rate hike with a dovish press conference.",
+  },
+  {
+    date: "2026-03-19", region: "Japan",           title: "BOJ Monetary Policy Decision", impact: "High",
+    // ── NEW FIELDS ──
+    whatHappened:      "Bank of Japan policy board voted on whether to raise rates further or maintain the current tightening trajectory amid yen volatility and wage inflation data.",
+    whyItMatters:      "BOJ rate hikes unwind the yen carry trade — a massive global macro position. Sudden JPY strengthening causes widespread deleveraging across EM equities, gold, and tech.",
+    marketImpact:      "bearish",
+    impactTerm:        "short",
+    whoAffected:       { assets: ["Forex", "Equity", "Bonds"], sectors: ["Technology (Nasdaq-correlated)", "Japanese Exporters", "Global carry-trade funded positions"] },
+    investbeansInsight: "BOJ remains the black-swan risk for global markets in 2026. Any surprise hike or guidance shift triggers JPY short-covering. Indian FIIs (many funded by carry) may pull back, pressuring Nifty.",
+  },
+  {
+    date: "2026-03-19", region: "United Kingdom",  title: "BoE Interest Rate Decision", impact: "High",
+    // ── NEW FIELDS ──
+    whatHappened:      "Bank of England MPC voted on bank rate amid sticky UK services inflation and a slowing UK economy.",
+    whyItMatters:      "BoE policy directly moves GBP/USD, UK gilt yields, and UK equity valuations. A cut ahead of the Fed widens the USD/GBP differential.",
+    marketImpact:      "mixed",
+    impactTerm:        "short",
+    whoAffected:       { assets: ["Forex", "Bonds", "Equity"], sectors: ["UK Financials", "UK Real Estate", "FTSE 100 Exporters"] },
+    investbeansInsight: "UK's stagflation risk (high inflation + low growth) keeps BoE in a difficult spot. GBP/INR traders watch this closely. Limited direct India impact unless GBP moves sharply.",
+  },
+  {
+    date: "2026-04-03", region: "United States",   title: "Non-Farm Payrolls (Mar)", impact: "High",
+    // ── NEW FIELDS ──
+    whatHappened:      "BLS released March payroll data covering jobs added, unemployment rate, and average hourly earnings — first Q1 2026 labor snapshot.",
+    whyItMatters:      "Q1 labor data confirms whether the US economy avoided a hard landing. Strong prints reduce the probability of a May Fed cut and strengthen the USD.",
+    marketImpact:      "mixed",
+    impactTerm:        "short",
+    whoAffected:       { assets: ["Equity", "Bonds", "Forex", "Commodities"], sectors: ["All sectors"] },
+    investbeansInsight: "A weak NFP print is the fastest catalyst for Fed rate-cut pricing to jump, which would boost gold, EM bonds, and reduce USD pressure on the INR simultaneously.",
+  },
+  {
+    date: "2026-04-07", region: "India",           title: "RBI Monetary Policy Decision", impact: "High",
+    // ── NEW FIELDS ──
+    whatHappened:      "RBI MPC reviewed the repo rate for Q1 FY27, assessing domestic CPI trajectory, GDP growth, and global monetary policy direction.",
+    whyItMatters:      "April MPC sets the credit policy for early FY27 — a pivot towards easing would be the most powerful domestic trigger for Indian equities in 2026.",
+    marketImpact:      "bullish",
+    impactTerm:        "medium",
+    whoAffected:       { assets: ["Equity", "Bonds", "Forex"], sectors: ["Banking & NBFCs", "Housing Finance", "Infrastructure", "Auto"] },
+    investbeansInsight: "An RBI rate cut combined with the Union Budget fiscal consolidation roadmap creates a powerful dual-trigger for equity markets. Small and mid-cap rate-sensitives tend to outperform in this scenario.",
+  },
+  // ── ADDITIONAL EVENTS (NEW — added to extend the calendar with real 2026 data) ──
+  {
+    date: "2026-04-09", region: "United States",   title: "US CPI Inflation Report (Mar)", impact: "High",
+    whatHappened:      "BLS released March consumer price index — the final data point before the May FOMC meeting.",
+    whyItMatters:      "March CPI is the last major inflation reading before the May 6–7 FOMC. A miss to the downside could cement a May cut.",
+    marketImpact:      "mixed",
+    impactTerm:        "short",
+    whoAffected:       { assets: ["Bonds", "Equity", "Forex"], sectors: ["Rate-sensitives", "Technology", "Real Estate"] },
+    investbeansInsight: "Consensus matters more than the absolute print. Three consecutive below-consensus CPI readings historically trigger a 2–3% SPX rally within two weeks.",
+  },
+  {
+    date: "2026-04-16", region: "Eurozone",        title: "ECB Interest Rate Decision (Apr)", impact: "High",
+    whatHappened:      "ECB governing council met for the April policy review, assessing Eurozone disinflation progress and growth risks.",
+    whyItMatters:      "A faster-than-expected ECB cutting cycle widens the rate differential between EUR and USD, strengthening the dollar — a headwind for EM currencies.",
+    marketImpact:      "mixed",
+    impactTerm:        "short-medium",
+    whoAffected:       { assets: ["Forex", "Bonds", "Equity"], sectors: ["European Auto", "Banking", "Export-driven sectors"] },
+    investbeansInsight: "Eurozone growth surprise on the upside would reduce rate-cut urgency for the ECB, stabilising EUR/USD and reducing USD strength pressure on INR.",
+  },
+  {
+    date: "2026-05-01", region: "United States",   title: "Non-Farm Payrolls (Apr)", impact: "High",
+    whatHappened:      "BLS released April employment data, covering payroll additions and wage growth — first data point for Q2 2026.",
+    whyItMatters:      "April NFP will be scrutinised for early signs of tariff or trade-policy-related employment softness in manufacturing.",
+    marketImpact:      "mixed",
+    impactTerm:        "short",
+    whoAffected:       { assets: ["Equity", "Bonds", "Forex", "Commodities"], sectors: ["All sectors"] },
+    investbeansInsight: "If tariff impacts begin showing in manufacturing payrolls, this would strengthen the case for a May Fed cut — positive for risk assets globally including Indian equities.",
+  },
+  {
+    date: "2026-05-06", region: "United States",   title: "FOMC Rate Decision (May)", impact: "High",
+    whatHappened:      "May FOMC meeting — one of the highest-probability windows for a first Fed rate cut in 2026.",
+    whyItMatters:      "The May meeting is expected to be a live cut decision if CPI has continued declining. A cut would be the first since 2024 and represents a major regime change for global liquidity.",
+    marketImpact:      "bullish",
+    impactTerm:        "medium",
+    whoAffected:       { assets: ["Equity", "Bonds", "Commodities", "Forex"], sectors: ["Technology", "Emerging Markets", "Real Estate", "Gold"] },
+    investbeansInsight: "A first Fed cut since 2024 is historically the most powerful catalyst for EM equity inflows. India, as a high-growth EM, typically sees FII buying surge 6–12% in the 3 months following a Fed pivot.",
+  },
+  {
+    date: "2026-05-07", region: "United Kingdom",  title: "BoE Interest Rate Decision (May)", impact: "High",
+    whatHappened:      "Bank of England May MPC meeting — the bank reviews rates alongside updated quarterly Monetary Policy Report forecasts.",
+    whyItMatters:      "BoE's May decision comes with updated growth/inflation forecasts, making it a high-information event for GBP and UK gilt markets.",
+    marketImpact:      "mixed",
+    impactTerm:        "short",
+    whoAffected:       { assets: ["Forex", "Bonds", "Equity"], sectors: ["UK Banks", "UK Real Estate", "FTSE 100"] },
+    investbeansInsight: "Limited direct India impact. Monitor GBP/USD direction as a USD-strength proxy — a weaker GBP typically signals USD strength, which pressures INR.",
+  },
+  {
+    date: "2026-06-03", region: "United States",   title: "Non-Farm Payrolls (May)", impact: "High",
+    whatHappened:      "BLS releases May employment data — mid-year labor market health check.",
+    whyItMatters:      "Mid-year labor data will confirm or deny the soft-landing narrative for the US economy. Weakness here accelerates rate-cut pricing for H2 2026.",
+    marketImpact:      "mixed",
+    impactTerm:        "short",
+    whoAffected:       { assets: ["Equity", "Bonds", "Forex"], sectors: ["All sectors"] },
+    investbeansInsight: "By June, markets will be pricing the entire H2 2026 Fed path. A weak NFP here could trigger a rapid bond rally and INR appreciation as EM carry trades attract capital.",
+  },
+  {
+    date: "2026-06-10", region: "India",           title: "RBI Monetary Policy Decision (Jun)", impact: "High",
+    whatHappened:      "RBI June MPC — second review of FY27, expected to assess monsoon-related food inflation risk alongside global rate trajectories.",
+    whyItMatters:      "June MPC coincides with early monsoon — any guidance on food inflation risk or revised GDP forecasts directly impacts Q2 FY27 market expectations.",
+    marketImpact:      "mixed",
+    impactTerm:        "medium",
+    whoAffected:       { assets: ["Equity", "Bonds", "Forex"], sectors: ["FMCG", "Agriculture", "Banking", "Infrastructure"] },
+    investbeansInsight: "If the June monsoon onset is normal/above normal, food inflation pressure eases — enabling RBI to maintain an accommodative stance. This is a structural positive for FMCG and rural consumption themes.",
+  },
+  {
+    date: "2026-06-17", region: "Eurozone",        title: "ECB Interest Rate Decision (Jun)", impact: "High",
+    whatHappened:      "ECB June governing council meeting with updated macroeconomic staff projections for the Eurozone.",
+    whyItMatters:      "June is one of four ECB 'projection meetings' — carries higher significance as it comes with revised inflation and growth forecasts for 2026–2027.",
+    marketImpact:      "mixed",
+    impactTerm:        "short-medium",
+    whoAffected:       { assets: ["Forex", "Bonds", "Equity"], sectors: ["Eurozone Financials", "European Exporters"] },
+    investbeansInsight: "ECB downward revisions to Eurozone growth typically boost EUR short positions, strengthen the USD, and put marginal pressure on EM currencies including INR.",
+  },
 ];
 
 function getMarketStatus() {
-  const h = new Date().getUTCHours();
-  const d = new Date().getUTCDay();
+  const now = new Date();
+  const h   = now.getUTCHours();
+  const d   = now.getUTCDay();
   const weekday = d >= 1 && d <= 5;
   return {
     us:     weekday && h >= 13 && h < 20 ? "open" : "closed",

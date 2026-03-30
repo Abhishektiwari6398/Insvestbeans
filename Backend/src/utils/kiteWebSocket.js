@@ -1,5 +1,5 @@
 // Backend/src/utils/kiteWebSocket.js
-// ── UPDATED: MCX commodity tokens added ──
+// ── UPDATED: India VIX + full sector index coverage ──
 // Uses official kiteconnect npm package
 // Auto-fetches current MCX contract tokens from Kite instruments API
 // so tokens stay valid as contracts roll over each month
@@ -8,18 +8,27 @@ import { KiteTicker } from "kiteconnect";
 import axios from "axios";
 
 // ─────────────────────────────────────────────────────────────────
-// NSE INSTRUMENT TOKEN MAP (static — these never change)
+// NSE INSTRUMENT TOKEN MAP (static — these never change for indices)
 // ─────────────────────────────────────────────────────────────────
 export const TOKEN_SYMBOL = {
-  // NSE Indices
+  // ── NSE Broad Indices ───────────────────────────────────────────
   256265:  "NSE:NIFTY 50",
   260105:  "NSE:NIFTY BANK",
+  // ── NSE Volatility ──────────────────────────────────────────────
+  264969:  "NSE:INDIA VIX",          // ← NEW: India VIX
+  // ── NSE Sectoral Indices ────────────────────────────────────────
   258529:  "NSE:NIFTY IT",
   258049:  "NSE:NIFTY AUTO",
   259849:  "NSE:NIFTY PHARMA",
-  // BSE Indices
+  261889:  "NSE:NIFTY FIN SERVICE",  // ← NEW
+  258537:  "NSE:NIFTY FMCG",         // ← NEW
+  259337:  "NSE:NIFTY METAL",        // ← NEW
+  258409:  "NSE:NIFTY ENERGY",       // ← NEW (Oil & Gas)
+  260361:  "NSE:NIFTY REALTY",       // ← NEW
+  260649:  "NSE:NIFTY PSU BANK",     // ← NEW
+  // ── BSE Broad Indices ───────────────────────────────────────────
   265:     "BSE:SENSEX",
-  // NSE Top Stocks
+  // ── NSE Top Stocks ──────────────────────────────────────────────
   738561:  "NSE:RELIANCE",
   2953217: "NSE:TCS",
   341249:  "NSE:HDFCBANK",
@@ -31,13 +40,8 @@ export const TOKEN_SYMBOL = {
 };
 
 // MCX commodity token map — populated dynamically at runtime
-// Key = instrument_token, Value = "MCX:SYMBOL" string
 export const MCX_TOKEN_SYMBOL = {};
-
-// Reverse map: "MCX:GOLD" → token number
 export const MCX_SYMBOL_TOKEN = {};
-
-// Combined map used for tick lookup
 export let ACTIVE_TOKEN_SYMBOL = { ...TOKEN_SYMBOL };
 
 export const SYMBOL_TOKEN = Object.fromEntries(
@@ -46,48 +50,17 @@ export const SYMBOL_TOKEN = Object.fromEntries(
 
 // ─────────────────────────────────────────────────────────────────
 // MCX COMMODITY CONFIG
-// tradingSymbol: the base symbol name in Kite instruments dump
-// displayName: what we show in the UI
-// unit: MCX trading unit
 // ─────────────────────────────────────────────────────────────────
 const MCX_COMMODITY_CONFIG = [
-  {
-    tradingSymbol: "GOLD",
-    displayName:   "Gold",
-    key:           "MCX:GOLD",
-    unit:          "₹/10g",
-    // MCX Gold lot = 1 kg = 100 × 10g, price quoted per 10g
-  },
-  {
-    tradingSymbol: "SILVER",
-    displayName:   "Silver",
-    key:           "MCX:SILVER",
-    unit:          "₹/kg",
-  },
-  {
-    tradingSymbol: "CRUDEOIL",
-    displayName:   "Crude Oil",
-    key:           "MCX:CRUDEOIL",
-    unit:          "₹/bbl",
-  },
-  {
-    tradingSymbol: "NATURALGAS",
-    displayName:   "Natural Gas",
-    key:           "MCX:NATURALGAS",
-    unit:          "₹/mmBtu",
-  },
-  {
-    tradingSymbol: "COPPER",
-    displayName:   "Copper",
-    key:           "MCX:COPPER",
-    unit:          "₹/kg",
-  },
+  { tradingSymbol: "GOLD",       displayName: "Gold",        key: "MCX:GOLD",       unit: "₹/10g"   },
+  { tradingSymbol: "SILVER",     displayName: "Silver",      key: "MCX:SILVER",     unit: "₹/kg"    },
+  { tradingSymbol: "CRUDEOIL",   displayName: "Crude Oil",   key: "MCX:CRUDEOIL",   unit: "₹/bbl"   },
+  { tradingSymbol: "NATURALGAS", displayName: "Natural Gas", key: "MCX:NATURALGAS", unit: "₹/mmBtu" },
+  { tradingSymbol: "COPPER",     displayName: "Copper",      key: "MCX:COPPER",     unit: "₹/kg"    },
 ];
 
 // ─────────────────────────────────────────────────────────────────
 // FETCH MCX INSTRUMENT TOKENS
-// Kite instruments API returns ALL MCX contracts.
-// We pick the near-month (soonest expiry after today) for each commodity.
 // ─────────────────────────────────────────────────────────────────
 export async function fetchMCXTokens(apiKey, accessToken) {
   if (!apiKey || !accessToken) {
@@ -106,16 +79,11 @@ export async function fetchMCXTokens(apiKey, accessToken) {
       timeout: 10000,
     });
 
-    // Response is a CSV string
-    const lines = res.data.split("\n").filter(l => l.trim());
+    const lines   = res.data.split("\n").filter(l => l.trim());
     const headers = lines[0].split(",");
-    // Headers: instrument_token, exchange_token, tradingsymbol, name, last_price,
-    //          expiry, strike, tick_size, lot_size, instrument_type, segment, exchange
-
-    const today = new Date();
+    const today   = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Parse all futures contracts
     const instruments = lines.slice(1).map(line => {
       const cols = line.split(",");
       return {
@@ -132,13 +100,11 @@ export async function fetchMCXTokens(apiKey, accessToken) {
       i.expiry >= today
     );
 
-    // For each commodity, find the nearest expiry futures contract
     Object.keys(MCX_TOKEN_SYMBOL).forEach(k => delete MCX_TOKEN_SYMBOL[k]);
     Object.keys(MCX_SYMBOL_TOKEN).forEach(k => delete MCX_SYMBOL_TOKEN[k]);
 
     let foundCount = 0;
     for (const cfg of MCX_COMMODITY_CONFIG) {
-      // Filter contracts whose tradingsymbol STARTS WITH the base symbol
       const contracts = instruments.filter(i =>
         i.tradingsymbol.startsWith(cfg.tradingSymbol) &&
         !i.tradingsymbol.includes("MINI") &&
@@ -153,7 +119,6 @@ export async function fetchMCXTokens(apiKey, accessToken) {
         continue;
       }
 
-      // Sort by expiry — nearest first
       contracts.sort((a, b) => a.expiry - b.expiry);
       const near = contracts[0];
 
@@ -164,27 +129,19 @@ export async function fetchMCXTokens(apiKey, accessToken) {
       foundCount++;
     }
 
-    // Rebuild active token map
     Object.assign(ACTIVE_TOKEN_SYMBOL, TOKEN_SYMBOL, MCX_TOKEN_SYMBOL);
-
     console.log(`✅ MCX tokens loaded: ${foundCount}/${MCX_COMMODITY_CONFIG.length} commodities`);
     return MCX_TOKEN_SYMBOL;
 
   } catch (err) {
     console.error("❌ fetchMCXTokens failed:", err.message);
-    // Use hardcoded fallback tokens (approximate — may need update after contract rollover)
-    // These are approximate March/April 2026 contract tokens
-    // ⚠️ Update these after each monthly rollover by running:
-    //    curl -H "X-Kite-Version: 3" -H "Authorization: token API_KEY:ACCESS_TOKEN" \
-    //         https://api.kite.trade/instruments/MCX | grep -E "^[0-9]" | grep "FUT" | grep -E "GOLD|SILVER|CRUDEOIL|NATURALGAS|COPPER"
+
     const FALLBACK_TOKENS = {
-      // These tokens are for April 2026 contracts — update monthly
-      // To get real tokens: kite.instruments("MCX") and filter FUT nearest expiry
-      225177: "MCX:GOLD",       // GOLD26APRFUT
-      234230: "MCX:SILVER",     // SILVER26MAYFUT
-      239545: "MCX:CRUDEOIL",   // CRUDEOIL26APRFUT
-      253577: "MCX:NATURALGAS", // NATURALGAS26MARFUT
-      231288: "MCX:COPPER",     // COPPER26MARFUT
+      225177: "MCX:GOLD",
+      234230: "MCX:SILVER",
+      239545: "MCX:CRUDEOIL",
+      253577: "MCX:NATURALGAS",
+      231288: "MCX:COPPER",
     };
 
     Object.assign(MCX_TOKEN_SYMBOL, FALLBACK_TOKENS);
@@ -201,11 +158,30 @@ export async function fetchMCXTokens(apiKey, accessToken) {
 // ─────────────────────────────────────────────────────────────────
 // TOKEN LISTS
 // ─────────────────────────────────────────────────────────────────
-const INDEX_TOKENS = [256265, 260105, 258529, 258049, 259849, 265];
+
+// All NSE/BSE index tokens — subscribed in quote mode
+const INDEX_TOKENS = [
+  // Broad
+  256265,  // NIFTY 50
+  260105,  // NIFTY BANK
+  265,     // SENSEX
+  // Volatility
+  264969,  // INDIA VIX  ← NEW
+  // Sectoral
+  258529,  // NIFTY IT
+  258049,  // NIFTY AUTO
+  259849,  // NIFTY PHARMA
+  261889,  // NIFTY FIN SERVICE  ← NEW
+  258537,  // NIFTY FMCG         ← NEW
+  259337,  // NIFTY METAL        ← NEW
+  258409,  // NIFTY ENERGY       ← NEW
+  260361,  // NIFTY REALTY       ← NEW
+  260649,  // NIFTY PSU BANK     ← NEW
+];
+
 const STOCK_TOKENS = [738561, 2953217, 341249, 408065, 1270529, 969473, 356865, 424961];
 const BASE_TOKENS  = [...INDEX_TOKENS, ...STOCK_TOKENS];
 
-// MCX tokens to subscribe — built dynamically after fetchMCXTokens()
 function getMCXTokenList() {
   return Object.keys(MCX_TOKEN_SYMBOL).map(Number).filter(Boolean);
 }
@@ -249,20 +225,19 @@ export class KiteWebSocketManager {
       console.log("✅ KiteTicker CONNECTED");
       this.connected = true;
 
-      // Fetch MCX tokens fresh on every connect (handles monthly rollover)
       await fetchMCXTokens(apiKey, accessToken);
 
-      const mcxTokens  = getMCXTokenList();
-      const allTokens  = [...BASE_TOKENS, ...mcxTokens];
+      const mcxTokens = getMCXTokenList();
+      const allTokens = [...BASE_TOKENS, ...mcxTokens];
 
       this.ticker.subscribe(allTokens);
 
-      // Full mode for stocks + MCX (gives OHLC + OI for commodities)
+      // Full mode for stocks + MCX (OHLC + OI + depth)
       this.ticker.setMode(this.ticker.modeFull,  [...STOCK_TOKENS, ...mcxTokens]);
-      // Quote mode for indices
+      // Quote mode for indices (includes OHLC + change, no depth)
       this.ticker.setMode(this.ticker.modeQuote, INDEX_TOKENS);
 
-      console.log(`📡 Subscribed ${allTokens.length} instruments (${BASE_TOKENS.length} equity + ${mcxTokens.length} MCX)`);
+      console.log(`📡 Subscribed ${allTokens.length} instruments (${INDEX_TOKENS.length} indices + ${STOCK_TOKENS.length} stocks + ${mcxTokens.length} MCX)`);
     });
 
     this.ticker.on("ticks", (ticks) => {
@@ -274,7 +249,7 @@ export class KiteWebSocketManager {
         this.lastTicks[symbol] = {
           symbol,
           instrument_token: tick.instrument_token,
-          exchange:      symbol.split(":")[0],        // "NSE" or "MCX"
+          exchange:      symbol.split(":")[0],
           tradable:      tick.tradable,
           mode:          tick.mode,
           last_price:    tick.last_price,
@@ -283,15 +258,13 @@ export class KiteWebSocketManager {
           volume:        tick.volume         ?? 0,
           buy_quantity:  tick.buy_quantity   ?? 0,
           sell_quantity: tick.sell_quantity  ?? 0,
-          // MCX specific — OI is real open interest from the exchange
           oi:            tick.oi             ?? 0,
           oi_day_high:   tick.oi_day_high    ?? 0,
           oi_day_low:    tick.oi_day_low     ?? 0,
           change:        tick.change         ?? 0,
-          // OHLC — direct from MCX exchange tick, no calculation needed
-          ohlc: tick.ohlc ?? undefined,
-          depth: tick.depth ?? undefined,
-          ts:   Date.now(),
+          ohlc:          tick.ohlc           ?? undefined,
+          depth:         tick.depth          ?? undefined,
+          ts:            Date.now(),
         };
       });
 
@@ -303,24 +276,40 @@ export class KiteWebSocketManager {
       if (this.io) this.io.emit("kite:order_update", order);
     });
 
-    this.ticker.on("error",      (err) => { console.error("❌ KiteTicker error:", err); this.connected = false; });
-    this.ticker.on("disconnect", ()    => { console.log("🔌 KiteTicker disconnected"); this.connected = false; });
-    this.ticker.on("reconnect",  (c)   => { console.log(`🔄 Reconnecting... attempt ${c}`); });
-    this.ticker.on("noreconnect",()    => { console.error("❌ Max reconnect attempts reached"); });
+    this.ticker.on("error",       (err) => { console.error("❌ KiteTicker error:", err); this.connected = false; });
+    this.ticker.on("disconnect",  ()    => { console.log("🔌 KiteTicker disconnected"); this.connected = false; });
+    this.ticker.on("reconnect",   (c)   => { console.log(`🔄 Reconnecting... attempt ${c}`); });
+    this.ticker.on("noreconnect", ()    => { console.error("❌ Max reconnect attempts reached"); });
 
     this.ticker.connect();
   }
 
   updateToken(accessToken) { this.token = accessToken; this.connect(this.apiKey, accessToken); }
-  disconnect() { try { this.ticker?.disconnect(); } catch(_) {} this.ticker = null; this.connected = false; }
-  getLastTicks() { return this.lastTicks; }
-  getMCXTicks()  {
-    // Returns only MCX commodity ticks
+  disconnect()             { try { this.ticker?.disconnect(); } catch(_) {} this.ticker = null; this.connected = false; }
+  getLastTicks()           { return this.lastTicks; }
+
+  getMCXTicks() {
     return Object.fromEntries(
       Object.entries(this.lastTicks).filter(([k]) => k.startsWith("MCX:"))
     );
   }
-  isConnected()  { return this.connected; }
+
+  /** Returns all sector index ticks keyed by "NSE:NIFTY IT" etc. */
+  getSectorTicks() {
+    const SECTOR_KEYS = [
+      "NSE:NIFTY IT", "NSE:NIFTY AUTO", "NSE:NIFTY PHARMA",
+      "NSE:NIFTY FIN SERVICE", "NSE:NIFTY FMCG", "NSE:NIFTY METAL",
+      "NSE:NIFTY ENERGY", "NSE:NIFTY REALTY", "NSE:NIFTY PSU BANK",
+    ];
+    return Object.fromEntries(
+      SECTOR_KEYS.map(k => [k, this.lastTicks[k]]).filter(([, v]) => v)
+    );
+  }
+
+  /** Returns India VIX tick */
+  getVixTick() { return this.lastTicks["NSE:INDIA VIX"] ?? null; }
+
+  isConnected() { return this.connected; }
 }
 
 export const kiteWS = new KiteWebSocketManager();

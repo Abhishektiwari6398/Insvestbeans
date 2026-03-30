@@ -114,7 +114,7 @@ export const getAllInsights = asyncHandler(async (req, res) => {
 
   const insights = await Insight.find(query)
     .sort(sort).limit(parseInt(limit)).skip(skip)
-    .select("-viewedBy -viewedIPs")   // ✅ Never send tracking arrays to frontend
+    .select("-viewedBy -viewedIPs")
     .lean();
 
   const userId = req.user?._id;
@@ -149,7 +149,6 @@ export const getInsightById = asyncHandler(async (req, res) => {
   const insight = await Insight.findById(id).populate("author", "name email image");
   if (!insight) throw new ApiError(404, "Insight not found");
 
-  // ✅ Pass userId (logged-in) or IP (guest) so the same person can't inflate views
   const userId = req.user?._id || null;
   const ip =
     req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
@@ -164,7 +163,6 @@ export const getInsightById = asyncHandler(async (req, res) => {
       ? insight.likedBy.some((lid) => lid.toString() === userId.toString())
       : false;
   delete response.likedBy;
-  // ✅ Never expose internal tracking arrays to the frontend
   delete response.viewedBy;
   delete response.viewedIPs;
 
@@ -352,4 +350,31 @@ export const togglePublishStatus = asyncHandler(async (req, res) => {
   await insight.save();
 
   return res.status(200).json(new ApiResponse(200, insight, "Publish status updated successfully"));
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// @desc    Get latest published insight for the Events page banner (Public)
+// @route   GET /api/v1/insights/events-banner
+// @access  Public
+//
+// Returns exactly 1 insight — the most recently published one.
+// Returns null data (not 404) when no insights are published yet,
+// so the frontend can show a graceful empty state without throwing an error.
+// ────────────────────────────────────────────────────────────────────────────
+export const getEventsBanner = asyncHandler(async (req, res) => {
+  const insight = await Insight.findOne({ isPublished: true })
+    .sort({ publishedAt: -1 })
+    .select(
+      "title description investBeansInsight sentiment category marketType credits readTime publishedAt"
+    )
+    .lean();
+
+  // Return null data instead of 404 — frontend handles empty state gracefully
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      insight ?? null,
+      insight ? "Events banner insight fetched" : "No published insights available"
+    )
+  );
 });

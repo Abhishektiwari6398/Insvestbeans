@@ -8,53 +8,56 @@ import {
 } from "@/services/beanOfWisdomService";
 import {
   Loader2, Edit3, Trash2, X, Coffee,
-  TrendingUp, Lightbulb, Sparkles,
 } from "lucide-react";
 import BeansOfWisdomForm from "@/components/BeansOfWisdomForm";
 
-/* ── Animation styles injected once ── */
+/* ── Animations ── */
 const StyleInjector = () => {
   useEffect(() => {
-    if (document.getElementById("bow-anim")) return;
+    if (document.getElementById("bow-pub-styles")) return;
     const s = document.createElement("style");
-    s.id = "bow-anim";
+    s.id = "bow-pub-styles";
     s.textContent = `
-      @keyframes bow-up {
-        from { opacity:0; transform:translateY(14px); }
+      @keyframes bow-in {
+        from { opacity:0; transform:translateY(10px); }
         to   { opacity:1; transform:translateY(0); }
       }
-      @keyframes bow-line {
+      @keyframes bow-rule {
         from { transform:scaleX(0); }
         to   { transform:scaleX(1); }
       }
-      @keyframes bow-dot {
-        0%,100% { opacity:1; transform:scale(1); }
-        50%      { opacity:.45; transform:scale(.7); }
+      @keyframes bow-pulse {
+        0%,100% { opacity:1; } 50% { opacity:.3; }
       }
-      .bow-up  { animation: bow-up 0.5s cubic-bezier(.22,.68,0,1.15) both; }
-      .bow-d1  { animation-delay:.06s; }
-      .bow-d2  { animation-delay:.14s; }
-      .bow-d3  { animation-delay:.22s; }
-      .bow-d4  { animation-delay:.30s; }
-      .bow-d5  { animation-delay:.38s; }
-      .bow-d6  { animation-delay:.46s; }
-      .bow-line-anim { transform-origin:left; animation: bow-line 0.55s .25s cubic-bezier(.22,.68,0,1.15) both; }
-      .bow-dot  { animation: bow-dot 2.2s ease-in-out infinite; }
+      .bow-in  { animation: bow-in 0.45s cubic-bezier(.22,.68,0,1.1) both; }
+      .bow-d1  { animation-delay:.04s; }
+      .bow-d2  { animation-delay:.12s; }
+      .bow-d3  { animation-delay:.20s; }
+      .bow-d4  { animation-delay:.28s; }
+      .bow-rule-anim { transform-origin:left; animation: bow-rule .55s .2s cubic-bezier(.22,.68,0,1.1) both; }
+      .bow-dot { animation: bow-pulse 2.2s ease-in-out infinite; }
     `;
     document.head.appendChild(s);
   }, []);
   return null;
 };
 
+function weekLabel() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 1);
+  const wk = Math.ceil(((now.getTime() - start.getTime()) / 86400000 + start.getDay() + 1) / 7);
+  return `Week ${wk} · ${now.getFullYear()}`;
+}
+
 export default function BeansOfWisdomView() {
   const { isAdmin, loading: authLoading } = useAuth();
   const { theme } = useTheme();
   const isLight = theme === "light";
 
-  const [bean, setBean] = useState<BeanOfWisdom | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showEditForm, setShowEditForm] = useState(false);
+  const [bean, setBean]                   = useState<BeanOfWisdom | null>(null);
+  const [loading, setLoading]             = useState(true);
+  const [error, setError]                 = useState<string | null>(null);
+  const [showEditForm, setShowEditForm]   = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => { fetchBeans(); }, []);
@@ -71,114 +74,97 @@ export default function BeansOfWisdomView() {
 
   const handleDelete = async () => {
     if (!bean?._id || !isAdmin) return;
-    if (!window.confirm("Are you sure you want to delete this wisdom?")) return;
+    if (!window.confirm("Delete this wisdom?")) return;
     try {
       setDeleteLoading(true); setError(null);
       await deleteBean(bean._id);
       setBean(null);
     } catch (err: any) {
-      setError(err.message || "Failed to delete bean");
+      setError(err.message || "Failed to delete");
     } finally { setDeleteLoading(false); }
   };
 
   const handleFormSuccess = () => { fetchBeans(); setShowEditForm(false); };
 
-  /* ══ Colors — enhanced light mode ══ */
-  const sectionHeadingColor = isLight ? "#041421" : "white";
-  const sectionSubColor     = isLight ? "#36556d" : "rgba(203,213,225,1)";
+  /* ── Tokens ── */
+  const accentHex   = "#0A3656";
+  const accentLight = isLight ? "#0A3656" : "#74A8C9";
 
-  const cardWrapBorder  = isLight ? "1px solid rgba(4,20,33,0.10)" : "1px solid rgba(124,166,194,0.22)";
-  const cardWrapBg      = isLight ? "#FCFDFE" : "#041421";
-  const cardWrapShadow  = isLight ? "0 8px 34px rgba(4,20,33,0.08), 0 2px 8px rgba(4,20,33,0.05)" : "0 8px 32px rgba(0,0,0,0.35)";
+  const headingClr  = isLight ? "#041421"                 : "#ffffff";
+  const subClr      = isLight ? "#36556d"                 : "rgba(203,213,225,1)";
 
-  const leftColBg       = isLight ? "#F3F8FC" : "#0b2336";
-  const dividerColor    = isLight ? "rgba(4,20,33,0.10)" : "rgba(124,166,194,0.14)";
+  const pubBg       = isLight ? "#F7FAFB"                 : "#07192A";
+  const ink         = isLight ? "#0A1E2C"                 : "#E8F0F5";
+  const inkMid      = isLight ? "#36556d"                 : "rgba(155,193,218,0.85)";
+  const rule        = isLight ? "rgba(4,20,33,.10)"       : "rgba(124,166,194,.15)";
+  const pullBg      = isLight ? "rgba(10,54,86,.05)"      : "rgba(10,54,86,.38)";
 
-  const badgeBg         = isLight ? "rgba(252,253,254,0.92)" : "rgba(10,54,86,0.22)";
-  const badgeBorder     = isLight ? "1px solid rgba(4,20,33,0.10)" : "1px solid rgba(124,166,194,0.22)";
-  const badgeTextColor  = isLight ? "#35566f" : "rgba(255,255,255,0.85)";
+  const gradL  = `linear-gradient(90deg,${accentLight},rgba(127,177,207,.5),transparent)`;
+  const gradR  = `linear-gradient(90deg,transparent,rgba(127,177,207,.5),${accentLight})`;
 
-  const heroTitleColor    = isLight ? "#041421" : "white";
-  const heroSubtitleColor = isLight ? "#36556d" : "rgba(255,255,255,0.60)";
+  const errBg  = isLight ? "rgba(254,242,242,1)"          : "rgba(220,38,38,.10)";
+  const errBdr = isLight ? "1px solid rgba(254,202,202,.8)" : "1px solid rgba(239,68,68,.5)";
+  const errClr = isLight ? "#dc2626"                      : "rgba(252,165,165,1)";
+  const spinClr = accentLight;
+  const emptyClr = isLight ? "#94a3b8"                   : "rgba(148,163,184,1)";
 
-  const tagBg     = isLight ? "rgba(243,248,252,0.95)" : "rgba(10,54,86,0.26)";
-  const tagBorder = isLight ? "1px solid rgba(4,20,33,0.10)" : "1px solid rgba(124,166,194,0.24)";
-  const tagColor  = isLight ? "#36556d" : "rgba(155,193,218,1)";
-
-  const descIconBg     = isLight ? "rgba(243,248,252,0.95)" : "rgba(10,54,86,0.22)";
-  const descIconBorder = isLight ? "1px solid rgba(4,20,33,0.10)" : "1px solid rgba(255,255,255,0.10)";
-  const descTextColor  = isLight ? "#35566f" : "rgba(255,255,255,0.60)";
-
-  const keyPrincipleBg         = isLight ? "#eaf3fa" : "rgba(10,54,86,0.22)";
-  const keyPrincipleBorderClr  = isLight ? "rgba(4,20,33,0.10)" : "#0b2336";
-  const keyPrincipleTextColor  = isLight ? "#041421" : "white";
-
-  const insightPanelBg     = isLight ? "#F3F8FC" : "#0b2336";
-  const insightPanelBorder = isLight ? "rgba(4,20,33,0.10)" : "rgba(31,95,137,0.40)";
-  const insightIconBg      = isLight ? "rgba(243,248,252,0.95)" : "rgba(10,54,86,0.22)";
-  const insightIconBorder  = isLight ? "1px solid rgba(4,20,33,0.10)" : "1px solid rgba(124,166,194,0.22)";
-  const insightTextColor   = isLight ? "#35566f" : "rgba(203,213,225,1)";
-
-  const quotePanelBg   = isLight ? "#F3F8FC" : "#0b2336";
-  const quoteTextColor = isLight ? "#36556d" : "rgba(155,193,218,1)";
-
-  const errorBg     = isLight ? "rgba(254,242,242,1)" : "rgba(220,38,38,0.1)";
-  const errorBorder = isLight ? "1px solid rgba(254,202,202,0.8)" : "1px solid rgba(239,68,68,0.5)";
-  const errorColor  = isLight ? "#dc2626" : "rgba(252,165,165,1)";
-
-  const emptyIconColor = isLight ? "#0A3656" : "#74A8C9";
-  const emptyTextColor = isLight ? "#94a3b8" : "rgba(148,163,184,1)";
-  const spinnerColor   = isLight ? "#0A3656" : "#74A8C9";
+  const pubFont  = "'Georgia','Times New Roman',serif";
+  const sansFont = "system-ui,-apple-system,sans-serif";
 
   /* ── Loading ── */
-  if (authLoading || loading) {
-    return (
-      <section className="py-6 lg:py-10 px-4 sm:px-6 md:px-10 lg:px-12">
-        <div className="flex items-center justify-center py-12 lg:py-24 gap-3">
-          <Loader2 className="w-5 h-5 animate-spin" style={{ color: spinnerColor }} />
-          <p className="text-sm font-medium" style={{ color: emptyTextColor }}>
-            Brewing your weekly wisdom…
-          </p>
-        </div>
-      </section>
-    );
-  }
+  if (authLoading || loading) return (
+    <section className="py-6 lg:py-10 px-4 sm:px-6 md:px-10 lg:px-12">
+      <div className="flex items-center justify-center py-16 gap-3">
+        <Loader2 className="w-4 h-4 animate-spin" style={{ color: spinClr }} />
+        <p className="text-xs font-medium tracking-widest uppercase" style={{ color: emptyClr, fontFamily: sansFont }}>
+          Brewing your weekly wisdom…
+        </p>
+      </div>
+    </section>
+  );
 
   /* ── Empty ── */
-  if (!bean) {
-    return (
-      <section className="py-6 lg:py-10 px-4 sm:px-6 md:px-10 lg:px-12">
-        <div className="text-center py-12 lg:py-24">
-          <Coffee className="w-10 h-10 mx-auto mb-3" style={{ color: emptyIconColor }} />
-          <p className="text-sm" style={{ color: emptyTextColor }}>No wisdom available yet.</p>
-        </div>
-      </section>
-    );
-  }
+  if (!bean) return (
+    <section className="py-6 lg:py-10 px-4 sm:px-6 md:px-10 lg:px-12">
+      <div className="text-center py-16">
+        <Coffee className="w-8 h-8 mx-auto mb-3 opacity-30" style={{ color: spinClr }} />
+        <p className="text-xs tracking-widest uppercase" style={{ color: emptyClr, fontFamily: sansFont }}>
+          No wisdom this week yet.
+        </p>
+      </div>
+    </section>
+  );
 
   return (
     <>
       <StyleInjector />
 
-      {/* ── section padding: compact on mobile, original on desktop ── */}
       <section id="beans-of-wisdom" className="py-6 lg:py-10 px-4 sm:px-6 md:px-10 lg:px-12">
 
-        {/* ════ SECTION HEADER ════ */}
-        <div className="mb-5 lg:mb-8 text-center">
+        {/* ═══════════════════════════════════════
+            ORIGINAL SECTION HEADING — unchanged
+        ═══════════════════════════════════════ */}
+        <div className="bow-in bow-d1 mb-4 lg:mb-7 text-center">
           <div className="flex items-center justify-center gap-2 mb-1.5">
-            <div className="w-1 h-4 rounded-full bg-[#0A3656]" />
-            <span className="text-xs font-bold text-[#0A3656] dark:text-[#74A8C9] tracking-[0.2em] uppercase">
+            <div className="w-1 h-4 rounded-full" style={{ background: accentLight }} />
+            <span
+              className="text-xs font-bold tracking-[0.2em] uppercase"
+              style={{ color: accentLight, fontFamily: sansFont }}
+            >
               Weekly Edition
             </span>
-            <div className="w-1 h-4 rounded-full bg-[#0A3656]" />
+            <div className="w-1 h-4 rounded-full" style={{ background: accentLight }} />
           </div>
+
           <h2
             className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight leading-none"
-            style={{ color: sectionHeadingColor }}
+            style={{ color: headingClr }}
           >
-            Beans of <span className="text-[#0A3656] dark:text-[#74A8C9]">Wisdom</span>
+            Beans of{" "}
+            <span style={{ color: accentLight }}>Wisdom</span>
           </h2>
-          <p className="text-sm mt-2 max-w-md mx-auto" style={{ color: sectionSubColor }}>
+
+          <p className="text-sm mt-2 max-w-md mx-auto" style={{ color: subClr }}>
             Curated market insight, delivered every week.
           </p>
 
@@ -186,13 +172,15 @@ export default function BeansOfWisdomView() {
             <div className="flex items-center justify-center gap-2.5 mt-4">
               <button
                 onClick={() => setShowEditForm(true)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-[#0A3656] hover:bg-[#072a44] rounded-xl transition-colors shadow-sm"
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white rounded-xl transition-colors shadow-sm"
+                style={{ background: accentHex, fontFamily: sansFont }}
               >
                 <Edit3 className="w-3.5 h-3.5" /> Edit
               </button>
               <button
                 onClick={handleDelete} disabled={deleteLoading}
-                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-red-500 bg-transparent hover:bg-red-500/10 border border-red-400/50 rounded-xl transition-colors disabled:opacity-40"
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl transition-colors disabled:opacity-40"
+                style={{ color: "#ef4444", border: "1px solid rgba(239,68,68,.4)", fontFamily: sansFont }}
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 {deleteLoading ? "Deleting…" : "Delete"}
@@ -201,163 +189,75 @@ export default function BeansOfWisdomView() {
           )}
         </div>
 
-        {/* ── Error ── */}
+        {/* Error */}
         {error && (
           <div
-            className="mb-4 lg:mb-6 flex items-start gap-2 rounded-xl p-4 text-sm"
-            style={{ background: errorBg, border: errorBorder, color: errorColor }}
+            className="mb-4 flex items-start gap-2 rounded-lg p-3 text-xs"
+            style={{ background: errBg, border: errBdr, color: errClr, fontFamily: sansFont }}
           >
             <p className="flex-1">{error}</p>
-            <button onClick={() => setError(null)}><X className="w-4 h-4" /></button>
+            <button onClick={() => setError(null)}><X className="w-3.5 h-3.5" /></button>
           </div>
         )}
 
-        {/* ════ MAIN CARD ════ */}
-        <div
-          className="rounded-2xl overflow-hidden bow-up bow-d1"
-          style={{ border: cardWrapBorder, boxShadow: cardWrapShadow, background: cardWrapBg }}
-        >
-          {/* Top strip */}
-          <div style={{ height: 3, background: "linear-gradient(90deg,#0A3656,rgba(127,177,207,0.5),transparent)" }} />
+        {/* ═══════════════════════════════════════
+            PUBLICATION STRIP
+        ═══════════════════════════════════════ */}
+        <div className="bow-in bow-d2 overflow-hidden" style={{ background: pubBg, fontFamily: pubFont }}>
 
-          {/* ── MOBILE LAYOUT: stacked, everything compact ── */}
-          <div className="lg:hidden">
+          {/* Top rule */}
+          <div style={{ height: 3, background: gradL }} />
 
-            {/* Title block */}
-            <div className="px-5 pt-5 pb-4" style={{ background: leftColBg }}>
-              <div
-                className="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-4 w-fit"
-                style={{ background: badgeBg, border: badgeBorder }}
+          {/* Meta strip */}
+          <div
+            className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-1.5"
+            style={{ borderBottom: `1px solid ${rule}`, fontFamily: sansFont }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="bow-dot inline-block w-1.5 h-1.5 rounded-full" style={{ background: accentLight }} />
+              <span className="text-[9px] font-bold tracking-[0.22em] uppercase" style={{ color: inkMid }}>
+                Today's Wisdom
+              </span>
+            </div>
+            <span className="text-[9px] tracking-[0.14em] uppercase" style={{ color: inkMid, opacity: .5 }}>
+              {weekLabel()}
+            </span>
+          </div>
+
+          {/* ═══════════════════════════════════════
+              MOBILE — single column, all content visible
+          ═══════════════════════════════════════ */}
+          <div className="lg:hidden flex flex-col">
+
+            {/* 1. Headline + rule + subtitle */}
+            <div className="px-4 py-4" style={{ borderBottom: `1px solid ${rule}` }}>
+              <h3
+                className="font-extrabold leading-[1.12] tracking-tight mb-2"
+                style={{ color: ink, fontSize: "clamp(16px, 5vw, 22px)" }}
               >
-                <span className="bow-dot w-2 h-2 rounded-full bg-[#0A3656] block" />
-                <span className="text-[10px] font-bold tracking-[0.18em] uppercase" style={{ color: badgeTextColor }}>
-                  Today's Wisdom
-                </span>
-              </div>
-              <h3 className="text-2xl font-extrabold leading-tight tracking-tight" style={{ color: heroTitleColor }}>
                 {bean.title}
               </h3>
-              <div className="bow-line-anim mt-3 mb-3" style={{ height: 3, width: 40, background: "linear-gradient(90deg,#0A3656,rgba(127,177,207,0.4))", borderRadius: 2 }} />
+              <div
+                className="bow-rule-anim mb-3"
+                style={{ height: 2, width: 28, background: accentLight, borderRadius: 1 }}
+              />
               {bean.subtitle && (
-                <p className="text-[13px] leading-relaxed" style={{ color: heroSubtitleColor }}>
+                <p style={{ color: inkMid, fontSize: 12, lineHeight: 1.7 }}>
                   {bean.subtitle}
                 </p>
               )}
-            </div>
-
-            {/* Description — collapsible feel: show inline, no big padding */}
-            {(bean.sectionTitle || bean.description) && (
-              <div className="px-5 py-4 flex gap-3" style={{ background: leftColBg, borderTop: `1px solid ${dividerColor}` }}>
-                <div className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center mt-0.5" style={{ background: descIconBg, border: descIconBorder }}>
-                  <Sparkles className="w-3.5 h-3.5 text-[#0A3656] dark:text-[#74A8C9]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  {bean.sectionTitle && (
-                    <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#0A3656] dark:text-[#74A8C9] mb-1">{bean.sectionTitle}</p>
-                  )}
-                  {bean.description && (
-                    <p className="text-[12.5px] leading-relaxed" style={{ color: descTextColor }}>{bean.description}</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Key Principle — compact */}
-            {bean.keyPrinciple && (
-              <div className="px-5 py-4 flex gap-3 items-start" style={{ background: keyPrincipleBg, borderTop: `1px solid ${keyPrincipleBorderClr}` }}>
-                <div className="w-7 h-7 rounded-lg bg-[#0A3656] flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <TrendingUp className="w-3.5 h-3.5 text-[#0F172A]" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#0A3656] dark:text-[#74A8C9] mb-1">Key Principle</p>
-                  <p className="text-base font-extrabold leading-snug" style={{ color: keyPrincipleTextColor }}>{bean.keyPrinciple}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Insight — compact */}
-            {bean.insightText && (
-              <div className="px-5 py-4 flex gap-3 items-start" style={{ background: insightPanelBg, borderTop: `1px solid ${insightPanelBorder}` }}>
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: insightIconBg, border: insightIconBorder }}>
-                  <Lightbulb className="w-3.5 h-3.5 text-[#0A3656] dark:text-[#74A8C9]" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#0A3656] dark:text-[#74A8C9] mb-1">{bean.insightTag || "Investment Strategy"}</p>
-                  <p className="text-[12.5px] leading-relaxed" style={{ color: insightTextColor }}>{bean.insightText}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Quote — compact, no giant quotation marks */}
-            {bean.quote && (
-              <div className="px-5 py-4 relative overflow-hidden" style={{ background: quotePanelBg, borderTop: `1px solid ${dividerColor}` }}>
-                <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg,rgba(245,158,11,0.55),transparent)" }} />
-                <div className="flex gap-2 items-start">
-                  <span className="text-[#0A3656] dark:text-[#74A8C9] text-2xl font-serif leading-none mt-1 opacity-60">"</span>
-                  <p className="text-[12.5px] italic leading-relaxed flex-1" style={{ color: quoteTextColor }}>{bean.quote}</p>
-                  <span className="text-[#0A3656] dark:text-[#74A8C9] text-2xl font-serif leading-none self-end opacity-60">"</span>
-                </div>
-              </div>
-            )}
-
-            {/* Tags — compact */}
-            {bean.tags && bean.tags.length > 0 && (
-              <div className="px-5 py-3 flex flex-wrap gap-2" style={{ background: leftColBg, borderTop: `1px solid ${dividerColor}` }}>
-                {bean.tags.map((tag, i) => (
-                  <span key={i} className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full cursor-default"
-                    style={{ color: tagColor, background: tagBg, border: tagBorder }}>
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* ── DESKTOP LAYOUT: original, completely unchanged ── */}
-          <div className="hidden lg:grid grid-cols-5">
-
-            {/* ══════ LEFT ══════ */}
-            <div className="col-span-3 flex flex-col" style={{ background: leftColBg, borderRight: `1px solid ${dividerColor}` }}>
-
-              <div className="bow-up bow-d2 px-9 md:px-11 pt-9 pb-7">
-                <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6 w-fit" style={{ background: badgeBg, border: badgeBorder }}>
-                  <span className="bow-dot w-2 h-2 rounded-full bg-[#0A3656] block" />
-                  <span className="text-[10px] font-bold tracking-[0.18em] uppercase" style={{ color: badgeTextColor }}>Today's Wisdom</span>
-                </div>
-                <h3 className="text-4xl md:text-5xl lg:text-[3.2rem] font-extrabold leading-[1.06] tracking-tight" style={{ color: heroTitleColor }}>
-                  {bean.title}
-                </h3>
-                <div className="bow-line-anim mt-4 mb-5" style={{ height: 3, width: 52, background: "linear-gradient(90deg,#0A3656,rgba(127,177,207,0.4))", borderRadius: 2 }} />
-                {bean.subtitle && (
-                  <p className="text-[13.5px] leading-relaxed max-w-lg" style={{ color: heroSubtitleColor }}>{bean.subtitle}</p>
-                )}
-              </div>
-
-              <div className="mx-9 h-px" style={{ background: dividerColor }} />
-
-              {(bean.sectionTitle || bean.description) && (
-                <div className="bow-up bow-d3 px-9 md:px-11 py-6 flex gap-4">
-                  <div className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center mt-0.5" style={{ background: descIconBg, border: descIconBorder }}>
-                    <Sparkles className="w-4 h-4 text-[#0A3656] dark:text-[#74A8C9]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    {bean.sectionTitle && (
-                      <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#0A3656] dark:text-[#74A8C9] mb-2">{bean.sectionTitle}</p>
-                    )}
-                    {bean.description && (
-                      <p className="text-[13px] sm:text-[13.5px] leading-[1.85]" style={{ color: descTextColor }}>{bean.description}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="mx-9 h-px" style={{ background: dividerColor }} />
-
+              {/* Tags */}
               {bean.tags && bean.tags.length > 0 && (
-                <div className="bow-up bow-d4 px-9 md:px-11 py-16 flex flex-wrap gap-2">
+                <div className="flex gap-1.5 flex-wrap mt-3">
                   {bean.tags.map((tag, i) => (
-                    <span key={i} className="text-[11px] font-semibold px-3 py-1 rounded-full cursor-default"
-                      style={{ color: tagColor, background: tagBg, border: tagBorder }}>
+                    <span
+                      key={i}
+                      style={{
+                        fontSize: 9, fontFamily: sansFont, letterSpacing: ".04em",
+                        color: accentLight, border: `1px solid ${accentLight}`,
+                        padding: "2px 7px",
+                      }}
+                    >
                       #{tag}
                     </span>
                   ))}
@@ -365,52 +265,235 @@ export default function BeansOfWisdomView() {
               )}
             </div>
 
-            {/* ══════ RIGHT ══════ */}
-            <div className="col-span-2 flex flex-col">
+            {/* 2. Key Principle */}
+            {bean.keyPrinciple && (
+              <div
+                className="px-4 py-3"
+                style={{ borderLeft: `3px solid ${accentLight}`, background: pullBg, borderBottom: `1px solid ${rule}` }}
+              >
+                <p
+                  className="font-bold uppercase mb-1.5"
+                  style={{ fontSize: 8, color: accentLight, fontFamily: sansFont, letterSpacing: ".22em" }}
+                >
+                  Key Principle
+                </p>
+                <p
+                  className="font-extrabold leading-snug"
+                  style={{ color: ink, fontSize: 14 }}
+                >
+                  {bean.keyPrinciple}
+                </p>
+              </div>
+            )}
 
+            {/* 3. Description / Section */}
+            {bean.description && (
+              <div className="px-4 py-3" style={{ borderBottom: `1px solid ${rule}` }}>
+                {bean.sectionTitle && (
+                  <p
+                    className="font-bold uppercase mb-1.5"
+                    style={{ fontSize: 8, color: accentLight, fontFamily: sansFont, letterSpacing: ".22em" }}
+                  >
+                    {bean.sectionTitle}
+                  </p>
+                )}
+                <p style={{ color: inkMid, fontSize: 12, lineHeight: 1.75 }}>
+                  {bean.description}
+                </p>
+              </div>
+            )}
+
+            {/* 4. Insight Text */}
+            {bean.insightText && (
+              <div className="px-4 py-3" style={{ borderBottom: `1px solid ${rule}` }}>
+                <p
+                  className="font-bold uppercase mb-1.5"
+                  style={{ fontSize: 8, color: accentLight, fontFamily: sansFont, letterSpacing: ".22em" }}
+                >
+                  {bean.insightTag || "Investment Strategy"}
+                </p>
+                <p style={{ color: inkMid, fontSize: 12, lineHeight: 1.75 }}>
+                  {bean.insightText}
+                </p>
+              </div>
+            )}
+
+            {/* 5. Quote */}
+            {bean.quote && (
+              <div
+                className="px-4 py-3 flex items-start gap-2"
+                style={{ background: pullBg }}
+              >
+                <span style={{ color: accentLight, fontSize: 22, lineHeight: 0.9, opacity: 0.7, fontFamily: pubFont }}>
+                  "
+                </span>
+                <p
+                  className="flex-1 italic"
+                  style={{ color: inkMid, fontSize: 12, lineHeight: 1.7 }}
+                >
+                  {bean.quote}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* ═══════════════════════════════════════
+              DESKTOP — 3-column newspaper
+          ═══════════════════════════════════════ */}
+          <div
+            className="hidden lg:grid"
+            style={{ gridTemplateColumns: "1fr 1px 1.6fr 1px 1fr" }}
+          >
+            {/* COL 1 */}
+            <div className="bow-in bow-d2 px-7 py-6 flex flex-col justify-between">
+              <div>
+                <h3
+                  className="text-[1.85rem] font-extrabold leading-[1.08] tracking-tight mb-3"
+                  style={{ color: ink }}
+                >
+                  {bean.title}
+                </h3>
+                <div
+                  className="bow-rule-anim mb-4"
+                  style={{ height: 2, width: 30, background: accentLight, borderRadius: 1 }}
+                />
+                {bean.subtitle && (
+                  <p className="text-[12.5px] leading-[1.78]" style={{ color: inkMid }}>
+                    {bean.subtitle}
+                  </p>
+                )}
+              </div>
+              {bean.tags && bean.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-5">
+                  {bean.tags.map((tag, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        fontSize: 10, fontFamily: sansFont, letterSpacing: ".05em",
+                        color: accentLight, border: `1px solid ${accentLight}`,
+                        padding: "2px 7px",
+                      }}
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ background: rule }} />
+
+            {/* COL 2 */}
+            <div className="bow-in bow-d3 px-8 py-6 flex flex-col gap-5">
               {bean.keyPrinciple && (
-                <div className="bow-up bow-d3 flex-1 flex flex-col justify-center gap-4 px-7 py-7"
-                  style={{ background: keyPrincipleBg, borderBottom: `1px solid ${keyPrincipleBorderClr}` }}>
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-[#0A3656] flex items-center justify-center flex-shrink-0">
-                      <TrendingUp className="w-4 h-4 text-[#0F172A]" />
-                    </div>
-                    <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#0A3656] dark:text-[#74A8C9]">Key Principle</p>
-                  </div>
-                  <p className="text-xl sm:text-2xl font-extrabold leading-snug tracking-tight" style={{ color: keyPrincipleTextColor }}>{bean.keyPrinciple}</p>
-                  <div className="w-10 h-[3px] rounded-full bg-[#0A3656]" />
+                <div
+                  style={{
+                    borderLeft: `3px solid ${accentLight}`,
+                    background: pullBg,
+                    padding: "12px 18px",
+                  }}
+                >
+                  <p
+                    className="font-bold tracking-[.22em] uppercase mb-2"
+                    style={{ fontSize: 9, color: accentLight, fontFamily: sansFont }}
+                  >
+                    Key Principle
+                  </p>
+                  <p
+                    className="text-xl font-extrabold leading-snug tracking-tight"
+                    style={{ color: ink }}
+                  >
+                    {bean.keyPrinciple}
+                  </p>
                 </div>
               )}
 
-              {bean.insightText && (
-                <div className="bow-up bow-d4 flex-1 flex flex-col justify-center gap-3 px-7 py-7"
-                  style={{ background: insightPanelBg, borderBottom: `1px solid ${insightPanelBorder}` }}>
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: insightIconBg, border: insightIconBorder }}>
-                      <Lightbulb className="w-4 h-4 text-[#0A3656] dark:text-[#74A8C9]" />
-                    </div>
-                    <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#0A3656] dark:text-[#74A8C9]">{bean.insightTag || "Investment Strategy"}</p>
-                  </div>
-                  <p className="text-[13px] leading-[1.85]" style={{ color: insightTextColor }}>{bean.insightText}</p>
+              {bean.description && (
+                <div>
+                  {bean.sectionTitle && (
+                    <p
+                      className="font-bold tracking-[.22em] uppercase mb-2"
+                      style={{ fontSize: 9, color: accentLight, fontFamily: sansFont }}
+                    >
+                      {bean.sectionTitle}
+                    </p>
+                  )}
+                  <p className="text-[13px] leading-[1.85]" style={{ color: inkMid }}>
+                    {bean.description}
+                  </p>
                 </div>
               )}
 
               {bean.quote && (
-                <div className="bow-up bow-d5 relative flex flex-col justify-center px-7 py-8 overflow-hidden" style={{ background: quotePanelBg }}>
-                  <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg,rgba(245,158,11,0.55),transparent)" }} />
-                  <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 50% 0%,rgba(10,54,86,0.09) 0%,transparent 65%)" }} />
-                  <div className="relative z-10">
-                    <div className="text-[5rem] leading-none font-serif select-none mb-2" style={{ color: "rgba(10,54,86,0.22)" }}>"</div>
-                    <p className="text-[13.5px] md:text-[14.5px] italic font-light leading-[1.9] px-1" style={{ color: quoteTextColor }}>{bean.quote}</p>
-                    <div className="text-[5rem] leading-none font-serif select-none text-right mt-1" style={{ color: "rgba(10,54,86,0.22)" }}>"</div>
-                  </div>
-                </div>
+                <>
+                  <div style={{ height: 1, background: rule }} />
+                  <p className="text-[13.5px] italic leading-[1.85]" style={{ color: inkMid }}>
+                    <span style={{ color: accentLight, fontSize: "1.5em", lineHeight: .7, verticalAlign: "middle" }}>"</span>
+                    {" "}{bean.quote}{" "}
+                    <span style={{ color: accentLight, fontSize: "1.5em", lineHeight: .7, verticalAlign: "middle" }}>"</span>
+                  </p>
+                </>
+              )}
+            </div>
+
+            <div style={{ background: rule }} />
+
+            {/* COL 3 */}
+            <div className="bow-in bow-d4 px-7 py-6 flex flex-col gap-4">
+              {bean.insightText && (
+                <>
+                  <p
+                    className="font-bold tracking-[.22em] uppercase"
+                    style={{ fontSize: 9, color: accentLight, fontFamily: sansFont }}
+                  >
+                    {bean.insightTag || "Investment Strategy"}
+                  </p>
+                  <div style={{ height: 1, background: rule }} />
+                  <p className="text-[12.5px] leading-[1.85]" style={{ color: inkMid }}>
+                    {bean.insightText}
+                  </p>
+                </>
               )}
             </div>
           </div>
 
-          {/* Bottom strip */}
-          <div style={{ height: 3, background: "linear-gradient(90deg,transparent,rgba(127,177,207,0.4),#0A3656)" }} />
+          {/* Footer strip */}
+          <div
+            className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-1.5"
+            style={{ borderTop: `1px solid ${rule}`, fontFamily: sansFont }}
+          >
+            <span className="text-[9px] tracking-[.15em] uppercase" style={{ color: inkMid, opacity: .45 }}>
+              Curated market insight
+            </span>
+
+            {/* {isAdmin && (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowEditForm(true)}
+                  className="flex items-center gap-1 text-[10px] font-bold tracking-wide uppercase transition-opacity hover:opacity-60"
+                  style={{ color: accentLight }}
+                >
+                  <Edit3 className="w-2.5 h-2.5" /> Edit
+                </button>
+                <span style={{ color: rule }}>·</span>
+                <button
+                  onClick={handleDelete} disabled={deleteLoading}
+                  className="flex items-center gap-1 text-[10px] font-bold tracking-wide uppercase transition-opacity hover:opacity-60 disabled:opacity-30"
+                  style={{ color: "#ef4444" }}
+                >
+                  <Trash2 className="w-2.5 h-2.5" />
+                  {deleteLoading ? "Deleting…" : "Delete"}
+                </button>
+              </div>
+            )} */}
+
+            <span className="text-[9px] tracking-[.15em] uppercase" style={{ color: inkMid, opacity: .45 }}>
+              InvestBeans
+            </span>
+          </div>
+
+          {/* Bottom rule */}
+          <div style={{ height: 3, background: gradR }} />
         </div>
 
         {isAdmin && (

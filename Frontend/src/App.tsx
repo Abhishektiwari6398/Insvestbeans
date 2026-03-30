@@ -33,10 +33,15 @@ import PricingPlan from "./views/Pricingplan";
 import CurrencyView from "./views/Currencyview";
 import DecodeMarketsPage from "./components/DecodeMarketsPage";
 
-// ── NEW: Full Commodities & ETFs view (replaces old MarketsView at /markets) ──
+// ── Commodities & ETFs ────────────────────────────────────────────────────────
 import CommoditiesView from "@/views/Commoditiesview";
 import AdminDashboard from "./components/Admindashboard";
 import CheckoutPage from "./components/Checkoutpage";
+import EventsView from "./views/Eventsview";
+
+// ── Education sub-pages (NEW) ─────────────────────────────────────────────────
+import EducationDetailView from "@/views/Educationdetailview";
+import EducationUnlockPage from "@/views/Educationunlockpage";
 
 const queryClient = new QueryClient();
 
@@ -55,16 +60,21 @@ const App = () => (
               <Route path="/domestic" element={<DomesticController />} />
               <Route path="/global" element={<GlobalController />} />
 
-              {/* /markets → Full Commodities & ETFs view (5 tabs via ?tab= param) */}
+              {/* /markets → Full Commodities & ETFs view */}
               <Route path="/markets" element={<CommoditiesView />} />
-
-              {/* Keep old MarketsView accessible at /markets-old if needed */}
               <Route path="/markets-old" element={<MarketsView />} />
 
               <Route path="/currency" element={<CurrencyView />} />
               <Route path="/pricing" element={<PricingPlan />} />
               <Route path="/chart/:symbol" element={<ChartPage />} />
+
+              {/* ── Education routes ─────────────────────────────────── */}
               <Route path="/education" element={<EducationView />} />
+              {/* Paywall / Unlock page (requires payment) */}
+              <Route path="/education/unlock/:categoryId" element={<EducationUnlockPage />} />
+              {/* "Start Learning" detail page */}
+              <Route path="/education/:categoryId" element={<EducationDetailView />} />
+
               <Route path="/team" element={<TeamView />} />
               <Route path="/blogs" element={<BlogsView />} />
               <Route path="/blogs/:id" element={<BlogDetailView />} />
@@ -77,16 +87,9 @@ const App = () => (
               <Route path="/forgot-password" element={<ForgotPasswordController />} />
               <Route path="/reset-password" element={<ResetPasswordController />} />
               <Route path="/insights/:tab" element={<DecodeMarketsPage />} />
+              <Route path="/events" element={<EventsView />} />
               <Route path="/plans/:planId/checkout" element={<CheckoutPage />} />
               <Route path={import.meta.env.VITE_ADMIN_ROUTE || "/x7-panel"} element={<AdminDashboard />} />
-              {/* <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <DashboardController />
-                  </ProtectedRoute>
-                }
-              /> */}
               <Route path="/signin" element={<SignInController />} />
               <Route path="/signup" element={<SignUpController />} />
               <Route path="*" element={<NotFoundController />} />

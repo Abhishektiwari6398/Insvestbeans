@@ -6,6 +6,7 @@ import WhatWeDo from './Whatwedo';
 import { useTheme } from '@/controllers/Themecontext';
 
 
+
 const TeamView = () => {
   const { theme } = useTheme();
   const isLight = theme === 'light';
@@ -56,7 +57,7 @@ const TeamView = () => {
       html { scroll-behavior: smooth; }
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { scrollbar-width: none; }
-      header, nav.site-header, .site-header { display: none !important; }
+    
       .line-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
     `}</style>
   );
@@ -156,7 +157,7 @@ const TeamView = () => {
 
       gsap.utils.toArray<HTMLElement>('.gsap-floating-pill').forEach((pill, idx) => {
         gsap.to(pill, {
-          y: 12,
+          y: 4,
           repeat: -1,
           yoyo: true,
           duration: 3 + idx * 0.3,
@@ -226,56 +227,50 @@ const TeamView = () => {
 
   return (
     <Layout>
+
       <GlobalRevealStyles />
+
       <div ref={pageRef} className={`min-h-screen ${isLight ? "bg-[#f5f4f0] text-gray-900" : "bg-slate-950/95 text-white"}`}>
         {/* Hero Section */}
-        <div className={`relative overflow-hidden ${isLight ? "bg-gradient-to-br from-[#f0f6ff] via-[#f8fbff] to-[#eef4fd]" : "bg-[radial-gradient(circle_at_top,_rgba(81,140,255,0.25),_transparent_55%)]"}`}>
+        <div className={`relative ${isLight ? "bg-gradient-to-br from-[#f0f6ff] via-[#f8fbff] to-[#eef4fd]" : "bg-[radial-gradient(circle_at_top,_rgba(81,140,255,0.25),_transparent_55%)]"}`}>
           <div className="absolute inset-0 pointer-events-none">
-            <div className={`absolute inset-x-0 top-24 h-64 bg-gradient-to-b blur-3xl ${isLight ? "from-blue-100/40 via-transparent to-transparent" : "from-blue-500/10 via-transparent to-transparent"}`}></div>
+            <div className={`absolute inset-x-0 top-40 h-64 bg-gradient-to-b blur-3xl ${isLight ? "from-blue-100/40 via-transparent to-transparent" : "from-blue-500/10 via-transparent to-transparent"}`}></div>
             <div className={`absolute -bottom-10 right-10 w-72 h-72 blur-[120px] rounded-full ${isLight ? "bg-purple-200/20" : "bg-purple-500/10"}`}></div>
             <div className={`absolute -top-24 left-1/3 w-80 h-80 blur-[140px] rounded-full ${isLight ? "bg-blue-200/30" : "bg-cyan-400/20"}`}></div>
           </div>
-          <div className="relative z-10 container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-6 pb-14 sm:pb-20 lg:pb-24">
-            {/* Back Button */}
-            <div className="mb-6">
-              <button
-                type="button"
-                onClick={() => window.history.back()}
-                className={`inline-flex items-center gap-1.5 text-sm font-medium transition-colors duration-200 ${isLight ? "text-gray-400 hover:text-gray-700" : "text-white/50 hover:text-white/90"}`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Back
-              </button>
-            </div>
-            <div className="grid lg:grid-cols-12 gap-6 items-start">
-              <div className="lg:col-span-6 space-y-6 text-center lg:text-left gsap-hero-title">
+          <div className="relative z-10 container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-3 pb-10 sm:pb-14 lg:pb-16">
+
+            {/* <div className="grid lg:grid-cols-2 gap-8 items-start ">
+              <div className="min-w-0 space-y-5 text-center lg:text-left gsap-hero-title ">
                 <span className={`inline-flex items-center gap-2 text-xs uppercase tracking-[0.5em] ${isLight ? "text-blue-500" : "text-blue-200/80"}`}>
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
                   InvestBeans DNA
                 </span>
-                <h1  className={`text-3xl sm:text-5xl lg:text-6xl font-black leading-tight ${isLight ? "text-blue-600" : "text-white"}`}>
+                <h1  className={`text-3xl sm:text-4xl lg:text-4xl xl:text-5xl font-black leading-tight ${isLight ? "text-blue-600" : "text-white"}`}>
               
-                We don’t sell calls. We build decision-makers.
+                We don’t sell calls.<span  className="block mt-2 xl:text-5xl  ">We build decision-makers.</span>
                 </h1>
+                
                 <h1 className={`text-[18px] sm:text-2xl lg:text-3xl font-black leading-tight ${isLight ? "text-blue-700" : "text-white"}`}>
                 “ Baazigar Banein… Sattebaaz Nahi ” 
                 </h1>
-                <p className={`text-sm sm:text-base lg:text-lg max-w-2xl mx-auto lg:mx-0 ${isLight ? "text-gray-500" : "text-blue-100/90"}`}>
+                <p className={`text-sm sm:text-base lg:textsm   max-w-2xl mx-auto lg:mx-0 ${isLight ? "text-gray-500" : "text-blue-100/90"}`}>
                   We blend research-driven insights, ethical practices, and human mentorship so you can navigate markets with clarity, calm, and conviction.
                 </p>
-                <div className={`flex flex-wrap lg:flex-nowrap justify-center lg:justify-start gap-2 text-[11px] uppercase tracking-[0.2em] ${isLight ? "text-gray-500" : "text-white/70"}`}>
-                  <span className={`gsap-floating-pill rounded-full border px-4 py-1.5 ${isLight ? "border-gray-200 bg-white shadow-sm" : "border-white/25 bg-white/5"}`}>Clarity Over Noise</span>
-                  <span className={`gsap-floating-pill rounded-full border px-4 py-1.5 ${isLight ? "border-gray-200 bg-white shadow-sm" : "border-white/25 bg-white/5"}`}>Discipline Over Emotion</span>
-                  <span className={`gsap-floating-pill rounded-full border px-4 py-1.5 ${isLight ? "border-gray-200 bg-white shadow-sm" : "border-white/25 bg-white/5"}`}>Process Over Predictions</span>
+                <div className={`flex flex-wrap justify-center lg:justify-start items-start gap-2 py-1 text-[11px] uppercase tracking-[0.2em] ${isLight ? "text-gray-500" : "text-white/70"}`}>
+                  {[['Clarity Over', 'Noise'], ['Discipline Over', 'Emotion'], ['Process Over', 'Predictions']].map(([line1, line2]) => (
+                    <span key={line1} className={`gsap-floating-pill inline-flex flex-col items-center justify-center text-center rounded-2xl border px-4 py-2 leading-snug ${isLight ? "border-gray-200 bg-white shadow-sm" : "border-white/25 bg-white/5"}`}>
+                      <span>{line1}</span>
+                      <span>{line2}</span>
+                    </span>
+                  ))}
                 </div>
 
               </div>
 
-              <div className="lg:col-span-6 lg:pt-8">
+              <div className="min-w-0 lg:pt-6">
                 <div className={`gsap-hero-panel relative rounded-[32px] p-6 sm:p-7 ${isLight ? "bg-white border border-gray-100 shadow-xl" : "border border-white/10 bg-white/5 backdrop-blur-2xl shadow-[0_20px_80px_-40px_rgba(15,23,42,0.8)]"}`}>
-                  <div className="absolute -top-6 -right-6 w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl blur-2xl opacity-30"></div>
+                  <div className="absolute -top-6 -right-10 w-18 h-18 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl blur-2xl opacity-30"></div>
                   <div className="relative space-y-5">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-900/50">
@@ -289,6 +284,12 @@ const TeamView = () => {
                         <p className={`text-xs mt-0.5 ${isLight ? "text-gray-400" : "text-white/60"}`}>NISM-certified Research Analyst</p>
                       </div>
                     </div>
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-xs font-semibold ${isLight ? "text-emerald-700" : "text-emerald-300"}`}>
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                      Ethics-first
+                    </span>
                     <div className={`rounded-2xl p-4 ${isLight ? "border border-gray-100 bg-gray-50" : "border border-white/15 bg-white/5"}`}>
                       <p className={`text-xs uppercase tracking-[0.3em] mb-1 ${isLight ? "text-gray-400" : "text-white/60"}`}>Focus</p>
                       <div className={`flex flex-wrap gap-2 text-sm font-semibold ${isLight ? "text-gray-700" : "text-white"}`}>
@@ -297,12 +298,6 @@ const TeamView = () => {
                             {item}
                           </span>
                         ))}
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-xs font-semibold ${isLight ? "text-emerald-700" : "text-emerald-300"}`}>
-                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                          Ethics-first
-                        </span>
                       </div>
                     </div>
                     <div className={`rounded-2xl p-5 ${isLight ? "border border-blue-100 bg-blue-50" : "border border-white/20 bg-gradient-to-br from-blue-600/20 to-purple-600/10"}`}>
@@ -314,6 +309,93 @@ const TeamView = () => {
                   </div>
                 </div>
               </div>
+            </div> */}
+            <div className="grid lg:grid-cols-2 gap-8 items-stretch">
+
+              {/* ── LEFT COLUMN ── */}
+              <div className="min-w-0 flex flex-col justify-center space-y-5 text-center lg:text-left gsap-hero-title">
+                <span className={`inline-flex items-center gap-2 text-xs uppercase tracking-[0.5em] ${isLight ? "text-blue-500" : "text-blue-200/80"}`}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                  InvestBeans DNA
+                </span>
+
+                {/* ✅ Single-line headline — no block/break */}
+                <h1 className={`text-3xl sm:text-4xl xl:text-5xl font-black leading-tight ${isLight ? "text-blue-600" : "text-white"}`}>
+                  We don't sell calls. We build decision-makers.
+                </h1>
+
+                <h2 className={`text-[18px] sm:text-2xl lg:text-3xl font-black leading-tight ${isLight ? "text-blue-700" : "text-white"}`}>
+                  " Baazigar Banein… Sattebaaz Nahi "
+                </h2>
+
+                <p className={`text-sm sm:text-xl max-w-2xl mx-auto lg:mx-0 ${isLight ? "text-gray-500" : "text-blue-100/90"}`}>
+                  We blend research-driven insights, ethical practices, and human mentorship so you can navigate markets with clarity, calm, and conviction.
+                </p>
+
+                <div className={`flex flex-wrap justify-center lg:justify-start items-start gap-2 py-1 text-[11px] uppercase tracking-[0.2em] ${isLight ? "text-gray-500" : "text-white/70"}`}>
+                  {[['Clarity Over', 'Noise'], ['Discipline Over', 'Emotion'], ['Process Over', 'Predictions']].map(([line1, line2]) => (
+                    <span
+                      key={line1}
+                      className={`gsap-floating-pill inline-flex flex-col items-center justify-center text-center rounded-2xl border px-4 py-2 leading-snug ${isLight ? "border-gray-200 bg-white shadow-sm" : "border-white/25 bg-white/5"}`}
+                    >
+                      <span>{line1}</span>
+                      <span>{line2}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── RIGHT COLUMN ── equal height via flex */}
+              <div className="min-w-0 flex flex-col lg:pt-6">
+                <div className={`gsap-hero-panel relative rounded-[32px] p-6 sm:p-7 flex-1 flex flex-col justify-between ${isLight ? "bg-white border border-gray-100 shadow-xl" : "border border-white/10 bg-white/5 backdrop-blur-2xl shadow-[0_20px_80px_-40px_rgba(15,23,42,0.8)]"}`}>
+                  <div className="absolute -top-6 -right-10 w-18 h-18 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl blur-2xl opacity-30"></div>
+
+                  <div className="relative space-y-5">
+                    {/* Header row */}
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-900/50">
+                        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className={`text-xs uppercase tracking-[0.4em] ${isLight ? "text-gray-400" : "text-white/60"}`}>Founded 2024</p>
+                        <p className={`text-base font-semibold ${isLight ? "text-gray-800" : "text-white"}`}>Education & Research Collective</p>
+                        <p className={`text-xs mt-0.5 ${isLight ? "text-gray-400" : "text-white/60"}`}>NISM-certified Research Analyst</p>
+                      </div>
+                    </div>
+
+                    {/* Ethics badge */}
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-xs font-semibold ${isLight ? "text-emerald-700" : "text-emerald-300"}`}>
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                      Ethics-first
+                    </span>
+
+                    {/* Focus row */}
+                    <div className={`rounded-2xl p-4 ${isLight ? "border border-gray-100 bg-gray-50" : "border border-white/15 bg-white/5"}`}>
+                      <p className={`text-xs uppercase tracking-[0.3em] mb-1 ${isLight ? "text-gray-400" : "text-white/60"}`}>Focus</p>
+                      <div className={`flex flex-wrap gap-2 text-sm font-semibold ${isLight ? "text-gray-700" : "text-white"}`}>
+                        {['Equities', 'Commodities', 'Forex', 'Learn'].map((item) => (
+                          <span key={item} className={`px-3 py-1 rounded-full ${isLight ? "bg-white border border-gray-200 text-gray-600 shadow-sm" : "bg-white/10 border border-white/10"}`}>
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Promise row */}
+                    <div className={`rounded-2xl p-5 ${isLight ? "border border-blue-100 bg-blue-50" : "border border-white/20 bg-gradient-to-br from-blue-600/20 to-purple-600/10"}`}>
+                      <p className={`text-xs uppercase tracking-[0.4em] ${isLight ? "text-blue-400" : "text-white/60"}`}>Promise</p>
+                      <p className={`mt-2 text-sm ${isLight ? "text-blue-700" : "text-blue-100/90"}`}>
+                        No shortcuts. No noise. Just research-led judgment and disciplined risk thinking.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
             </div>
 
             {/* Stats hidden for now
@@ -333,53 +415,45 @@ const TeamView = () => {
           </div>
         </div>
 
-        {/* Join CTA strip */}
-        <div className={isLight ? "border-y border-gray-100 bg-white" : ""}>
-          <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className={`text-sm text-center sm:text-left ${isLight ? "text-gray-500" : "text-white/60"}`}>
-              Ready to navigate markets with clarity and conviction?
-            </p>
-            <button
-              type="button"
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 px-7 py-3 font-semibold text-white shadow-lg shadow-blue-500/25 hover:scale-[1.02] transition-all whitespace-nowrap"
-            >
-              Join the Community
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
         {/* Sticky sub-navigation */}
-        <div className={`sticky top-0 z-30 border-b backdrop-blur-lg ${isLight ? "border-gray-100 bg-white/90" : "border-white/10 bg-slate-950/85"}`}>
+        <div className={`sticky top-0 z-20 border-b backdrop-blur-lg ${isLight ? "border-gray-100 bg-white/90" : "border-white/10 bg-slate-950/85"}`}>
           <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar py-3" role="tablist" aria-label="About page sections">
-              {[
-                { href: '#our-story', label: 'Our Story' },
-                { href: '#team-members', label: 'Team' },
-                { href: '#mission', label: 'Mission' },
-                { href: '#core-values', label: 'Core Values' },
-                { href: '#why-us', label: 'Why Us' },
-                { href: '#certifications', label: 'Certifications' },
-                { href: '#join', label: 'Join' },
-              ].map((item, idx) => (
-                <a
-                  key={idx}
-                  href={item.href}
-                  className={`text-xs sm:text-sm px-3.5 py-1.5 rounded-full border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
-                    activeSection === item.href.replace('#', '')
-                      ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-transparent shadow-lg shadow-blue-900/30'
-                      : isLight
-                        ? 'text-gray-500 border-gray-200 hover:text-gray-800 hover:border-gray-300 bg-white'
-                        : 'text-white/70 border-white/15 hover:text-white hover:border-white/40'
-                  }`}
-                  role="tab"
-                  aria-selected={activeSection === item.href.replace('#', '')}
-                >
-                  {item.label}
-                </a>
-              ))}
+            <div className="flex items-center gap-2 sm:gap-3 py-3" role="tablist" aria-label="About page sections">
+              <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar flex-1">
+                {[
+                  { href: '#our-story', label: 'Our Story' },
+                  { href: '#mission', label: 'Mission & Vission' },
+                  { href: '#core-values', label: ' Values' },
+                  { href: '#team-members', label: 'Team' },
+                  { href: '#why-us', label: 'Why Us' },
+                  { href: '#what-we do', label: 'What We Do' },
+                  { href: '#certifications', label: 'Trust and Compliance' },
+                ].map((item, idx) => (
+                  <a
+                    key={idx}
+                    href={item.href}
+                    className={`text-xs sm:text-sm px-3.5 py-1.5 rounded-full border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 whitespace-nowrap ${activeSection === item.href.replace('#', '')
+                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-transparent shadow-lg shadow-blue-900/30'
+                        : isLight
+                          ? 'text-gray-500 border-gray-200 hover:text-gray-800 hover:border-gray-300 bg-white'
+                          : 'text-white/70 border-white/15 hover:text-white hover:border-white/40'
+                      }`}
+                    role="tab"
+                    aria-selected={activeSection === item.href.replace('#', '')}
+                  >
+                    {item.label}
+                  </a>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="hidden sm:inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 hover:scale-[1.02] transition-all whitespace-nowrap flex-shrink-0"
+              >
+                Join the Community
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -447,7 +521,7 @@ const TeamView = () => {
             </div>
           </Reveal>
 
-         
+
 
           {/* Team Members */}
           <div id="team-members" className="scroll-mt-24 mb-12">
@@ -522,42 +596,49 @@ const TeamView = () => {
 
 
           {/* Mission & Vision */}
-          <div id="mission" className="scroll-mt-24 grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12 lg:items-stretch">
-            <Reveal className="gsap-section-card h-full">
-              <div className="relative overflow-hidden rounded-[30px] border border-white/10 bg-gradient-to-br from-blue-600/70 to-blue-800/80 p-6 sm:p-8 text-white shadow-[0_25px_80px_-40px_rgba(37,99,235,0.9)] h-full">
-                <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.3),_transparent_60%)]"></div>
-                <div className="relative space-y-4">
-                  <p className="text-xs uppercase tracking-[0.5em] text-white/70">Mission</p>
-                  <h2 className="text-2xl font-semibold">Empower financial security through clarity and education.</h2>
-                  <p className="text-sm text-white/85 leading-relaxed">
-                    We help individuals build confidence in the markets through structured learning and research-led frameworks — designed to support disciplined decision-making and sustainable long-term growth at every stage of the journey.
-                  </p>
-                  <ul className="space-y-2 text-sm text-white/80">
-                    <li className="flex gap-2"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-white flex-shrink-0"></span>Structure learning journeys for every risk profile.</li>
-                    <li className="flex gap-2"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-white flex-shrink-0"></span>Coach capital protection and risk journaling.</li>
-                    <li className="flex gap-2"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-white flex-shrink-0"></span>Deliver mentorship that sticks beyond a webinar.</li>
-                  </ul>
+          <div id="mission" className="scroll-mt-24 mb-12">
+            <div className="text-center mb-6">
+              <p className={`text-xs uppercase tracking-[0.5em] mb-2 ${isLight ? "text-gray-400" : "text-white/60"}`}>Our Purpose</p>
+              <h2 className={`text-3xl sm:text-4xl font-bold ${isLight ? "text-gray-900" : "text-white"}`}>Trust Signals</h2>
+              <div className="w-20 h-1 bg-gradient-to-r from-blue-600 to-emerald-500 mx-auto rounded-full mt-3"></div>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:items-stretch">
+              <Reveal className="gsap-section-card h-full">
+                <div className="relative overflow-hidden rounded-[30px] border border-white/10 bg-gradient-to-br from-blue-600/70 to-blue-800/80 p-6 sm:p-8 text-white shadow-[0_25px_80px_-40px_rgba(37,99,235,0.9)] h-full">
+                  <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.3),_transparent_60%)]"></div>
+                  <div className="relative space-y-4">
+                    <p className="text-xs uppercase tracking-[0.5em] text-white/70">Mission</p>
+                    <h2 className="text-2xl font-semibold">Empower financial security through clarity and education.</h2>
+                    <p className="text-sm text-white/85 leading-relaxed">
+                      We help individuals build confidence in the markets through structured learning and research-led frameworks — designed to support disciplined decision-making and sustainable long-term growth at every stage of the journey.
+                    </p>
+                    <ul className="space-y-2 text-sm text-white/80">
+                      <li className="flex gap-2"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-white flex-shrink-0"></span>Structure learning journeys for every risk profile.</li>
+                      <li className="flex gap-2"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-white flex-shrink-0"></span>Coach capital protection and risk journaling.</li>
+                      <li className="flex gap-2"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-white flex-shrink-0"></span>Deliver mentorship that sticks beyond a webinar.</li>
+                    </ul>
+                  </div>
                 </div>
-              </div>
-            </Reveal>
+              </Reveal>
 
-            <Reveal id="vision" className="gsap-section-card h-full">
-              <div className="relative overflow-hidden rounded-[30px] border border-white/10 bg-gradient-to-br from-emerald-600/70 to-cyan-600/70 p-6 sm:p-8 text-white shadow-[0_25px_80px_-40px_rgba(16,185,129,0.9)] h-full">
-                <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_bottom,_rgba(255,255,255,0.25),_transparent_50%)]"></div>
-                <div className="relative space-y-4">
-                  <p className="text-xs uppercase tracking-[0.5em] text-white/70">Vision</p>
-                  <h2 className="text-2xl font-semibold">Make ethical wealth-building accessible to all.</h2>
-                  <p className="text-sm text-white/85 leading-relaxed">
-                    We aspire to lead in generational wealth creation through financial literacy, confidence, and long-term resilience — especially for women, youth, and underserved communities.
-                  </p>
-                  <ul className="space-y-2 text-sm text-white/80">
-                    <li className="flex gap-2"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-white flex-shrink-0"></span>Empower women through financial confidence.</li>
-                    <li className="flex gap-2"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-white flex-shrink-0"></span>Build financial literacy for the next generation.</li>
-                    <li className="flex gap-2"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-white flex-shrink-0"></span>Strengthen resilience against economic shocks.</li>
-                  </ul>
+              <Reveal id="vision" className="gsap-section-card h-full">
+                <div className="relative overflow-hidden rounded-[30px] border border-white/10 bg-gradient-to-br from-emerald-600/70 to-cyan-600/70 p-6 sm:p-8 text-white shadow-[0_25px_80px_-40px_rgba(16,185,129,0.9)] h-full">
+                  <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_bottom,_rgba(255,255,255,0.25),_transparent_50%)]"></div>
+                  <div className="relative space-y-4">
+                    <p className="text-xs uppercase tracking-[0.5em] text-white/70">Vision</p>
+                    <h2 className="text-2xl font-semibold">Make ethical wealth-building accessible to all.</h2>
+                    <p className="text-sm text-white/85 leading-relaxed">
+                      We aspire to lead in generational wealth creation through financial literacy, confidence, and long-term resilience — especially for women, youth, and underserved communities.
+                    </p>
+                    <ul className="space-y-2 text-sm text-white/80">
+                      <li className="flex gap-2"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-white flex-shrink-0"></span>Empower women through financial confidence.</li>
+                      <li className="flex gap-2"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-white flex-shrink-0"></span>Build financial literacy for the next generation.</li>
+                      <li className="flex gap-2"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-white flex-shrink-0"></span>Strengthen resilience against economic shocks.</li>
+                    </ul>
+                  </div>
                 </div>
-              </div>
-            </Reveal>
+              </Reveal>
+            </div>
           </div>
 
           {/* Company Values (unchanged content) */}
@@ -710,14 +791,14 @@ const TeamView = () => {
               </div>
             </div>
           </Reveal>
-           <Reveal id='what-we do'>
-            <WhatWeDo/>
-           </Reveal>
+          <Reveal id='what-we do'>
+            <WhatWeDo />
+          </Reveal>
 
 
           {/* Certifications Section */}
           <Reveal id="certifications" className="scroll-mt-24 mb-12">
-            <div className={`gsap-section-card relative overflow-hidden rounded-[32px] p-6 sm:p-10 ${isLight ? "border border-amber-200 bg-gradient-to-br from-amber-50 to-white text-amber-900" : "border border-amber-200/20 bg-gradient-to-br from-amber-900/20 to-slate-900/80 text-amber-100"}`}>
+            <div className={`gsap-section-card relative overflow-hidden rounded-[32px] p-6 sm:p-10 ${isLight ? "border border-amber-200 bg-gradient-to-br from-amber-50 to-white" : "border border-amber-400/30 bg-gradient-to-br from-amber-900/30 to-slate-800/90"}`}>
               <div className="absolute inset-0 opacity-60 bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.2),_transparent_65%)]"></div>
               <div className="relative space-y-6">
                 <div className="flex flex-wrap items-center gap-4">
@@ -727,27 +808,27 @@ const TeamView = () => {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-[0.4em] text-amber-700/80">Trust signals</p>
-                    <h2 className="text-2xl font-bold text-amber-900">Certifications & Governance</h2>
+                    <p className={`text-xs uppercase tracking-[0.4em] ${isLight ? "text-amber-700/80" : "text-amber-300/80"}`}>Trust signals</p>
+                    <h2 className={`text-2xl font-bold ${isLight ? "text-amber-900" : "text-amber-100"}`}>Certifications & Governance</h2>
                   </div>
                 </div>
-                <p className="text-sm text-amber-800 leading-relaxed">
+                <p className={`text-sm leading-relaxed ${isLight ? "text-amber-800" : "text-amber-100/90"}`}>
                   Our analysts hold <strong>NISM Research Analyst</strong> and <strong>NISM Equity Derivatives</strong> certifications. While InvestBeans is currently in the process
                   of aligning with SEBI registration pathways, we already operate with SEBI-grade documentation, disclosures, and audit trails for every advisory note.
                 </p>
-                <div className="rounded-2xl border border-amber-200 bg-white/80 p-5 text-sm text-amber-900 space-y-2">
+                <div className={`rounded-2xl border p-5 text-sm space-y-2 ${isLight ? "border-amber-200 bg-white/80 text-amber-900" : "border-amber-400/30 bg-amber-950/40 text-amber-100"}`}>
                   <p className="font-semibold">What this means for you:</p>
                   <ul className="space-y-2">
                     <li className="flex gap-2">
-                      <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                      <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0"></span>
                       Ethical screens on all shared research.
                     </li>
                     <li className="flex gap-2">
-                      <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                      <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0"></span>
                       Transparent risk labeling & scenario matrices.
                     </li>
                     <li className="flex gap-2">
-                      <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                      <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0"></span>
                       Continuous upskilling roadmap aligned to regulators.
                     </li>
                   </ul>

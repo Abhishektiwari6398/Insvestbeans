@@ -51,7 +51,7 @@ const Sparkline = ({ positive, color }) => {
   }
   const gradId = `sg-${positive ? "up" : "dn"}-${color.replace('#', '')}`;
   return (
-    <svg viewBox="0 0 72 40" className="w-full h-10" preserveAspectRatio="none">
+    <svg viewBox="0 0 72 40" className="w-full h-7" preserveAspectRatio="none">
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.35" />
@@ -143,7 +143,7 @@ const SensexNiftyCard = ({ cardBg, cardBorder, cardShadow, isLight, sensex, nift
   const niftyPos = (nifty?.chg ?? 0) >= 0;
 
   return (
-    <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }} className="rounded-2xl relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer md:p-5">
+    <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }} className="rounded-2xl relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer md:p-3">
       <div className="md:hidden">
         <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: isLight ? "#0A3656" : "#1F5F89", borderRadius: "8px 0 0 8px" }} />
         <div style={{ padding: "10px 10px 10px 14px" }}>
@@ -170,11 +170,11 @@ const SensexNiftyCard = ({ cardBg, cardBorder, cardShadow, isLight, sensex, nift
         </div>
       </div>
       <div className="hidden md:block">
-        <div className="flex items-center gap-1.5 mb-3">
+        <div className="flex items-center gap-1.5 mb-1.5">
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: isLight ? "#0A3656" : "#74A8C9", display: "inline-block", boxShadow: isLight ? "0 0 6px rgba(10,54,86,0.45)" : "0 0 6px rgba(116,168,201,0.45)" }} />
           <span style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: isLight ? "#1f455f" : "#ffffff" }}>SENSEX vs NIFTY 50</span>
         </div>
-        <div className="space-y-2 mb-3">
+        <div className="space-y-1.5 mb-2">
           {[
             { label: "Sensex", val: fmtVal(sensex?.price), chg: fmtChg(sensex?.chg), pos: sensexPos },
             { label: "Nifty 50", val: fmtVal(nifty?.price), chg: fmtChg(nifty?.chg), pos: niftyPos },
@@ -217,7 +217,7 @@ const FiiDiiCard = ({ cardBg, cardBorder, cardShadow, isLight, fiiNet, diiNet, f
   const diiLabel = fmt(diiNet);
   const dateLabel = fiiDate ? `As of ${fiiDate}` : "";
   return (
-    <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }} className="rounded-2xl relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer md:p-5">
+    <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }} className="rounded-2xl relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer md:p-3">
       <div className="md:hidden" style={{ padding: "10px 10px 10px 14px", position: "relative" }}>
         <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: isLight ? "#0A3656" : "#1F5F89", borderRadius: "8px 0 0 8px" }} />
         <div style={{ fontSize: "8px", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: isLight ? "#0A3656" : "#74A8C9", marginBottom: 8 }}>FII · DII FLOW</div>
@@ -247,13 +247,13 @@ const FiiDiiCard = ({ cardBg, cardBorder, cardShadow, isLight, fiiNet, diiNet, f
         </div>
       </div>
       <div className="hidden md:block">
-        <div className="flex items-center gap-1.5 mb-3">
+        <div className="flex items-center gap-1.5 mb-1.5">
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: isLight ? "#0A3656" : "#74A8C9", display: "inline-block", boxShadow: isLight ? "0 0 6px rgba(10,54,86,0.45)" : "0 0 6px rgba(116,168,201,0.45)" }} />
           <span style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: isLight ? "#1f455f" : "#ffffff" }}>FII vs DII</span>
         </div>
-        <div className="flex justify-between items-end mb-4">
-          <div><div className={`text-[11px] font-semibold mb-1 ${isLight ? "text-navy/50" : "text-white/40"}`}>FII</div><div className="text-lg md:text-xl font-bold text-red-400">{loading ? "···" : fiiLabel}</div></div>
-          <div className="text-right"><div className={`text-[11px] font-semibold mb-1 ${isLight ? "text-navy/50" : "text-white/40"}`}>DII</div><div className="text-lg md:text-xl font-bold text-emerald-400">{loading ? "···" : diiLabel}</div></div>
+        <div className="flex justify-between items-end mb-2">
+          <div><div className={`text-[11px] font-semibold mb-1 ${isLight ? "text-navy/50" : "text-white/40"}`}>FII</div><div className="text-base md:text-lg font-bold text-red-400">{loading ? "···" : fiiLabel}</div></div>
+          <div className="text-right"><div className={`text-[11px] font-semibold mb-1 ${isLight ? "text-navy/50" : "text-white/40"}`}>DII</div><div className="text-base md:text-lg font-bold text-emerald-400">{loading ? "···" : diiLabel}</div></div>
         </div>
         <div className="h-2.5 rounded-full overflow-hidden flex" style={{ background: isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)" }}>
           <div style={{ width: `${fiiPct}%`, background: "linear-gradient(90deg,#ef4444,#f87171)", borderRadius: "999px 0 0 999px" }} />
@@ -277,7 +277,7 @@ const IndiaVixCard = ({ cardBg, cardBorder, cardShadow, isLight, vixData }) => {
   const fearLabel = vix < 15 ? "Low" : vix < 20 ? "Moderate" : "High";
   const fearColor = vix < 15 ? "#22c55e" : vix < 20 ? "#f59e0b" : "#ef4444";
   return (
-    <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }} className="rounded-2xl relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer md:p-5">
+    <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }} className="rounded-2xl relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer md:p-3">
       <div className="md:hidden" style={{ padding: "10px 10px 10px 14px", position: "relative" }}>
         <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: fearColor, borderRadius: "8px 0 0 8px" }} />
         <div style={{ fontSize: "8px", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: isLight ? "#0A3656" : "#74A8C9", marginBottom: 6 }}>INDIA VIX</div>
@@ -299,12 +299,12 @@ const IndiaVixCard = ({ cardBg, cardBorder, cardShadow, isLight, vixData }) => {
         </div>
       </div>
       <div className="hidden md:block">
-        <div className="flex items-center gap-1.5 mb-3">
+        <div className="flex items-center gap-1.5 mb-1.5">
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: isLight ? "#0A3656" : "#74A8C9", display: "inline-block", boxShadow: isLight ? "0 0 6px rgba(10,54,86,0.45)" : "0 0 6px rgba(116,168,201,0.45)" }} />
           <span style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: isLight ? "#1f455f" : "#ffffff" }}>INDIA VIX</span>
         </div>
-        <div className="flex items-end justify-between mb-3">
-          <span className={`text-3xl md:text-4xl font-extrabold tracking-tight ${isLight ? "text-navy" : "text-white"}`}>{vix.toFixed ? vix.toFixed(2) : vix}</span>
+        <div className="flex items-end justify-between mb-1.5">
+          <span className={`text-lg md:text-xl font-extrabold tracking-tight ${isLight ? "text-navy" : "text-white"}`}>{vix.toFixed ? vix.toFixed(2) : vix}</span>
           <div className="flex flex-col items-end gap-1">
             <span className={`flex items-center gap-1 font-bold text-sm ${vixChange < 0 ? "text-red-400" : "text-emerald-400"}`}>
               {vixChange < 0 ? <TrendingDown className="w-3.5 h-3.5" /> : <TrendingUp className="w-3.5 h-3.5" />} {vixChange.toFixed ? vixChange.toFixed(2) : vixChange}%
@@ -333,7 +333,7 @@ const GiftNiftyCard = ({ cardBg, cardBorder, cardShadow, isLight, liveGiftNifty,
   const displayChange = change != null ? `${pos ? "▲ +" : "▼ "}${Math.abs(change).toFixed(2)}%` : "···";
   const sentiment = change == null ? "Loading…" : pos ? "Positive Opening Indicated" : "Negative Opening Indicated";
   return (
-    <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }} className="rounded-2xl relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer md:p-5">
+    <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }} className="rounded-2xl relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer md:p-3">
       <div className="md:hidden" style={{ position: "relative" }}>
         <div style={{ height: 3, background: isLight ? "#0A3656" : "#1F5F89", borderRadius: "8px 8px 0 0" }} />
         <div style={{ padding: "8px 10px 0 10px" }}>
@@ -347,13 +347,13 @@ const GiftNiftyCard = ({ cardBg, cardBorder, cardShadow, isLight, liveGiftNifty,
         <Sparkline positive={pos} color={isLight ? "#0A3656" : "#1F5F89"} />
       </div>
       <div className="hidden md:block">
-        <div className="flex items-center gap-1.5 mb-3">
+        <div className="flex items-center gap-1.5 mb-1.5">
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: isLight ? "#0A3656" : "#74A8C9", display: "inline-block", boxShadow: isLight ? "0 0 6px rgba(10,54,86,0.45)" : "0 0 6px rgba(116,168,201,0.45)" }} />
           <span style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: isLight ? "#1f455f" : "#ffffff" }}>GIFT NIFTY</span>
         </div>
         <div className="flex items-end justify-between mb-1">
           <div>
-            <div className={`text-2xl md:text-3xl font-extrabold tracking-tight ${isLight ? "text-navy" : "text-white"}`}>{displayPrice}</div>
+            <div className={`text-lg md:text-xl font-extrabold tracking-tight ${isLight ? "text-navy" : "text-white"}`}>{displayPrice}</div>
             <div className="flex items-center gap-1 mt-1">
               {pos ? <TrendingUp className="w-3.5 h-3.5 text-emerald-400" /> : <TrendingDown className="w-3.5 h-3.5 text-red-400" />}
               <span className={`font-bold text-sm ${pos ? "text-emerald-400" : "text-red-400"}`}>{displayChange}</span>
@@ -374,7 +374,7 @@ const UsdInrCard = ({ cardBg, cardBorder, cardShadow, isLight, liveValue, liveCh
   const pos = (changeVal ?? 0) >= 0;
   const sliderPct = Math.min(100, Math.max(0, ((rate - 82) / 8) * 100));
   return (
-    <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }} className="rounded-2xl relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer md:p-5">
+    <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }} className="rounded-2xl relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer md:p-3">
       <div className="md:hidden" style={{ padding: "10px 10px 10px 14px", position: "relative" }}>
         <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: isLight ? "#0A3656" : "#1F5F89", borderRadius: "8px 0 0 8px" }} />
         <div style={{ fontSize: "8px", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: isLight ? "#0A3656" : "#74A8C9", marginBottom: 5 }}>USD / INR</div>
@@ -399,13 +399,13 @@ const UsdInrCard = ({ cardBg, cardBorder, cardShadow, isLight, liveValue, liveCh
         </div>
       </div>
       <div className="hidden md:block">
-        <div className="flex items-center gap-1.5 mb-3">
+        <div className="flex items-center gap-1.5 mb-1.5">
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: isLight ? "#0A3656" : "#74A8C9", display: "inline-block", boxShadow: isLight ? "0 0 6px rgba(10,54,86,0.45)" : "0 0 6px rgba(116,168,201,0.45)" }} />
           <span style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: isLight ? "#1f455f" : "#ffffff" }}>USD / INR</span>
         </div>
         <div className="flex items-end justify-between mb-2">
           <div>
-            <div className={`text-2xl md:text-3xl font-extrabold tracking-tight ${isLight ? "text-navy" : "text-white"}`}>₹{rate.toFixed ? rate.toFixed(2) : rate}</div>
+            <div className={`text-lg md:text-xl font-extrabold tracking-tight ${isLight ? "text-navy" : "text-white"}`}>₹{rate.toFixed ? rate.toFixed(2) : rate}</div>
             <div className="flex items-center gap-1 mt-1">
               {pos ? <TrendingUp className="w-3.5 h-3.5 text-emerald-400" /> : <TrendingDown className="w-3.5 h-3.5 text-red-400" />}
               <span className={`font-bold text-sm ${pos ? "text-emerald-400" : "text-red-400"}`}>
@@ -439,7 +439,7 @@ const GoldSilverCard = ({ cardBg, cardBorder, cardShadow, isLight, liveGold, liv
   const srcLabel = (src) => src === "kite-ws" ? "Live MCX" : src === "kite-rest" ? "MCX REST" : src === "yahoo" ? "Yahoo est." : null;
   const srcColor = (src) => src === "kite-ws" ? "#22c55e" : src === "kite-rest" ? (isLight ? "#0A3656" : "#74A8C9") : "#f59e0b";
   return (
-    <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }} className="rounded-2xl relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer md:p-5">
+    <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }} className="rounded-2xl relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer md:p-3">
       <div className="md:hidden" style={{ padding: "10px", position: "relative" }}>
         <div style={{ position: "absolute", top: 0, right: 0, width: 40, height: 40, background: isLight ? "rgba(37,99,235,0.06)" : "rgba(59,130,246,0.08)", borderRadius: "0 8px 0 40px" }} />
         <div style={{ fontSize: "8px", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: isLight ? "#0A3656" : "#74A8C9", marginBottom: 7 }}>GOLD · SILVER</div>
@@ -482,7 +482,7 @@ const GoldSilverCard = ({ cardBg, cardBorder, cardShadow, isLight, liveGold, liv
             </span>
           )}
         </div>
-        <div className="space-y-3">
+        <div className="space-y-2">
           {[
             { Icon: GoldBrickIcon,   label: "Gold",   price: fmtPrice(gold),   chg: fmtChg(goldChg, goldPos),     pos: goldPos,   bar: "linear-gradient(90deg,#C9A84C,#f5d78e)", barW: "72%", unit: "per 10g" },
             { Icon: SilverBrickIcon, label: "Silver", price: fmtPrice(silver), chg: fmtChg(silverChg, silverPos), pos: silverPos, bar: "linear-gradient(90deg,#94a3b8,#cbd5e1)", barW: "58%", unit: "per kg" },
@@ -490,7 +490,7 @@ const GoldSilverCard = ({ cardBg, cardBorder, cardShadow, isLight, liveGold, liv
             <div key={label}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Icon size={40} />
+                  <Icon size={28} />
                   <div>
                     <span className={`font-semibold text-sm ${isLight ? "text-navy/80" : "text-white/80"}`}>{label}</span>
                     <span style={{ display: "block", fontSize: "9px", color: isLight ? "rgba(30,58,95,0.4)" : "rgba(255,255,255,0.35)", fontWeight: 600 }}>{unit}</span>
@@ -521,14 +521,14 @@ const USStatCard = ({ label, value, positive, cardBg, cardBorder, cardShadow, is
   const clickable = !!path && !!section;
   return (
     <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }}
-      className={`rounded-2xl p-3 sm:p-5 relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 ${clickable ? "cursor-pointer" : ""}`}
+      className={`rounded-2xl p-3 sm:p-3 relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 ${clickable ? "cursor-pointer" : ""}`}
       onClick={() => clickable && onNavigate?.(path, section)}>
-      <div className="flex items-center gap-1.5 mb-3">
+      <div className="flex items-center gap-1.5 mb-1.5">
         <span style={{ width: 7, height: 7, borderRadius: "50%", background: isLight ? "#0A3656" : "#74A8C9", display: "inline-block", boxShadow: isLight ? "0 0 6px rgba(10,54,86,0.45)" : "0 0 6px rgba(116,168,201,0.45)" }} />
         <span style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.10em", color: isLight ? "#1f455f" : "#ffffff" }}>{label}</span>
       </div>
       <div className="mb-3">
-        <div className="text-2xl sm:text-3xl font-extrabold tracking-tight" style={{ color: loading ? (isLight ? "#64748b" : "#94a3b8") : color }}>{loading ? "—" : value}</div>
+        <div className="text-lg sm:text-xl font-extrabold tracking-tight" style={{ color: loading ? (isLight ? "#64748b" : "#94a3b8") : color }}>{loading ? "—" : value}</div>
         <div className={`text-[10px] sm:text-[11px] mt-1 ${isLight ? "text-navy/40" : "text-white/35"}`}>Today's change</div>
       </div>
       <Sparkline positive={isUp} color={color} />
@@ -709,8 +709,8 @@ const Hero = () => {
     ? { background: "linear-gradient(180deg, #FCFDFE 0%, #F2F7FB 40%, #EAF2F8 70%, #FCFDFE 100%)" }
     : { background: "linear-gradient(180deg, #041421 0%, #072134 28%, #0A3656 54%, #1F5F89 68%, #062334 82%, #041421 100%)" };
   const sectionCls = isLight
-    ? "text-slate-900 pt-14 pb-10 md:pt-24 md:pb-14 lg:pt-28 lg:pb-16 relative overflow-hidden"
-    : "text-white pt-14 pb-10 md:pt-24 md:pb-14 lg:pt-28 lg:pb-16 relative overflow-hidden";
+    ? "text-slate-900 pt-4 pb-4 md:pt-6 md:pb-4 relative overflow-hidden"
+    : "text-white pt-4 pb-4 md:pt-6 md:pb-4 relative overflow-hidden";
   const cardBg = isLight ? "#FCFDFE" : "rgba(8,31,49,0.58)";
   const cardBorder = isLight ? "1px solid rgba(4,20,33,0.11)" : "1px solid rgba(124,166,194,0.28)";
   const cardShadow = isLight
@@ -757,7 +757,7 @@ const Hero = () => {
         <div className="max-w-5xl mx-auto text-center animate-fade-in">
 
           {/* Professional badge */}
-          <div className="flex justify-center mb-5 md:mb-6">
+          <div className="flex justify-center mb-2 md:mb-3">
             <span style={{
               display: "inline-flex", alignItems: "center", gap: 6,
               padding: "6px 16px", borderRadius: 20,
@@ -775,10 +775,10 @@ const Hero = () => {
 
           <h1
             key={theme}
-            className="font-extrabold tracking-tight mb-3 md:mb-5 px-2"
+            className="font-extrabold tracking-tight mb-2 px-2"
             style={{
-              fontSize: "clamp(1.5rem, 4.5vw, 3.5rem)",
-              lineHeight: 1.15,
+              fontSize: "clamp(1.3rem, 3.5vw, 2.6rem)",
+              lineHeight: 1.1,
               color: isLight ? "#041421" : "#e8edf5",
             }}
           >
@@ -789,8 +789,8 @@ const Hero = () => {
           <p
             className="mx-auto max-w-2xl"
             style={{
-              fontSize: "clamp(0.875rem, 1.6vw, 1.1rem)",
-              lineHeight: 1.7,
+              fontSize: "clamp(0.75rem, 1.3vw, 0.95rem)",
+              lineHeight: 1.5,
               letterSpacing: "0.01em",
               color: isLight ? "#35566f" : "#94a3b8",
               marginBottom: 0,
@@ -805,12 +805,37 @@ const Hero = () => {
             , not assumptions.
           </p>
 
+          {/* ── Coming Soon badge ── */}
+          <div style={{ marginTop: 10, marginBottom: 0 }}>
+            <span style={{
+              display: "inline-flex", alignItems: "center", gap: 7,
+              padding: "4px 12px 4px 6px", borderRadius: 99,
+              background: isLight ? "rgba(31,95,137,0.07)" : "rgba(10,54,86,0.55)",
+              border: isLight ? "1px solid rgba(31,95,137,0.18)" : "1px solid rgba(128,180,210,0.22)",
+            }}>
+              <span style={{
+                display: "inline-flex", alignItems: "center", gap: 4,
+                background: isLight ? "rgba(31,95,137,0.14)" : "rgba(31,95,137,0.55)",
+                border: isLight ? "1px solid rgba(31,95,137,0.20)" : "1px solid rgba(128,180,210,0.28)",
+                borderRadius: 99, padding: "2px 8px",
+                fontSize: 9, fontWeight: 800, letterSpacing: "0.09em", textTransform: "uppercase" as const,
+                color: isLight ? "#1F5F89" : "#9bc1da",
+              }}>
+                <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#f59e0b", display: "inline-block", boxShadow: "0 0 6px rgba(245,158,11,0.8)" }} />
+                Coming Soon
+              </span>
+              <span style={{ fontSize: 11, fontWeight: 500, color: isLight ? "#35566f" : "#7aa3be" }}>
+                Daily Research Reports
+              </span>
+            </span>
+          </div>
+
           {/* Divider + Tab Switcher */}
-          <div className="flex flex-col items-center" style={{ marginTop: 28 }}>
+          <div className="flex flex-col items-center" style={{ marginTop: 12 }}>
             <div style={{
-              width: 48, height: 2, borderRadius: 1,
+              width: 36, height: 2, borderRadius: 1,
               background: isLight ? "rgba(31,95,137,0.28)" : "rgba(128,180,210,0.30)",
-              marginBottom: 20,
+              marginBottom: 12,
             }} />
             <div style={tabWrapStyle}>
               {["bharat", "us"].map((key) => {
@@ -841,7 +866,7 @@ const Hero = () => {
 
           {/* ── BHARAT grid ── */}
           {activeTab === "bharat" && (
-            <div className="hero-stat-grid mt-8 md:mt-10 grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5 max-w-5xl mx-auto pb-4 md:pb-0 px-1 sm:px-0">
+            <div className="hero-stat-grid mt-4 md:mt-5 grid grid-cols-2 lg:grid-cols-3 gap-2 md:gap-3 max-w-5xl mx-auto px-1 sm:px-0">
               <SensexNiftyCard cardBg={cardBg} cardBorder={cardBorder} cardShadow={cardShadow} isLight={isLight}
                 sensex={bharatData.sensex} nifty={bharatData.nifty50} />
               <FiiDiiCard cardBg={cardBg} cardBorder={cardBorder} cardShadow={cardShadow} isLight={isLight}
@@ -862,7 +887,7 @@ const Hero = () => {
 
           {/* ── US grid ── */}
           {activeTab === "us" && (
-            <div className="hero-stat-grid mt-8 md:mt-10 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-5 max-w-5xl mx-auto pb-4 md:pb-0 px-1 sm:px-0">
+            <div className="hero-stat-grid mt-4 md:mt-5 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 max-w-5xl mx-auto px-1 sm:px-0">
               <USStatCard label="NASDAQ" value={usData.nasdaq} positive={usData.nasdaqPos} cardBg={cardBg} cardBorder={cardBorder} cardShadow={cardShadow} isLight={isLight}
                 path="/global" section="section-us" onNavigate={(p, s) => navigate(`${p}?scrollTo=${s}`)} />
               <USStatCard label="USD / INR" value={usData.usdInr} positive={usData.usdInrPos} cardBg={cardBg} cardBorder={cardBorder} cardShadow={cardShadow} isLight={isLight}
