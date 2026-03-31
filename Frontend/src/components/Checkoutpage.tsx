@@ -154,7 +154,7 @@ export default function CheckoutPage() {
         <div style={{ padding: "80px 20px", textAlign: "center" }}>
           <h2 style={{ fontSize: 20, fontWeight: 700, color: text }}>Plan not found</h2>
           <button
-            onClick={() => navigate("/plans")}
+            onClick={() => navigate("/pricing")}
             style={{
               marginTop: 16, padding: "10px 24px", borderRadius: 10,
               background: "#12466e", color: "white", border: "none",
@@ -271,7 +271,7 @@ export default function CheckoutPage() {
 
           {/* ── Back button ── */}
           <button
-            onClick={() => navigate("/plans")}
+            onClick={() => navigate("/pricing")}
             style={{
               display: "flex", alignItems: "center", gap: 6,
               background: "none", border: "none", cursor: "pointer",

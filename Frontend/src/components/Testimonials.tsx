@@ -141,6 +141,7 @@ function TestimonialCard({
         display: "flex", flexDirection: "column" as const, gap: "12px",
         // Desktop: fixed marquee width. Mobile: fill the swipe slot
         width: isMobile ? "100%" : "300px",
+        minHeight: isMobile ? "200px" : undefined,
         flexShrink: 0,
         boxSizing: "border-box" as const,
         cursor: "pointer",
@@ -210,7 +211,7 @@ function TestimonialCard({
 }
 
 // ─── Full-review Modal ─────────────────────────────────────────────────────
-function Modal({ t, onClose, isLight }: { t: Testimonial; onClose: () => void; isLight: boolean }) {
+function Modal({ t, onClose, isLight, isMobile }: { t: Testimonial; onClose: () => void; isLight: boolean; isMobile?: boolean }) {
   const modalBg      = isLight ? "#ffffff" : "linear-gradient(160deg,#0d1f38 0%,#0c1a2e 100%)";
   const modalBorder  = isLight ? "1px solid rgba(226,232,240,0.8)" : "1px solid rgba(255,255,255,0.1)";
   const titleColor   = isLight ? "#0f172a" : "white";
@@ -223,11 +224,22 @@ function Modal({ t, onClose, isLight }: { t: Testimonial; onClose: () => void; i
 
   return (
     <div
-      style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", background: "rgba(0,0,0,0.65)", backdropFilter: "blur(8px)" }}
+      style={{
+        position: isMobile ? "absolute" : "fixed",
+        inset: 0,
+        zIndex: 9999,
+        display: "flex",
+        alignItems: isMobile ? "flex-start" : "center",
+        justifyContent: "center",
+        padding: isMobile ? "12px" : "16px",
+        background: "rgba(0,0,0,0.65)",
+        backdropFilter: "blur(8px)",
+        overflowY: isMobile ? "auto" : undefined,
+      }}
       onClick={onClose}
     >
       <div
-        style={{ width: "100%", maxWidth: "640px", maxHeight: "90vh", borderRadius: "24px", overflow: "hidden", overflowY: "auto", background: modalBg, border: modalBorder, boxShadow: "0 32px 80px rgba(0,0,0,0.35)", position: "relative" }}
+        style={{ width: "100%", maxWidth: "640px", maxHeight: "90vh", borderRadius: "24px", overflow: "hidden", overflowY: "auto", background: modalBg, border: modalBorder, boxShadow: "0 32px 80px rgba(0,0,0,0.35)", position: "relative", marginTop: isMobile ? "8px" : undefined }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: "linear-gradient(90deg,transparent,rgba(10,54,86,0.50),transparent)" }} />
@@ -464,7 +476,7 @@ export default function TestimonialsPage() {
   return (
     <section
       id="testimonials"
-      style={{ background: "transparent", padding: isMobile ? "36px 0 32px" : "48px 0 40px", overflow: "hidden" }}
+      style={{ background: "transparent", padding: isMobile ? "36px 0 32px" : "48px 0 40px", overflow: "hidden", position: "relative" as const }}
     >
       <style>{marqueeCSS}</style>
 
@@ -596,7 +608,7 @@ export default function TestimonialsPage() {
         </div>
       )}
 
-      {modal && <Modal t={modal} onClose={() => setModal(null)} isLight={isLight} />}
+      {modal && <Modal t={modal} onClose={() => setModal(null)} isLight={isLight} isMobile={isMobile} />}
 
       <TestimonialForm
         isOpen={formOpen}

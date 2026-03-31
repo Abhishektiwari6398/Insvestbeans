@@ -350,7 +350,7 @@ const DropBtn = ({
   <DropdownMenuItem asChild>
     <button
       onClick={onClick}
-      className="w-full text-left px-3 py-1.5 text-[13px] rounded-md transition cursor-pointer"
+      className="w-full text-left px-3 py-1.5 text-[13px] rounded-md font-medium transition cursor-pointer"
       style={{ color: theme === "light" ? "rgba(4,20,33,0.84)" : "rgba(200,223,248,0.84)" }}
       onMouseEnter={e => {
         (e.currentTarget as HTMLElement).style.color = "#1F5F89";

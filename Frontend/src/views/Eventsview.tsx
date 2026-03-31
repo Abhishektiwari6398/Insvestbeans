@@ -172,9 +172,9 @@ const T = {
     purple:       "#a78bfa",
     purpleDim:    "rgba(167,139,250,0.1)",
     textPrimary:  "#e2e8f0",
-    textSecond:   "#8899aa",
-    textMuted:    "#3d5168",
-    textTiny:     "#2a3d52",
+    textSecond:   "#a0b4c8",
+    textMuted:    "#6b8aaa",
+    textTiny:     "#4a6680",
     tickerBg:     "#080b10",
   },
   light: {
@@ -199,9 +199,9 @@ const T = {
     purple:       "#7c3aed",
     purpleDim:    "rgba(124,58,237,0.08)",
     textPrimary:  "#0f172a",
-    textSecond:   "#334155",
-    textMuted:    "#64748b",
-    textTiny:     "#94a3b8",
+    textSecond:   "#1e293b",
+    textMuted:    "#475569",
+    textTiny:     "#64748b",
     tickerBg:     "#0d1117",
   },
 };
@@ -914,7 +914,7 @@ const EventsView: React.FC = () => {
         }
         /* Mobile: force single column grid */
         @media (max-width: 767px) {
-          .events-main-grid { grid-template-columns: 1fr !important; }
+          .events-main-grid { flex-direction: column !important; }
         }
       `}</style>
 
@@ -1075,9 +1075,8 @@ const EventsView: React.FC = () => {
 
         {/* ── Main layout ─────────────────────────────────────── */}
         <div style={{
-          display: "grid",
-          gridTemplateColumns: sideOpen ? "220px 1fr" : "1fr",
-          maxWidth: 1200, margin: "0 auto",
+          display: "flex",
+          alignItems: "flex-start",
           minHeight: "calc(100vh - 120px)",
         }} className="events-main-grid">
 
@@ -1087,10 +1086,12 @@ const EventsView: React.FC = () => {
               background: tk.panelBg,
               borderRight: `1px solid ${tk.border}`,
               padding: "18px 14px",
-              position: "sticky", top: 0,
-              height: "calc(100vh - 88px)",
+              position: "sticky", top: 64,
+              height: "calc(100vh - 64px)",
               overflowY: "auto",
               flexShrink: 0,
+              width: 220,
+              alignSelf: "flex-start",
             }}>
 
               {/* Region */}
@@ -1197,7 +1198,7 @@ const EventsView: React.FC = () => {
           )}
 
           {/* ── MAIN FEED ──────────────────────────────────────── */}
-          <div style={{ padding: "18px 20px", overflowY: "auto" }}>
+          <div style={{ flex: 1, minWidth: 0, padding: "18px 20px", overflowY: "auto" }}>
 
             {/* Insight banner */}
             <InsightTerminalBox isLight={isLight} tk={tk} />

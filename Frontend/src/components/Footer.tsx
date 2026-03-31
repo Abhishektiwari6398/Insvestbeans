@@ -7,8 +7,8 @@ const Footer = () => {
 
   // ── Theme-aware class helpers ───────────────────────────────────────────
   const footerBg = isLight
-    ? "bg-gradient-to-br from-[#f3f8fc] via-[#FCFDFE] to-[#eef4f9] text-navy py-16 relative overflow-hidden"
-    : "bg-gradient-to-br from-[#101528] to-[#1C395B] text-white py-16 relative overflow-hidden";
+    ? "bg-[#FCFDFE] text-[#041421] shadow-sm border-b border-slate-200/85  py-16 relative overflow-hidden"
+    : "bg-[#041421] text-white shadow-lg border-t border-[#0b314d]/55  py-16 relative overflow-hidden";
 
   const blob1 = isLight
     ? "absolute top-0 left-0 w-96 h-96 bg-blue-200/30 rounded-full blur-3xl"
@@ -27,7 +27,7 @@ const Footer = () => {
     : "border-white/20 mt-4";
 
   const taglineCls = isLight
-    ? "text-sm text-slate-600 leading-relaxed mb-6 max-w-md"
+    ? "text-sm text-slate-800 leading-relaxed mb-6 max-w-md"
     : "text-sm text-white/85 leading-relaxed mb-6 max-w-md";
 
   const socialBtnCls = isLight
@@ -39,7 +39,7 @@ const Footer = () => {
     : "text-lg font-semibold mb-4 text-[#9bc1da]";
 
   const linkCls = isLight
-    ? "text-slate-600 hover:text-[#0A3656] transition-all hover:translate-x-1 inline-block text-sm font-medium"
+    ? "text-slate-800 hover:text-[#0A3656] transition-all hover:translate-x-1 inline-block text-sm font-medium"
     : "text-white/80 hover:text-white hover:text-[#9bc1da] transition-all hover:translate-x-1 inline-block";
 
   const borderTopCls = isLight
@@ -47,7 +47,7 @@ const Footer = () => {
     : "border-t border-white/10 pt-8";
 
   const copyrightCls = isLight
-    ? "text-center text-sm text-slate-400"
+    ? "text-center text-sm text-slate-800"
     : "text-center text-sm text-white/80";
 
   return (

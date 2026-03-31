@@ -372,7 +372,7 @@ const UsdInrCard = ({ cardBg, cardBorder, cardShadow, isLight, liveValue, liveCh
   const rate = liveValue ?? 84;
   const changeVal = liveChange ?? null;
   const pos = (changeVal ?? 0) >= 0;
-  const sliderPct = Math.min(100, Math.max(0, ((rate - 82) / 8) * 100));
+  const sliderPct = Math.min(100, Math.max(0, ((rate - 82) / 28) * 100));
   return (
     <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }} className="rounded-2xl relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer md:p-3">
       <div className="md:hidden" style={{ padding: "10px 10px 10px 14px", position: "relative" }}>
@@ -395,7 +395,7 @@ const UsdInrCard = ({ cardBg, cardBorder, cardShadow, isLight, liveValue, liveCh
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
           <span style={{ fontSize: "8px", color: "rgba(59,130,246,0.7)", fontWeight: 600 }}>₹82</span>
-          <span style={{ fontSize: "8px", color: "rgba(239,68,68,0.7)", fontWeight: 600 }}>₹90</span>
+          <span style={{ fontSize: "8px", color: "rgba(239,68,68,0.7)", fontWeight: 600 }}>₹110</span>
         </div>
       </div>
       <div className="hidden md:block">
@@ -422,7 +422,7 @@ const UsdInrCard = ({ cardBg, cardBorder, cardShadow, isLight, liveValue, liveCh
         </div>
         <div className="flex justify-between mt-1">
           <span className="text-[9px] text-[#7fb1cf]/80">₹82</span>
-          <span className="text-[9px] text-red-400/70">₹90</span>
+          <span className="text-[9px] text-red-400/70">₹110</span>
         </div>
       </div>
     </div>

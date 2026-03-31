@@ -1145,7 +1145,13 @@ export default function IPOPage() {
                 {!isSearching&&<span className={`ml-1 ${isLight?'text-navy/40':'text-slate-500'}`}>— {STATUS_CFG[activeTab].label}</span>}
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className={`grid gap-4 ${
+                visibleIpos.length === 1
+                  ? 'grid-cols-1 max-w-xs mx-auto'
+                  : visibleIpos.length === 2
+                  ? 'grid-cols-1 sm:grid-cols-2 max-w-xl mx-auto'
+                  : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+              }`}>
                 {visibleIpos.map(ipo=>(
                   <IPOCard key={ipo._id} ipo={ipo} isAdmin={isAdmin}
                     onViewDetail={()=>{setSelectedIPO(ipo);setDetailOpen(true);}}

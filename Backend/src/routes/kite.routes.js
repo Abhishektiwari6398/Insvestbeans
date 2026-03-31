@@ -1336,6 +1336,39 @@ router.get("/market-breadth", async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 const _gainersCache = { data: null, ts: 0 };
 
+// async function fetchGainersLosers(cookies) {
+//   const [gRes, lRes] = await Promise.allSettled([
+//     axios.get("https://www.nseindia.com/api/live-analysis-variations?index=gainers", {
+//       timeout: 12000,
+//       headers: nseApiHeaders(cookies, "https://www.nseindia.com/market-data/top-gainers-losers"),
+//     }),
+//     axios.get("https://www.nseindia.com/api/live-analysis-variations?index=loosers", {
+//       timeout: 12000,
+//       headers: nseApiHeaders(cookies, "https://www.nseindia.com/market-data/top-gainers-losers"),
+//     }),
+//   ]);
+
+//   // ✅ FIX: extractNseRows handles all NSE response shapes
+//   // Previously: raw?.data ?? raw?.NIFTY ?? array — fails when data is { NIFTY: [...] }
+//   const parseRows = (res) => {
+//     if (res.status !== "fulfilled") return [];
+//     const raw  = res.value?.data;
+//     const rows = extractNseRows(raw);
+//     return rows.slice(0, 20).map(r => ({
+//       symbol:     r.symbol      ?? r.stock      ?? "",
+//       last_price: parseFloat(r.lastPrice   ?? r.ltp      ?? "0") || 0,
+//       change_pct: parseFloat(r.pChange     ?? r.changePct ?? r.perChange ?? "0") || 0,
+//       change_abs: parseFloat(r.change      ?? r.netChange  ?? "0") || 0,
+//       volume:     parseInt(r.totalTradedVolume ?? r.volume ?? "0", 10) || 0,
+//     })).filter(r => r.symbol && r.last_price > 0);
+//   };
+
+//   return {
+//     gainers: parseRows(gRes),
+//     losers:  parseRows(lRes),
+//     source:  "NSE",
+//   };
+// }
 async function fetchGainersLosers(cookies) {
   const [gRes, lRes] = await Promise.allSettled([
     axios.get("https://www.nseindia.com/api/live-analysis-variations?index=gainers", {
@@ -1348,26 +1381,50 @@ async function fetchGainersLosers(cookies) {
     }),
   ]);
 
-  // ✅ FIX: extractNseRows handles all NSE response shapes
-  // Previously: raw?.data ?? raw?.NIFTY ?? array — fails when data is { NIFTY: [...] }
   const parseRows = (res) => {
     if (res.status !== "fulfilled") return [];
     const raw  = res.value?.data;
     const rows = extractNseRows(raw);
     return rows.slice(0, 20).map(r => ({
       symbol:     r.symbol      ?? r.stock      ?? "",
-      last_price: parseFloat(r.lastPrice   ?? r.ltp      ?? "0") || 0,
+      last_price: parseFloat(r.lastPrice   ?? r.ltp       ?? "0") || 0,
       change_pct: parseFloat(r.pChange     ?? r.changePct ?? r.perChange ?? "0") || 0,
       change_abs: parseFloat(r.change      ?? r.netChange  ?? "0") || 0,
       volume:     parseInt(r.totalTradedVolume ?? r.volume ?? "0", 10) || 0,
-    })).filter(r => r.symbol && r.last_price > 0);
+    }))
+    // ✅ FIX: Don't filter on last_price > 0 — use change_pct threshold instead
+    // NSE sends 0.00 prices in after-hours; symbol presence is enough
+    .filter(r => r.symbol && (r.last_price > 0 || Math.abs(r.change_pct) > 0));
   };
 
-  return {
-    gainers: parseRows(gRes),
-    losers:  parseRows(lRes),
-    source:  "NSE",
-  };
+  let gainers = parseRows(gRes);
+  let losers  = parseRows(lRes);
+
+  // ✅ NEW: If both empty (market closed / IP blocked), fall back to
+  // equity-stockIndices which has prev-session data sorted by pChange
+  if (gainers.length === 0 && losers.length === 0) {
+    console.warn("[Gainers-Losers] live-analysis-variations returned empty — using NIFTY 500 fallback");
+    const fallback = await axios.get(
+      "https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%20500",
+      { timeout: 12000, headers: nseApiHeaders(cookies, "https://www.nseindia.com/market-data/live-equity-market") }
+    );
+    const allStocks = extractNseRows(fallback.data)
+      .filter(s => s.symbol && s.symbol !== "NIFTY 500" && (s.series === "EQ" || s.priority === 1))
+      .map(r => ({
+        symbol:     r.symbol,
+        last_price: parseFloat(r.lastPrice ?? "0") || 0,
+        change_pct: parseFloat(r.pChange   ?? "0") || 0,
+        change_abs: parseFloat(r.change    ?? "0") || 0,
+        volume:     parseInt(r.totalTradedVolume ?? "0", 10) || 0,
+      }))
+      .filter(r => r.last_price > 0);
+
+    const sorted = [...allStocks].sort((a, b) => b.change_pct - a.change_pct);
+    gainers = sorted.filter(r => r.change_pct > 0).slice(0, 20);
+    losers  = sorted.filter(r => r.change_pct < 0).reverse().slice(0, 20);
+  }
+
+  return { gainers, losers, source: "NSE" };
 }
 
 router.get("/gainers-losers", async (req, res) => {
@@ -1378,8 +1435,8 @@ router.get("/gainers-losers", async (req, res) => {
   try {
     const cookies = await getNseSession();
     const data    = await fetchGainersLosers(cookies);
-    if (data.gainers.length === 0 && data.losers.length === 0) throw new Error("Empty response after extraction");
-    _gainersCache.data = data;
+    // Only throw if the fallback also produced nothing — let partial results through
+if (!data.gainers && !data.losers) throw new Error("Empty response after extraction");
     _gainersCache.ts   = Date.now();
     console.log(`[Gainers-Losers] ✅ NSE: ${data.gainers.length} gainers, ${data.losers.length} losers`);
     return res.json({ status: "success", data });

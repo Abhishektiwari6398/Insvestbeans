@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/controllers/Themecontext';
+import Header from '@/components/Header';
 
 const sections = [
   { id: 'regulatory',    num: '01', title: 'Regulatory Position & SEBI Disclaimer' },
@@ -59,55 +60,50 @@ export default function PrivacyPolicy() {
   const accentDim = isLight ? '#dce9fe' : '#1d2f4a';
 
   return (
-    <div style={{ minHeight: '100vh', background: bg, color: ink, fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: bg, color: ink, fontFamily: "'Inter', -apple-system, sans-serif" }}>
 
       {/* Inject fonts */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         .pp-toclink {
-          display: flex; align-items: baseline; gap: 10px;
-          padding: 6px 0; cursor: pointer; border: none; background: none;
-          text-align: left; width: 100%; transition: color 0.15s;
+          display: flex; align-items: center; gap: 10px;
+          padding: 8px 12px; cursor: pointer; border: none; background: none;
+          text-align: left; width: 100%; transition: all 0.15s; border-radius: 6px;
         }
-        .pp-toclink:hover .pp-tocnum { color: ${accent}; }
+        .pp-toclink:hover { background: ${isLight ? '#f3f4f6' : 'rgba(255,255,255,0.05)'}; }
         .pp-toclink:hover .pp-toctitle { color: ${ink}; }
 
-        .pp-section { scroll-margin-top: 32px; padding: 52px 0; border-bottom: 1px solid ${border}; }
+        .pp-section { scroll-margin-top: 80px; padding: 40px 0; border-bottom: 1px solid ${border}; }
         .pp-section:last-child { border-bottom: none; }
 
         .pp-tag {
           display: inline-block; font-size: 11px; font-weight: 600;
-          letter-spacing: 0.06em; text-transform: uppercase;
-          padding: 3px 9px; border-radius: 4px;
+          letter-spacing: 0.04em; text-transform: uppercase;
+          padding: 2px 8px; border-radius: 4px;
         }
 
         .pp-notice {
-          border-left: 3px solid; padding: 14px 18px; border-radius: 0 6px 6px 0;
+          border-left: 3px solid; padding: 14px 18px; border-radius: 0 8px 8px 0;
           font-size: 14px; line-height: 1.7; margin-top: 16px;
         }
 
-        .pp-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 16px; }
-        .pp-table th { text-align: left; font-weight: 600; font-size: 12px; letter-spacing: 0.05em;
-          text-transform: uppercase; padding: 10px 14px; color: ${inkMid};
-          border-bottom: 2px solid ${border}; }
-        .pp-table td { padding: 11px 14px; border-bottom: 1px solid ${border}; color: ${inkMid}; line-height: 1.6; vertical-align: top; }
+        .pp-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 16px; border-radius: 8px; overflow: hidden; border: 1px solid ${border}; }
+        .pp-table th { text-align: left; font-weight: 600; font-size: 11px; letter-spacing: 0.06em;
+          text-transform: uppercase; padding: 11px 16px; color: ${inkMid};
+          background: ${isLight ? '#f9fafb' : 'rgba(255,255,255,0.03)'};
+          border-bottom: 1px solid ${border}; }
+        .pp-table td { padding: 12px 16px; border-bottom: 1px solid ${border}; color: ${inkMid}; line-height: 1.6; vertical-align: top; }
         .pp-table tr:last-child td { border-bottom: none; }
+        .pp-table tr:hover td { background: ${isLight ? '#f9fafb' : 'rgba(255,255,255,0.02)'}; }
 
-        .pp-chip {
-          display: inline-flex; align-items: center; gap: 5px;
-          font-size: 12px; font-weight: 500; padding: 4px 10px;
-          border-radius: 100px; border: 1px solid ${border};
-          color: ${inkMid}; background: ${surface};
-        }
-
-        .pp-contact-row { display: flex; gap: 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid ${border}; }
+        .pp-contact-row { display: flex; gap: 16px; align-items: center; padding: 13px 0; border-bottom: 1px solid ${border}; }
         .pp-contact-row:last-child { border-bottom: none; }
-        .pp-contact-label { font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
-          text-transform: uppercase; color: ${inkFaint}; min-width: 72px; }
-        .pp-contact-value { font-size: 15px; color: ${ink}; }
+        .pp-contact-label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+          text-transform: uppercase; color: ${inkFaint}; min-width: 80px; }
+        .pp-contact-value { font-size: 14px; color: ${ink}; }
 
         @media (max-width: 900px) {
           .pp-layout { flex-direction: column !important; }
@@ -116,60 +112,92 @@ export default function PrivacyPolicy() {
       `}</style>
 
       {/* ── Header ───────────────────────────────────────────────── */}
-      <header style={{
-        borderBottom: `1px solid ${border}`, background: surface,
-        position: 'sticky', top: 0, zIndex: 50, backdropFilter: 'blur(12px)',
-      }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60 }}>
-          <a href="/" style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: ink, textDecoration: 'none', fontWeight: 400 }}>
-            InvestBeans
-          </a>
-          <a href="/" style={{ fontSize: 13, color: accent, textDecoration: 'none', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 5 }}>
-            ← Back
-          </a>
-        </div>
-      </header>
+      <Header />
 
       {/* ── Hero ──────────────────────────────────────────────────── */}
-      <div style={{ borderBottom: `1px solid ${border}`, padding: '64px 32px 56px', background: surface }}>
-        <div style={{ maxWidth: 760, margin: '0 auto' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
-            <span className="pp-chip">
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-              DPDP Act, 2023
-            </span>
-            <span className="pp-chip">IT Act, 2000</span>
-            <span className="pp-chip">IT (SPDI) Rules, 2011</span>
+      <div style={{ background: isLight ? '#ffffff' : '#0e1117', borderBottom: `1px solid ${border}` }}>
+        <div style={{ maxWidth: 1160, margin: '0 auto', padding: '52px 48px 0' }}>
+
+          {/* Breadcrumb */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 32, fontSize: 13, color: inkFaint }}>
+            <span>Legal</span>
+            <span style={{ fontSize: 10 }}>›</span>
+            <span style={{ color: inkMid, fontWeight: 500 }}>Privacy Policy</span>
           </div>
-          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 52, fontWeight: 400, lineHeight: 1.1, color: ink, marginBottom: 20 }}>
-            Privacy Policy
-          </h1>
-          <p style={{ fontSize: 15, color: inkMid, lineHeight: 1.7, maxWidth: 620 }}>
-            InvestBeans is a proprietorship firm providing financial education and market research. This policy explains how we collect, use, and protect your personal data in accordance with Indian law.
-          </p>
-          <p style={{ marginTop: 18, fontSize: 13, color: inkFaint }}>
-            Effective Date: <strong style={{ color: inkMid }}>—</strong> &nbsp;·&nbsp; Last updated: <strong style={{ color: inkMid }}>—</strong>
-          </p>
+
+          {/* Two-col: title left, badges right */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 24, marginBottom: 40 }}>
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: accent, marginBottom: 12 }}>
+                Legal Document
+              </p>
+              <h1 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 700, lineHeight: 1.1, color: ink, letterSpacing: '-0.025em', marginBottom: 14 }}>
+                Privacy Policy
+              </h1>
+              <p style={{ fontSize: 15, color: inkMid, lineHeight: 1.7, maxWidth: 520 }}>
+                InvestBeans is a proprietorship firm providing financial education and market research. This policy explains how we collect, use, and protect your personal data in accordance with Indian law.
+              </p>
+            </div>
+
+            {/* Compliance badges stacked */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+              {[
+                { label: 'DPDP Act, 2023', dot: '#22c55e' },
+                { label: 'IT Act, 2000', dot: accent },
+                { label: 'IT (SPDI) Rules, 2011', dot: '#a78bfa' },
+              ].map(b => (
+                <div key={b.label} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  padding: '7px 14px', borderRadius: 6,
+                  border: `1px solid ${border}`,
+                  background: isLight ? '#f9fafb' : 'rgba(255,255,255,0.04)',
+                  fontSize: 12, fontWeight: 500, color: inkMid,
+                }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: b.dot, flexShrink: 0 }} />
+                  {b.label}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Horizontal meta bar — flush to edges, no padding below */}
+          <div style={{ display: 'flex', borderTop: `1px solid ${border}` }}>
+            {[
+              { label: 'Jurisdiction', value: 'India' },
+              { label: 'Framework', value: 'DPDP Act 2023 · IT Act 2000 · IT (SPDI) Rules 2011' },
+            ].map((item, i) => (
+              <div key={i} style={{
+                padding: '16px 24px',
+                borderRight: i === 0 ? `1px solid ${border}` : 'none',
+                flex: i === 0 ? '0 0 180px' : '1',
+              }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: inkFaint, marginBottom: 5 }}>
+                  {item.label}
+                </div>
+                <div style={{ fontSize: 13, color: inkMid, fontWeight: 500 }}>{item.value}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* ── Layout ────────────────────────────────────────────────── */}
-      <div className="pp-layout" style={{ maxWidth: 1160, margin: '0 auto', padding: '0 32px', display: 'flex', gap: 64, alignItems: 'flex-start' }}>
+      <div className="pp-layout" style={{ maxWidth: 1160, margin: '0 auto', padding: '0 48px', display: 'flex', gap: 56, alignItems: 'flex-start' }}>
 
         {/* ── TOC sidebar ─────────────────────────────────────────── */}
         <aside className="pp-toc" style={{
-          width: 240, flexShrink: 0, position: 'sticky', top: 80,
-          paddingTop: 48, paddingBottom: 48, maxHeight: 'calc(100vh - 80px)', overflowY: 'auto',
+          width: 220, flexShrink: 0, position: 'sticky', top: 80,
+          paddingTop: 40, paddingBottom: 40, maxHeight: 'calc(100vh - 80px)', overflowY: 'auto',
         }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: inkFaint, marginBottom: 16 }}>Contents</p>
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: inkFaint, marginBottom: 8, paddingLeft: 12 }}>On this page</p>
           <nav>
             {sections.map(({ id, num, title }) => {
               const isActive = active === id;
               return (
                 <button key={id} className="pp-toclink" onClick={() => scrollTo(id)}
-                  style={{ borderLeft: `2px solid ${isActive ? accent : 'transparent'}`, paddingLeft: 12, marginLeft: -14 }}>
-                  <span className="pp-tocnum" style={{ fontSize: 11, fontWeight: 700, color: isActive ? accent : inkFaint, minWidth: 22, fontVariantNumeric: 'tabular-nums' }}>{num}</span>
-                  <span className="pp-toctitle" style={{ fontSize: 13, color: isActive ? ink : inkMid, fontWeight: isActive ? 500 : 400, lineHeight: 1.4 }}>{title}</span>
+                  style={{ background: isActive ? (isLight ? '#eff6ff' : 'rgba(81,148,246,0.08)') : 'none' }}>
+                  <span className="pp-tocnum" style={{ fontSize: 10, fontWeight: 700, color: isActive ? accent : inkFaint, minWidth: 20, fontVariantNumeric: 'tabular-nums' }}>{num}</span>
+                  <span className="pp-toctitle" style={{ fontSize: 13, color: isActive ? (isLight ? accent : '#93c5fd') : inkMid, fontWeight: isActive ? 600 : 400, lineHeight: 1.4 }}>{title}</span>
                 </button>
               );
             })}
@@ -177,7 +205,7 @@ export default function PrivacyPolicy() {
         </aside>
 
         {/* ── Main content ────────────────────────────────────────── */}
-        <main style={{ flex: 1, minWidth: 0, paddingTop: 48, paddingBottom: 96 }}>
+        <main style={{ flex: 1, minWidth: 0, paddingTop: 40, paddingBottom: 96 }}>
 
           {/* 01 – Regulatory Position */}
           <section id="regulatory" className="pp-section">
@@ -407,7 +435,7 @@ export default function PrivacyPolicy() {
       </div>
 
       {/* Footer */}
-      <footer style={{ borderTop: `1px solid ${border}`, padding: '28px 32px' }}>
+      <footer style={{ borderTop: `1px solid ${border}`, padding: '24px 48px' }}>
         <div style={{ maxWidth: 1160, margin: '0 auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
           <p style={{ fontSize: 13, color: inkFaint }}>© 2026 InvestBeans. All rights reserved.</p>
           <div style={{ display: 'flex', gap: 24 }}>
@@ -427,9 +455,13 @@ function SectionHeader({ num, title, accent, ink, inkFaint }: {
   num: string; title: string; accent: string; ink: string; inkFaint: string;
 }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 24 }}>
-      <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', color: accent, fontVariantNumeric: 'tabular-nums', minWidth: 28 }}>{num}</span>
-      <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, fontWeight: 400, color: ink, lineHeight: 1.2 }}>{title}</h2>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+      <span style={{
+        fontSize: 11, fontWeight: 700, color: accent,
+        background: `${accent}18`, padding: '3px 8px', borderRadius: 5,
+        fontVariantNumeric: 'tabular-nums', letterSpacing: '0.04em',
+      }}>{num}</span>
+      <h2 style={{ fontSize: 20, fontWeight: 700, color: ink, lineHeight: 1.3, letterSpacing: '-0.015em' }}>{title}</h2>
     </div>
   );
 }

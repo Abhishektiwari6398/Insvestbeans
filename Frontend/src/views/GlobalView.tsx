@@ -237,7 +237,8 @@ function MktHoursSection() {
                   : isPre  ? "bg-amber-500/20 text-white border border-amber-500/30"
                   : l      ? "bg-gray-100 text-gray-600 border border-gray-200"
                            : "bg-white/10 text-white border border-white/15"}`}>
-                  {m.code}
+                
+                  <span className="text-base leading-none">{m.flag}</span>
                 </div>
 
                 {/* City name */}

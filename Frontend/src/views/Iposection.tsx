@@ -1176,8 +1176,6 @@ const IPOSection = () => {
                   ? 'grid-cols-1 max-w-xs mx-auto'
                   : displayed.length === 2
                   ? 'grid-cols-1 sm:grid-cols-2 max-w-xl mx-auto'
-                  : displayed.length === 3
-                  ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-3xl mx-auto'
                   : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
               }`}>
                 {displayed.map(ipo => (
