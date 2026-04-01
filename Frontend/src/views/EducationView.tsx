@@ -526,7 +526,7 @@ const EducationView = () => {
   };
 
   const handleStartLearning = (detailId: string) => navigate(`/education/${detailId}`);
-  const handleUnlock        = (detailId: string) => navigate(`/education/unlock/${detailId}`);
+  const handleUnlock        = (detailId: string) => navigate(`/pricing`);
 
   const pageBg = isLight
     ? 'linear-gradient(160deg,#f5f4f0 0%,#f8fbff 45%,#f5f4f0 100%)'

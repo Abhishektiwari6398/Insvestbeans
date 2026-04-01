@@ -500,7 +500,7 @@ const EducationDetailView = () => {
                           </div>
                         ) : (
                           <button
-                            onClick={() => navigate('/education/unlock/' + categoryId)}
+                            onClick={() => navigate('/pricing')}
                             className="w-full py-2.5 rounded-xl text-sm font-bold text-white mb-3 hover:opacity-90 transition-all hover:-translate-y-0.5"
                             style={{ background: data.accentGrad }}>
                             🔓 Unlock Access — ₹111/mo
@@ -598,7 +598,7 @@ const EducationDetailView = () => {
               {data.isPaid && !isSubscriber && (
                 <div className="p-3" style={{ borderTop: `1px solid ${border}` }}>
                   <button
-                    onClick={() => navigate(`/education/unlock/${categoryId}`)}
+                    onClick={() => navigate("/pricing")}
                     className="w-full py-2 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
                     style={{ background: data.accentGrad }}>
                     🔓 Unlock All Content
@@ -665,7 +665,7 @@ const EducationDetailView = () => {
                           title={`${mod.title.split('—')[0].trim()} — Premium`}
                           description="Subscribe to unlock this module and all premium content."
                           ctaText="Unlock Access"
-                          ctaHref={`/education/unlock/${categoryId}`}
+                          ctaHref={`/pricing`}
                           className="rounded-2xl">
 
                           {/* Module card (will be blurred for non-subscribers) */}
@@ -708,7 +708,7 @@ const EducationDetailView = () => {
                     Get full access to all {data.modules.length} {data.contentType === 'video' ? 'sessions' : 'books'} with a Foundation Plan.
                   </p>
                   <button
-                    onClick={() => navigate(`/education/unlock/${categoryId}`)}
+                    onClick={() => navigate(`/pricing`)}
                     className="inline-flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-sm text-white hover:opacity-90 transition-all hover:-translate-y-0.5"
                     style={{ background: data.accentGrad, boxShadow: `0 4px 20px ${data.accent}35` }}>
                     🔓 Unlock Access — ₹111/month
@@ -807,7 +807,7 @@ function ModuleCard({ mod, idx, data, isLight, cardBg, border, ls, textPrimary, 
                 )}
                 {chLocked && (
                   <button
-                    onClick={() => navigate(`/education/unlock/${categoryId}`)}
+                    onClick={() => navigate(`/pricing`)}
                     className="text-[9px] font-black px-2 py-0.5 rounded-full flex-shrink-0 transition-all hover:opacity-80"
                     style={{ background: 'rgba(81,148,246,0.12)', color: '#5194F6', border: '1px solid rgba(81,148,246,0.20)', letterSpacing: '0.04em' }}>
                     UNLOCK

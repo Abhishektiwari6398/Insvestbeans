@@ -41,7 +41,7 @@ import EventsView from "./views/Eventsview";
 
 // ── Education sub-pages (NEW) ─────────────────────────────────────────────────
 import EducationDetailView from "@/views/Educationdetailview";
-import EducationUnlockPage from "@/views/Educationunlockpage";
+
 
 const queryClient = new QueryClient();
 
@@ -70,8 +70,7 @@ const App = () => (
 
               {/* ── Education routes ─────────────────────────────────── */}
               <Route path="/education" element={<EducationView />} />
-              {/* Paywall / Unlock page (requires payment) */}
-              <Route path="/education/unlock/:categoryId" element={<EducationUnlockPage />} />
+              
               {/* "Start Learning" detail page */}
               <Route path="/education/:categoryId" element={<EducationDetailView />} />
 
