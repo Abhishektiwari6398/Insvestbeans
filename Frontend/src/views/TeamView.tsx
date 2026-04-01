@@ -55,6 +55,7 @@ const TeamView = () => {
         .ib-reveal { transition: none !important; opacity: 1 !important; transform: none !important; }
       }
       html { scroll-behavior: smooth; }
+      html, body { overflow-x: hidden; max-width: 100%; }
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { scrollbar-width: none; }
     
@@ -230,9 +231,9 @@ const TeamView = () => {
 
       <GlobalRevealStyles />
 
-      <div ref={pageRef} className={`min-h-screen ${isLight ? "bg-[#f5f4f0] text-gray-900" : "bg-slate-950/95 text-white"}`}>
+      <div ref={pageRef} className={`min-h-screen overflow-x-hidden ${isLight ? "bg-[#f5f4f0] text-gray-900" : "bg-slate-950/95 text-white"}`}>
         {/* Hero Section */}
-        <div className={`relative ${isLight ? "bg-gradient-to-br from-[#f0f6ff] via-[#f8fbff] to-[#eef4fd]" : "bg-[radial-gradient(circle_at_top,_rgba(81,140,255,0.25),_transparent_55%)]"}`}>
+        <div className={`relative overflow-hidden ${isLight ? "bg-gradient-to-br from-[#f0f6ff] via-[#f8fbff] to-[#eef4fd]" : "bg-[radial-gradient(circle_at_top,_rgba(81,140,255,0.25),_transparent_55%)]"}`}>
           <div className="absolute inset-0 pointer-events-none">
             <div className={`absolute inset-x-0 top-40 h-64 bg-gradient-to-b blur-3xl ${isLight ? "from-blue-100/40 via-transparent to-transparent" : "from-blue-500/10 via-transparent to-transparent"}`}></div>
             <div className={`absolute -bottom-10 right-10 w-72 h-72 blur-[120px] rounded-full ${isLight ? "bg-purple-200/20" : "bg-purple-500/10"}`}></div>
@@ -458,7 +459,7 @@ const TeamView = () => {
           </div>
         </div>
 
-        <div className={`container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14 ${isLight ? "text-gray-900" : "text-slate-100"}`}>
+        <div className={`container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14 overflow-x-hidden ${isLight ? "text-gray-900" : "text-slate-100"}`}>
           {/* Our Story Section */}
           <Reveal id="our-story" className="scroll-mt-24 mb-10">
             <div className={`gsap-section-card relative overflow-hidden rounded-[32px] p-6 sm:p-10 ${isLight ? "bg-white border border-gray-100 shadow-xl shadow-gray-100" : "border border-white/10 bg-white text-slate-900 shadow-[0_40px_120px_-60px_rgba(15,23,42,0.5)]"}`}>
@@ -685,7 +686,7 @@ const TeamView = () => {
             </div>
 
             {/* Desktop View - Connected Circles */}
-            <div className="hidden lg:block">
+            <div className="hidden lg:block overflow-x-hidden">
               <div className="relative max-w-6xl mx-auto py-6">
                 <div className="flex justify-center items-center gap-8 mb-4">
                   {allValues.slice(0, 5).map((value, idx) => (
