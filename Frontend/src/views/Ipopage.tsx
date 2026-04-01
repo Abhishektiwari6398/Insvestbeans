@@ -4,6 +4,7 @@ import { useAuth } from '@/controllers/AuthContext';
 import { useTheme } from '@/controllers/Themecontext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import RequireSubscription from '@/components/RequireSubscription';
 import {
   TrendingUp, TrendingDown, Calendar, Users, Building2,
   CheckCircle, Clock, AlertCircle, ArrowRight, Star, Target,
@@ -731,8 +732,17 @@ function DetailModal({ ipo, onClose, onEdit, onDelete, deleting, isAdmin }: {
             </div>
           )}
 
-          {/* SWOT — from backend, visible to everyone */}
-          <SwotAnalysis ipo={ipo} isLight={isLight}/>
+          {/* SWOT — subscribers only */}
+          <RequireSubscription
+            title="Premium Analysis"
+            description="Subscribe to unlock full SWOT analysis for this IPO."
+            ctaText="View Plans"
+            ctaHref="/pricing"
+            mode="overlay"
+            minHeight="180px"
+          >
+            <SwotAnalysis ipo={ipo} isLight={isLight}/>
+          </RequireSubscription>
 
           {/* CTA — ASBA removed, only RHP */}
           <button

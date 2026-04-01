@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/controllers/AuthContext';
 import { useTheme } from '@/controllers/Themecontext';
+import RequireSubscription from '@/components/RequireSubscription';
 import {
   TrendingUp, TrendingDown, Calendar, Users, Building2,
   CheckCircle, Clock, AlertCircle, ArrowRight, Star, Target,
@@ -791,8 +792,17 @@ function DetailModal({
             </div>
           )}
 
-          {/* SWOT */}
-          <SwotAnalysis ipo={ipo} isLight={isLight} />
+          {/* SWOT — subscribers only */}
+          <RequireSubscription
+            title="Premium Analysis"
+            description="Subscribe to unlock full SWOT analysis for this IPO."
+            ctaText="View Plans"
+            ctaHref="/pricing"
+            mode="overlay"
+            minHeight="180px"
+          >
+            <SwotAnalysis ipo={ipo} isLight={isLight} />
+          </RequireSubscription>
 
           {/* CTA */}
           <button
