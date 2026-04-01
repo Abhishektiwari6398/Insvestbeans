@@ -968,11 +968,21 @@ const Header = () => {
                     onClick={closeMobile}
                   >Blogs</Link>
                 </li>
-
+                <li>
+                  <Link
+                    to="/help-center"
+                    className="block font-medium py-3 px-3 rounded-md transition-colors"
+                    style={{ color: isLight ? "rgba(4,20,33,0.90)" : "#c8dff8" }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#1F5F89"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = isLight ? "rgba(4,20,33,0.90)" : "#c8dff8"; }}
+                    onClick={closeMobile}
+                  >Help</Link>
+                </li>
+{/*                      
                 <MobileAccordion label="Help" isOpen={mobileHelpOpen} toggle={() => setMobileHelpOpen(s => !s)}>
                   <MobileLink to="/help-center">FAQs</MobileLink>
                   <MobileLink to="/help-center">Contact Us</MobileLink>
-                </MobileAccordion>
+                </MobileAccordion> */}
 
                 {isAuthenticated && (
                   <li className="pt-3">
