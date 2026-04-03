@@ -151,16 +151,16 @@ function buildDescription(e: ApiEvent): string {
 // Light/dark variants
 const T = {
   dark: {
-    pageBg:       "#07090d",
-    panelBg:      "#0d1117",
-    cardBg:       "#0f1520",
+    pageBg:       "#07111b",
+    panelBg:      "#0c1821",
+    cardBg:       "#0f1e2d",
     cardHover:    "#131c2a",
     elevated:     "#141c27",
-    border:       "#1a2535",
+    border:       "#1a2d3f",
     borderBright: "#243348",
-    accent:       "#00c4a3",
-    accentDim:    "rgba(0,196,163,0.12)",
-    accentBorder: "rgba(0,196,163,0.3)",
+    accent:       "#74A8C9",
+    accentDim:    "rgba(116,168,201,0.12)",
+    accentBorder: "rgba(116,168,201,0.30)",
     green:        "#00d084",
     greenDim:     "rgba(0,208,132,0.1)",
     red:          "#ff4757",
@@ -178,16 +178,16 @@ const T = {
     tickerBg:     "#080b10",
   },
   light: {
-    pageBg:       "#f0f2f5",
+    pageBg:       "#f5f4f0",
     panelBg:      "#ffffff",
     cardBg:       "#ffffff",
     cardHover:    "#f7f9fc",
     elevated:     "#f0f4f8",
     border:       "#dde3ec",
     borderBright: "#c8d3e0",
-    accent:       "#00a88b",
-    accentDim:    "rgba(0,168,139,0.08)",
-    accentBorder: "rgba(0,168,139,0.25)",
+    accent:       "#0A3656",
+    accentDim:    "rgba(10,54,86,0.08)",
+    accentBorder: "rgba(10,54,86,0.25)",
     green:        "#0ab066",
     greenDim:     "rgba(10,176,102,0.08)",
     red:          "#e8334a",
@@ -208,7 +208,7 @@ const T = {
 
 // ─── Category config ──────────────────────────────────────────────────────────
 const CAT_CONFIG: Record<Category, { icon: React.ElementType; label: string; colorKey: string }> = {
-  monetary:    { icon: TrendingUp,  label: "Monetary",    colorKey: "accent" },
+  monetary:    { icon: TrendingUp,  label: "Monetary",    colorKey: "blue"   },
   budget:      { icon: Landmark,    label: "Budget",      colorKey: "purple" },
   earnings:    { icon: BarChart2,   label: "Earnings",    colorKey: "green"  },
   economic:    { icon: Activity,    label: "Economic",    colorKey: "blue"   },
@@ -227,7 +227,7 @@ const MI_CONFIG = {
   mixed:   { icon: Minus,          label: "MIXED",    colorKey: "amber"  },
 };
 const ASSET_COLOR: Record<string, string> = {
-  "Equity":      "#3d9aff",
+  "Equity":      "#74A8C9",
   "Bonds":       "#a78bfa",
   "Forex":       "#ffa825",
   "Commodities": "#00d084",
@@ -326,7 +326,7 @@ const LiveTickerBar: React.FC<{ macro: MacroSnapshot; eventCount: number; upcomi
   const borderCol  = isLight ? "#2e3f56"   : "#1a2535";
   const labelCol   = isLight ? "#7a9ab8"   : "#3d5168";
   const dividerCol = isLight ? "#2e3f56"   : "#1a2535";
-  const accentCol  = isLight ? "#00c4a3"   : "#00c4a3";
+  const accentCol  = isLight ? "#0A3656"   : "#74A8C9";
   const valueCol   = isLight ? "#e2f0ff"   : "#e2e8f0";
   const greenCol   = isLight ? "#00d084"   : "#00d084";
 
@@ -349,7 +349,7 @@ const LiveTickerBar: React.FC<{ macro: MacroSnapshot; eventCount: number; upcomi
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginRight: 20, flexShrink: 0 }}>
         <span style={{
           width: 6, height: 6, borderRadius: "50%", background: accentCol,
-          boxShadow: "0 0 0 0 rgba(0,196,163,0.4)",
+          boxShadow: "0 0 0 0 rgba(116,168,201,0.4)",
           animation: "tickerPulse 2s infinite",
         }} />
         <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.16em", color: accentCol, fontFamily: "'IBM Plex Mono', monospace", textTransform: "uppercase" }}>
@@ -772,7 +772,7 @@ const EventTerminalCard: React.FC<{ event: MarketEvent; isLight: boolean; tk: ty
           {event.investbeansInsight && (
             <div style={{
               padding: "12px 18px",
-              background: isLight ? `${tk.accentDim}` : `linear-gradient(135deg, rgba(0,196,163,0.06), transparent)`,
+              background: isLight ? `${tk.accentDim}` : `linear-gradient(135deg, rgba(116,168,201,0.06), transparent)`,
               borderTop: `1px solid ${tk.accentBorder}`,
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
@@ -784,7 +784,7 @@ const EventTerminalCard: React.FC<{ event: MarketEvent; isLight: boolean; tk: ty
                   fontFamily: "'IBM Plex Mono', monospace", letterSpacing: "0.08em",
                 }}>GUIDANCE · NOT ADVICE</span>
               </div>
-              <p style={{ fontSize: 12, color: isLight ? tk.textPrimary : "#93c5de", margin: 0, lineHeight: 1.75, fontStyle: "italic" }}>
+              <p style={{ fontSize: 12, color: isLight ? tk.textPrimary : "#9bc1da", margin: 0, lineHeight: 1.75, fontStyle: "italic" }}>
                 {event.investbeansInsight}
               </p>
             </div>
@@ -885,9 +885,9 @@ const EventsView: React.FC = () => {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
         @keyframes tickerPulse {
-          0%   { box-shadow: 0 0 0 0 rgba(0,196,163,0.5); opacity:1; }
-          70%  { box-shadow: 0 0 0 6px rgba(0,196,163,0);  opacity:0.8; }
-          100% { box-shadow: 0 0 0 0 rgba(0,196,163,0);   opacity:1; }
+          0%   { box-shadow: 0 0 0 0 rgba(116,168,201,0.5); opacity:1; }
+          70%  { box-shadow: 0 0 0 6px rgba(116,168,201,0);  opacity:0.8; }
+          100% { box-shadow: 0 0 0 0 rgba(116,168,201,0);   opacity:1; }
         }
         @keyframes fadeSlideIn {
           from { opacity:0; transform:translateY(6px); }

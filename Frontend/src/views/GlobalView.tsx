@@ -96,8 +96,8 @@ function SecHead({ id, icon:Icon, title, sub }: { id:string; icon:any; title:str
   const l = useIL();
   return (
     <div id={id} className="flex items-center gap-3 mb-5 scroll-mt-24">
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-[#16a34a]/20 border border-[#16a34a]/30">
-        <Icon className="w-4 h-4 text-[#16a34a]"/>
+      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-[#0A3656]/20 border border-[#0A3656]/30 dark:bg-[#74A8C9]/10 dark:border-[#74A8C9]/20">
+        <Icon className="w-4 h-4 text-[#0A3656] dark:text-[#74A8C9]"/>
       </div>
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <h2 className={`font-extrabold text-base tracking-tight ${l?"text-gray-900":"text-white"}`}>{title}</h2>
@@ -139,7 +139,7 @@ function SideNav({ active, onSelect, usMarkets, euMarkets, asMarkets, refreshing
       {/* Live badge */}
       <div className={`mx-3 mb-1.5 rounded-lg border px-3 py-1.5 ${l?"bg-gray-50 border-gray-100":"bg-[#0a1826] border-[#1a2d3f]"}`}>
         <div className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a] animate-pulse"/>
+          <span className="w-1.5 h-1.5 rounded-full bg-[#0A3656] dark:bg-[#74A8C9] animate-pulse"/>
           <span className={`text-[9px] font-black uppercase tracking-widest ${l?"text-gray-600":"text-[#c0d8ea]"}`}>Global Markets</span>
           {lastUpdated && <span className={`text-[9px] ml-auto ${l?"text-gray-400":"text-[#7a9ab5]"}`}>{ago(lastUpdated)}</span>}
         </div>
@@ -151,7 +151,7 @@ function SideNav({ active, onSelect, usMarkets, euMarkets, asMarkets, refreshing
             onClick={() => { onSelect(s.id); jumpTo(s.id); }}
             className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all text-left ${
               active===s.id
-                ? l?"bg-[#16a34a]/10 text-[#16a34a] border-l-2 border-[#16a34a] font-bold":"bg-[#16a34a]/10 text-emerald-400 border-l-2 border-emerald-600"
+                ? l?"bg-[#0A3656]/10 text-[#0A3656] border-l-2 border-[#0A3656] font-bold":"bg-[#74A8C9]/10 text-[#74A8C9] border-l-2 border-[#74A8C9]"
                 : l?"text-gray-500 hover:bg-gray-50 hover:text-gray-800":"text-[#5a7a92] hover:bg-white/[0.03] hover:text-[#c0d8ea]"
             }`}>
             <s.icon className="w-3.5 h-3.5 shrink-0"/>
@@ -199,7 +199,7 @@ function SideNav({ active, onSelect, usMarkets, euMarkets, asMarkets, refreshing
 
       <div className={`shrink-0 border-t px-3 py-3 ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
         <button onClick={onRefresh} disabled={refreshing}
-          className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-bold text-white disabled:opacity-50 bg-[#16a34a] hover:bg-[#15803d] transition-colors">
+          className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-bold text-white disabled:opacity-50 bg-[#0A3656] hover:bg-[#072a42] transition-colors">
           <RefreshCw className={`w-3 h-3 ${refreshing?"animate-spin":""}`}/> Refresh
         </button>
       </div>
@@ -308,7 +308,7 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym 
             <button key={m.symbol} onClick={() => setSel(i)}
               className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all border shrink-0 ${
                 active
-                  ? "bg-[#16a34a] text-white border-transparent shadow-md"
+                  ? "bg-[#0A3656] text-white border-transparent shadow-md"
                   : l ? "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
                       : "bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f] hover:border-[#2a4a62] hover:text-[#c0d8ea]"
               }`}>
@@ -343,7 +343,7 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym 
         <div className={`px-5 py-2.5 flex items-center justify-between ${tx.t3(l)} text-[10px]`}>
           <span>Tap chart to open full view · Period buttons change timeframe</span>
           <button onClick={() => onChart(s.symbol, s.name)}
-            className="flex items-center gap-1 font-bold text-[#16a34a] hover:underline">
+            className="flex items-center gap-1 font-bold text-[#0A3656] dark:text-[#74A8C9] hover:underline">
             Open TradingView ↗
           </button>
         </div>
@@ -437,7 +437,7 @@ export default function GlobalView() {
                 {sidebar ? <X className={`w-4 h-4 ${tx.t1(l)}`}/> : <Menu className={`w-4 h-4 ${tx.t1(l)}`}/>}
               </button>
               <span className={`text-[9px] font-black px-2 py-1 rounded-md border ${
-                l?"bg-emerald-50 border-emerald-200 text-emerald-700":"bg-emerald-900/15 border-emerald-800/30 text-emerald-400"
+                l?"bg-[#0A3656]/10 border-[#0A3656]/30 text-[#0A3656]":"bg-[#74A8C9]/10 border-[#74A8C9]/25 text-[#74A8C9]"
               }`}>● LIVE</span>
               <h1 className={`text-sm font-black hidden sm:block ${tx.t1(l)}`}>
                 Global Markets <span className={`font-normal ml-1 text-xs ${tx.t2(l)}`}>Dashboard</span>
@@ -446,7 +446,7 @@ export default function GlobalView() {
             <div className="flex items-center gap-2">
               {error && <span className={`text-[10px] text-red-500 hidden md:inline`}>⚠ {error}</span>}
               <button onClick={doRefresh} disabled={refreshing||isLoading}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold text-white disabled:opacity-50 bg-[#16a34a] hover:bg-[#15803d] transition-colors">
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold text-white disabled:opacity-50 bg-[#0A3656] hover:bg-[#072a42] transition-colors">
                 <RefreshCw className={`w-3 h-3 ${refreshing?"animate-spin":""}`}/> <span className="hidden sm:inline">Refresh</span>
               </button>
               <div className={`flex items-center gap-1 text-[10px] ${tx.t3(l)}`}>
@@ -561,7 +561,7 @@ export default function GlobalView() {
                   const p = r.avgChange>=0;
                   return (
                     <Card key={r.name} className="overflow-hidden">
-                      <div className="h-0.5" style={{ background: p?"linear-gradient(to right,#16a34a,transparent)":"linear-gradient(to right,#dc2626,transparent)" }}/>
+                      <div className="h-0.5" style={{ background: p?"linear-gradient(to right,#0A3656,transparent)":"linear-gradient(to right,#dc2626,transparent)" }}/>
                       <div className="p-4">
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-2">

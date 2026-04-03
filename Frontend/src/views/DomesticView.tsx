@@ -39,11 +39,19 @@ const SECTOR_INDICES = [
 
 // ── Instruments ──────────────────────────────────────────────────
 const INDICES = [
-  { name:"Nifty 50",     key:"NSE:NIFTY 50",    sym:"NIFTY 50",    ex:"NSE", token:256265 },
-  { name:"Sensex",       key:"BSE:SENSEX",       sym:"SENSEX",       ex:"BSE", token:265    },
-  { name:"Bank Nifty",   key:"NSE:NIFTY BANK",   sym:"NIFTY BANK",   ex:"NSE", token:260105 },
-  { name:"Nifty Auto",   key:"NSE:NIFTY AUTO",   sym:"NIFTY AUTO",   ex:"NSE", token:258049 },
-  { name:"Nifty Pharma", key:"NSE:NIFTY PHARMA", sym:"NIFTY PHARMA", ex:"NSE", token:259849 },
+  { name:"Nifty 50",       key:"NSE:NIFTY 50",          sym:"NIFTY 50",          ex:"NSE", token:256265  },
+  { name:"Sensex",         key:"BSE:SENSEX",             sym:"SENSEX",            ex:"BSE", token:265     },
+  { name:"Bank Nifty",     key:"NSE:NIFTY BANK",         sym:"NIFTY BANK",        ex:"NSE", token:260105  },
+  { name:"Nifty Auto",     key:"NSE:NIFTY AUTO",         sym:"NIFTY AUTO",        ex:"NSE", token:258049  },
+  { name:"Nifty Pharma",   key:"NSE:NIFTY PHARMA",       sym:"NIFTY PHARMA",      ex:"NSE", token:259849  },
+  { name:"Nifty IT",       key:"NSE:NIFTY IT",           sym:"NIFTY IT",          ex:"NSE", token:258529  },
+  { name:"Nifty Metal",    key:"NSE:NIFTY METAL",        sym:"NIFTY METAL",       ex:"NSE", token:259337  },
+  { name:"Nifty Realty",   key:"NSE:NIFTY REALTY",       sym:"NIFTY REALTY",      ex:"NSE", token:260361  },
+  { name:"Nifty Energy",   key:"NSE:NIFTY ENERGY",       sym:"NIFTY ENERGY",      ex:"NSE", token:258409  },
+  { name:"Nifty FMCG",     key:"NSE:NIFTY FMCG",         sym:"NIFTY FMCG",        ex:"NSE", token:258537  },
+  { name:"Nifty Fin Svc",  key:"NSE:NIFTY FIN SERVICE",  sym:"NIFTY FIN SERVICE", ex:"NSE", token:261889  },
+  { name:"Nifty PSU Bank", key:"NSE:NIFTY PSU BANK",     sym:"NIFTY PSU BANK",    ex:"NSE", token:260649  },
+  { name:"India VIX",      key:"NSE:INDIA VIX",          sym:"INDIA VIX",         ex:"NSE", token:264969  },
 ];
 const STOCKS = [
   { key:"NSE:RELIANCE",   sym:"RELIANCE",   name:"Reliance Industries", token:738561   },
@@ -164,22 +172,22 @@ const up = (v?: number | null) => (v ?? 0) >= 0;
 const useIL = () => { const { theme } = useTheme(); return theme === "light"; };
 
 const tx = {
-  bg:      (l:boolean) => l ? "bg-[#f5f4f0]"   : "bg-[#07111b]",
-  card:    (l:boolean) => l ? "bg-white border border-gray-100 shadow-sm" : "bg-[#0c1821] border border-[#1a2d3f]",
-  header:  (l:boolean) => l ? "bg-gray-50 border-b border-gray-100"       : "bg-[#081017] border-b border-[#1a2d3f]",
-  row:     (l:boolean) => l ? "hover:bg-gray-50/60 border-b border-gray-50" : "hover:bg-white/[0.02] border-b border-[#111e28]",
-  sidebar: (l:boolean) => l ? "bg-white border-r border-gray-100" : "bg-[#07111b] border-r border-[#1a2d3f]",
-  topbar:  (l:boolean) => l ? "bg-white/95 border-b border-gray-100 backdrop-blur-sm" : "bg-[#07111b]/95 border-b border-[#1a2d3f] backdrop-blur-sm",
-  t1:      (l:boolean) => l ? "text-gray-900"   : "text-[#e2ecf4]",
-  t2:      (l:boolean) => l ? "text-gray-500"   : "text-[#5a7a92]",
-  t3:      (l:boolean) => l ? "text-gray-400"   : "text-[#3d5f78]",
+  bg:      (l:boolean) => l ? "bg-[#f0f7fe]"    : "bg-[#070e1a]",
+  card:    (l:boolean) => l ? "bg-white border border-slate-200 shadow-sm" : "bg-[#0c1a2e] border border-[#1e3a5f]/50",
+  header:  (l:boolean) => l ? "bg-slate-50 border-b border-slate-200"      : "bg-[#070e1a] border-b border-[#1e3a5f]/40",
+  row:     (l:boolean) => l ? "hover:bg-slate-50/60 border-b border-slate-100" : "hover:bg-white/[0.02] border-b border-[#1e3a5f]/30",
+  sidebar: (l:boolean) => l ? "bg-white border-r border-slate-200" : "bg-[#070e1a] border-r border-[#1e3a5f]/40",
+  topbar:  (l:boolean) => l ? "bg-white/96 border-b border-slate-200 backdrop-blur-sm" : "bg-[#040810]/96 border-b border-[#1e3a5f]/50 backdrop-blur-sm",
+  t1:      (l:boolean) => l ? "text-slate-900"  : "text-white",
+  t2:      (l:boolean) => l ? "text-slate-500"  : "text-slate-400",
+  t3:      (l:boolean) => l ? "text-slate-400"  : "text-slate-500",
   tab:     (l:boolean, active:boolean) => active
-    ? "bg-[#16a34a] text-white border-transparent"
-    : l ? "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
-        : "bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f] hover:border-[#2a4a62] hover:text-[#c0d8ea]",
+    ? "bg-[#5194F6] text-white border-transparent"
+    : l ? "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+        : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50 hover:bg-[#0c1a2e] hover:text-white",
   pill:    (l:boolean, g:boolean) => g
-    ? l ? "bg-emerald-50 text-emerald-700" : "bg-emerald-900/20 text-emerald-400"
-    :     l ? "bg-red-50 text-red-600"     : "bg-red-900/20 text-red-400",
+    ? l ? "bg-emerald-50 text-emerald-700" : "bg-emerald-500/15 text-emerald-400"
+    :     l ? "bg-red-50 text-red-600"     : "bg-red-500/15 text-red-400",
 };
 
 // ── Hooks ──────────────────────────────────────────────────────────
@@ -240,7 +248,7 @@ function Card({ children, className="" }: { children:React.ReactNode; className?
 
 function Skel({ h="h-8", w="w-full" }: { h?:string; w?:string }) {
   const l = useIL();
-  return <div className={`${h} ${w} rounded-lg animate-pulse ${l?"bg-gray-100":"bg-[#1a2d3f]/60"}`}/>;
+  return <div className={`${h} ${w} rounded-lg animate-pulse ${l?"bg-slate-100":"bg-[#0c1a2e]/60"}`}/>;
 }
 
 function PctTag({ p, sm=false }: { p?:number|null; sm?:boolean }) {
@@ -272,8 +280,8 @@ function SecHead({ id, icon:Icon, title, sub, live=false }: {
   const l = useIL();
   return (
     <div id={id} className="flex items-center gap-3 mb-5 scroll-mt-24">
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-[#16a34a]/10">
-        <Icon className="w-4 h-4 text-[#16a34a]"/>
+      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-[#5194F6]/10">
+        <Icon className="w-4 h-4 text-[#5194F6]"/>
       </div>
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <h2 className={`font-black text-base tracking-tight ${tx.t1(l)}`}>{title}</h2>
@@ -284,7 +292,7 @@ function SecHead({ id, icon:Icon, title, sub, live=false }: {
         )}
         {sub && <span className={`text-[11px] truncate hidden sm:block ${tx.t3(l)}`}>{sub}</span>}
       </div>
-      <div className={`h-px flex-1 max-w-24 ${l?"bg-gray-100":"bg-[#1a2d3f]"}`}/>
+      <div className={`h-px flex-1 max-w-24 ${l?"bg-slate-200":"bg-[#1e3a5f]/40"}`}/>
     </div>
   );
 }
@@ -292,13 +300,13 @@ function SecHead({ id, icon:Icon, title, sub, live=false }: {
 function KiteBanner({ msg }: { msg:string }) {
   const l = useIL();
   return (
-    <div className={`mb-4 px-4 py-3 rounded-xl border flex flex-col sm:flex-row sm:items-center gap-3 ${l?"bg-amber-50 border-amber-200":"bg-amber-900/10 border-amber-800/30"}`}>
+    <div className={`mb-4 px-4 py-3 rounded-xl border flex flex-col sm:flex-row sm:items-center gap-3 ${l?"bg-amber-50 border-amber-200":"bg-amber-500/10 border-amber-500/20"}`}>
       <div className="flex items-center gap-2 flex-1">
         <Info className={`w-4 h-4 shrink-0 ${l?"text-amber-600":"text-amber-400"}`}/>
         <p className={`text-xs font-medium ${l?"text-amber-700":"text-amber-300"}`}>{msg}</p>
       </div>
       <a href={`${ROOT}/api/v1/kite/login`}
-        className="shrink-0 flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-lg bg-[#16a34a] text-white hover:bg-[#15803d] transition-colors">
+        className="shrink-0 flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-lg bg-[#5194F6] text-white hover:bg-[#4080e0] transition-colors">
         <Wifi className="w-3.5 h-3.5"/>Login with Kite
       </a>
     </div>
@@ -313,7 +321,7 @@ function TickerItem({ tick, sym }: { tick?:KiteTick; sym:string }) {
   const l = useIL();
   const p = getPct(tick);
   return (
-    <div className={`flex items-center gap-2 px-4 h-full border-r shrink-0 ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
+    <div className={`flex items-center gap-2 px-4 h-full border-r shrink-0 ${l?"border-slate-100":"border-[#1e3a5f]/40"}`}>
       <span className={`text-[10px] font-black tracking-wider ${tx.t3(l)}`}>{sym}</span>
       <span className={`text-[11px] font-bold tabular-nums transition-colors duration-400 ${f==="up"?"text-emerald-500":f==="dn"?"text-red-500":tx.t1(l)}`}>
         {tick?.last_price!=null ? fmt(tick.last_price) : "···"}
@@ -332,7 +340,7 @@ function TickerBar({ rawTicks }: { rawTicks:any }) {
   // Build items list once (stable for animation), updates come via tick props
   const items = [...live, ...live];
   return (
-    <div className={`overflow-hidden border-b select-none ${l?"bg-white border-gray-100":"bg-[#060e16] border-[#1a2d3f]"}`} style={{ height:34 }}>
+    <div className={`overflow-hidden border-b select-none ${l?"bg-white border-slate-200":"bg-[#040810] border-[#1e3a5f]/50"}`} style={{ height:34 }}>
       <style>{`@keyframes tkS{from{transform:translateX(0)}to{transform:translateX(-50%)}}.tk-s{display:flex;width:max-content;animation:tkS 55s linear infinite;align-items:center;height:100%}.tk-s:hover{animation-play-state:paused}`}</style>
       <div className="tk-s">{items.map((it,i) => <TickerItem key={i} tick={ticks[it.key]} sym={it.sym}/>)}</div>
     </div>
@@ -351,29 +359,9 @@ function NiftyMini({ tick }: { tick:KiteTick }) {
 function SideNav({ active, onSelect, ticks, connected }: {
   active:string; onSelect:(id:string)=>void; ticks:any; connected:boolean;
 }) {
-  const l      = useIL();
-  const nifty  = ticks["NSE:NIFTY 50"]  as KiteTick|undefined;
-  const sensex = ticks["BSE:SENSEX"]    as KiteTick|undefined;
+  const l = useIL();
   return (
     <div className="flex flex-col h-full py-3">
-      {nifty && (
-        <div className={`mx-3 mb-2 rounded-lg border px-3 py-2 ${l?"bg-gray-50 border-gray-100":"bg-[#0a1826] border-[#1a2d3f]"}`}>
-          <div className="flex items-center justify-between mb-0.5">
-            <span className={`text-[9px] font-black uppercase tracking-widest ${tx.t3(l)}`}>Nifty 50</span>
-            <PctTag p={getPct(nifty)} sm/>
-          </div>
-          <NiftyMini tick={nifty}/>
-        </div>
-      )}
-      {sensex && (
-        <div className={`mx-3 mb-3 rounded-lg border px-3 py-2 ${l?"bg-gray-50 border-gray-100":"bg-[#0a1826] border-[#1a2d3f]"}`}>
-          <div className="flex items-center justify-between mb-0.5">
-            <span className={`text-[9px] font-black uppercase tracking-widest ${tx.t3(l)}`}>Sensex</span>
-            <PctTag p={getPct(sensex)} sm/>
-          </div>
-          <NiftyMini tick={sensex}/>
-        </div>
-      )}
       <p className={`text-[9px] font-black uppercase tracking-widest px-4 mb-1 ${tx.t3(l)}`}>Navigate</p>
       <nav className="flex-1 space-y-px px-2 overflow-y-auto">
         {NAV_SECTIONS.map(s => (
@@ -381,8 +369,8 @@ function SideNav({ active, onSelect, ticks, connected }: {
             onClick={() => { onSelect(s.id); document.getElementById(s.id)?.scrollIntoView({ behavior:"smooth", block:"start" }); }}
             className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all text-left ${
               active===s.id
-                ? l?"bg-[#16a34a]/10 text-[#16a34a] border-l-2 border-[#16a34a] font-bold":"bg-[#16a34a]/10 text-emerald-400 border-l-2 border-emerald-600"
-                : l?"text-gray-500 hover:bg-gray-50 hover:text-gray-800":"text-[#5a7a92] hover:bg-white/[0.03] hover:text-[#c0d8ea]"
+                ? l?"bg-[#5194F6]/10 text-[#5194F6] border-l-2 border-[#5194F6] font-bold":"bg-[#5194F6]/10 text-[#5194F6] border-l-2 border-[#5194F6]"
+                : l?"text-slate-500 hover:bg-slate-50 hover:text-slate-800":"text-slate-400 hover:bg-[#0c1a2e] hover:text-white"
             }`}>
             <s.icon className="w-3.5 h-3.5 shrink-0"/>
             <span className="truncate">{s.label}</span>
@@ -444,8 +432,8 @@ function CandleChart({ token, height=300, showControls=true, defaultPeriod="1D",
     if (!containerRef.current) return;
     if (chartRef.current) { chartRef.current.remove(); chartRef.current=null; cSerRef.current=null; vSerRef.current=null; }
 
-    const bg   = dark ? "#0c1821" : "#ffffff";
-    const grid = dark ? "rgba(255,255,255,0.035)" : "rgba(0,0,0,0.04)";
+    const bg   = dark ? "#0c1a2e" : "#ffffff";
+    const grid = dark ? "rgba(30,58,95,0.3)" : "rgba(0,0,0,0.04)";
     const text = dark ? "rgba(144,164,184,0.7)"  : "rgba(80,100,120,0.9)";
     const chartH = showControls ? height - 80 : height;
 
@@ -457,8 +445,8 @@ function CandleChart({ token, height=300, showControls=true, defaultPeriod="1D",
       grid:   { vertLines:{ visible:false }, horzLines:{ color:grid, style:1 } },
       crosshair: {
         mode:1,
-        vertLine:{ color:"rgba(144,164,184,0.25)", labelBackgroundColor:dark?"#1a3050":"#d1dce8", width:1, style:1 },
-        horzLine:{ color:"rgba(144,164,184,0.25)", labelBackgroundColor:dark?"#1a3050":"#d1dce8", width:1, style:1 },
+        vertLine:{ color:"rgba(81,148,246,0.25)", labelBackgroundColor:dark?"#0c1a2e":"#dbeafe", width:1, style:1 },
+        horzLine:{ color:"rgba(81,148,246,0.25)", labelBackgroundColor:dark?"#0c1a2e":"#dbeafe", width:1, style:1 },
       },
       rightPriceScale: { borderVisible:false, scaleMargins:{ top:0.06, bottom:0.18 }, minimumWidth:70 },
       timeScale: { borderVisible:false, timeVisible:period==="1D"||period==="1W", secondsVisible:false, fixLeftEdge:true, fixRightEdge:true, barSpacing:9, rightOffset:4 },
@@ -529,27 +517,27 @@ function CandleChart({ token, height=300, showControls=true, defaultPeriod="1D",
   return (
     <div>
       {showControls && (
-        <div className={`flex items-center gap-2 px-4 py-3 border-b ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
+        <div className={`flex items-center gap-2 px-4 py-3 border-b ${l?"border-slate-100":"border-[#1e3a5f]/50"}`}>
           <div className="flex gap-1.5">
             {PERIODS.map(p => (
               <button key={p} onClick={() => setPeriod(p)} disabled={loading}
                 className={`px-2.5 py-1 rounded-md text-[11px] font-bold border transition-all disabled:opacity-60 ${
                   period===p
-                    ? "bg-[#16a34a] text-white border-transparent"
-                    : l?"bg-white text-gray-500 border-gray-200 hover:border-gray-300":"bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f] hover:border-[#2a4a62]"
+                    ? "bg-[#5194F6] text-white border-transparent"
+                    : l?"bg-white text-slate-500 border-slate-200 hover:border-gray-300":"bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50 hover:border-[#1e3a5f]"
                 }`}>{p}</button>
             ))}
           </div>
-          {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#16a34a] ml-1"/>}
+          {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#5194F6] ml-1"/>}
           {error && <span className="text-[10px] text-red-500 ml-1">⚠ {error}</span>}
           {lastFetch && !error && (() => {
             const now = new Date();
             const mins = now.getHours() * 60 + now.getMinutes();
             const mktOpen = mins >= 555 && mins < 930; // 9:15 AM to 3:30 PM
             if (mktOpen) {
-              return <span className={`text-[10px] ml-auto hidden sm:block ${l?"text-gray-400":"text-[#3d5f78]"}`}>{P_LABEL[period]} · Updated {lastFetch.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true})}</span>;
+              return <span className={`text-[10px] ml-auto hidden sm:block ${l?"text-slate-400":"text-slate-500"}`}>{P_LABEL[period]} · Updated {lastFetch.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true})}</span>;
             } else {
-              return <span className={`text-[10px] ml-auto hidden sm:block ${l?"text-gray-400":"text-[#3d5f78]"}`}>{P_LABEL[period]} · <span className={l?"text-amber-500":"text-amber-400"}>Market closed</span> · Data as of {lastFetch.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true})}</span>;
+              return <span className={`text-[10px] ml-auto hidden sm:block ${l?"text-slate-400":"text-slate-500"}`}>{P_LABEL[period]} · <span className={l?"text-amber-500":"text-amber-400"}>Market closed</span> · Data as of {lastFetch.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true})}</span>;
             }
           })()}
         </div>
@@ -557,8 +545,13 @@ function CandleChart({ token, height=300, showControls=true, defaultPeriod="1D",
       <div className={`relative transition-opacity ${loading?"opacity-40":"opacity-100"}`} style={{ height:showControls?height-80:height }}>
         <div ref={containerRef} style={{ width:"100%", height:"100%" }}/>
         {!candles.length && !loading && (
-          <div className={`absolute inset-0 flex items-center justify-center text-sm ${l?"text-gray-400":"text-[#5a7a92]"}`}>
-            {error ? "⚠ Could not load chart" : "Fetching chart data…"}
+          <div className={`absolute inset-0 flex flex-col items-center justify-center gap-3 text-sm ${l?"text-slate-400":"text-slate-400"}`}>
+            <span>{error ? `⚠ ${error}` : "Fetching chart data…"}</span>
+            <button
+              onClick={() => fetchData(period)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${l?"bg-white border-slate-200 text-slate-600 hover:bg-slate-50":"bg-[#0c1a2e] border-[#1e3a5f]/50 text-slate-400 hover:border-[#1e3a5f]"}`}>
+              <RefreshCw className="w-3 h-3"/> Retry
+            </button>
           </div>
         )}
       </div>
@@ -602,11 +595,11 @@ function SearchResultCard({ item, onClose, rawTicks }: {
   return (
     <div className={`rounded-2xl border shadow-lg overflow-hidden mb-6 ${tx.card(l)}`}>
       {/* Header */}
-      <div className={`flex items-start justify-between px-5 pt-4 pb-3 border-b ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
+      <div className={`flex items-start justify-between px-5 pt-4 pb-3 border-b ${l?"border-slate-100":"border-[#1e3a5f]/50"}`}>
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className={`text-[9px] font-black uppercase tracking-widest ${tx.t3(l)}`}>{item.sym} · {item.ex}</span>
-            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${l?"bg-blue-50 text-blue-600 border-blue-200":"bg-blue-900/20 text-blue-400 border-blue-800/30"}`}>SEARCH RESULT</span>
+            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${l?"bg-blue-50 text-blue-600 border-blue-200":"bg-[#5194F6]/12 text-[#5194F6] border-[#5194F6]/25"}`}>SEARCH RESULT</span>
           </div>
           <p className={`text-sm font-bold mb-2 ${tx.t2(l)}`}>{item.name}</p>
           {livePrice > 0 ? (
@@ -630,16 +623,16 @@ function SearchResultCard({ item, onClose, rawTicks }: {
         <div className="flex flex-col items-end gap-2">
           {ohlc && (
             <div className="flex flex-col gap-1">
-              <div className={`flex items-center gap-2 px-2.5 py-1 rounded-lg border text-xs ${l?"bg-emerald-50 border-emerald-100":"bg-emerald-900/15 border-emerald-800/30"}`}>
+              <div className={`flex items-center gap-2 px-2.5 py-1 rounded-lg border text-xs ${l?"bg-emerald-50 border-emerald-100":"bg-emerald-500/10 border-emerald-500/20"}`}>
                 <span className={tx.t3(l)}>H</span><span className="font-bold text-emerald-600 tabular-nums">₹{fmt(ohlc.high)}</span>
               </div>
-              <div className={`flex items-center gap-2 px-2.5 py-1 rounded-lg border text-xs ${l?"bg-red-50 border-red-100":"bg-red-900/15 border-red-800/30"}`}>
+              <div className={`flex items-center gap-2 px-2.5 py-1 rounded-lg border text-xs ${l?"bg-red-50 border-red-100":"bg-red-500/10 border-red-500/20"}`}>
                 <span className={tx.t3(l)}>L</span><span className="font-bold text-red-600 tabular-nums">₹{fmt(ohlc.low)}</span>
               </div>
             </div>
           )}
           <button onClick={onClose}
-            className={`p-1.5 rounded-lg border transition-colors ${l?"bg-white border-gray-200 hover:bg-gray-50":"bg-[#0a1826] border-[#1a2d3f] hover:bg-[#0c1e2d]"}`}>
+            className={`p-1.5 rounded-lg border transition-colors ${l?"bg-white border-slate-200 hover:bg-slate-50":"bg-[#0c1a2e] border-[#1e3a5f]/50 hover:bg-[#0a1a2e]"}`}>
             <X className={`w-4 h-4 ${tx.t2(l)}`}/>
           </button>
         </div>
@@ -650,7 +643,7 @@ function SearchResultCard({ item, onClose, rawTicks }: {
 
       {/* OHLCV row */}
       {ohlc && (
-        <div className={`grid grid-cols-3 sm:grid-cols-6 border-t ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
+        <div className={`grid grid-cols-3 sm:grid-cols-6 border-t ${l?"border-slate-100":"border-[#1e3a5f]/50"}`}>
           {[
             { label:"Open",   val:ohlc.open,       cls:tx.t1(l) },
             { label:"High",   val:ohlc.high,       cls:"text-emerald-600" },
@@ -659,7 +652,7 @@ function SearchResultCard({ item, onClose, rawTicks }: {
             { label:"LTP",    val:livePrice,       cls:"text-blue-600" },
             { label:"Volume", raw:fmtV(tick?.volume ?? quote?.volume) },
           ].map((s, i) => (
-            <div key={s.label} className={`text-center py-3 ${i>0?(l?"border-l border-gray-100":"border-l border-[#1a2d3f]"):""} ${l?"bg-gray-50":"bg-[#081017]"}`}>
+            <div key={s.label} className={`text-center py-3 ${i>0?(l?"border-l border-slate-100":"border-l border-[#1e3a5f]/50"):""} ${l?"bg-slate-50":"bg-[#070e1a]"}`}>
               <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${tx.t3(l)}`}>{s.label}</p>
               <p className={`text-xs font-black tabular-nums ${s.cls ?? tx.t1(l)}`}>
                 {s.raw ?? (s.val!=null && s.val > 0 ? "₹"+fmt(s.val) : "—")}
@@ -734,8 +727,8 @@ function SearchBar({ rawTicks, onResult }: {
   return (
     <div className="relative flex-1 max-w-[160px] sm:max-w-xs" ref={dropRef as any}>
       <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${
-        l ? "bg-gray-50 border-gray-200 focus-within:border-[#16a34a] focus-within:bg-white"
-          : "bg-[#0c1821] border-[#1a2d3f] focus-within:border-[#16a34a] focus-within:bg-[#0e2235]"
+        l ? "bg-slate-50 border-slate-200 focus-within:border-[#5194F6] focus-within:bg-white"
+          : "bg-[#0c1a2e] border-[#1e3a5f]/50 focus-within:border-[#5194F6] focus-within:bg-[#0c1a2e]"
       }`}>
         <Search className={`w-3.5 h-3.5 shrink-0 ${tx.t3(l)}`}/>
         <input
@@ -747,7 +740,7 @@ function SearchBar({ rawTicks, onResult }: {
           placeholder="Search stocks, indices…"
           className={`flex-1 bg-transparent text-xs font-bold outline-none placeholder:font-normal w-full min-w-0 ${tx.t1(l)}`}
         />
-        {searching && <RefreshCw className="w-3 h-3 animate-spin text-[#16a34a] shrink-0"/>}
+        {searching && <RefreshCw className="w-3 h-3 animate-spin text-[#5194F6] shrink-0"/>}
         {query && !searching && (
           <button onClick={() => { setQuery(""); setOpen(false); onResult(null); }}>
             <X className={`w-3 h-3 ${tx.t3(l)}`}/>
@@ -756,14 +749,14 @@ function SearchBar({ rawTicks, onResult }: {
       </div>
       {/* Dropdown */}
       {open && suggestions.length > 0 && (
-        <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border shadow-xl z-50 overflow-hidden ${l?"bg-white border-gray-200":"bg-[#0c1821] border-[#1a2d3f]"}`}>
+        <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border shadow-xl z-50 overflow-hidden ${l?"bg-white border-slate-200":"bg-[#0c1a2e] border-[#1e3a5f]/50"}`}>
           {suggestions.map(s => {
             const key  = s.ex + ":" + s.sym;
             const tick = rawTicks[key] as KiteTick | undefined;
             const pct  = getPct(tick);
             return (
               <button key={s.sym} onMouseDown={() => handleSelect(s)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs transition-colors ${l?"hover:bg-gray-50":"hover:bg-white/[0.04]"}`}>
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs transition-colors ${l?"hover:bg-slate-50":"hover:bg-white/[0.04]"}`}>
                 <div className="text-left">
                   <p className={`font-black ${tx.t1(l)}`}>{s.sym}</p>
                   <p className={`text-[10px] ${tx.t3(l)}`}>{s.name}</p>
@@ -825,12 +818,15 @@ function IndicesSection({ ticks, connected }: any) {
         {INDICES.map((m,i) => {
           const tk = ticks[m.key] as KiteTick|undefined;
           const pp = getPct(tk);
+          const nseUrl = m.ex === "BSE"
+            ? `https://www.bseindia.com/sensex/code/16/`
+            : `https://www.nseindia.com/market-data/live-equity-market?symbol=${encodeURIComponent(m.sym)}`;
           return (
-            <button key={m.key} onClick={() => setSel(i)}
+            <button key={m.key} onClick={() => { setSel(i); window.open(nseUrl, "_blank"); }}
               className={`flex flex-col items-start px-3 py-2 rounded-lg text-xs font-bold transition-all border shrink-0 ${
                 sel===i
-                  ? "bg-[#16a34a] text-white border-transparent"
-                  : l?"bg-white text-gray-600 border-gray-200 hover:border-gray-300":"bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f] hover:border-[#2a4a62]"
+                  ? "bg-[#5194F6] text-white border-transparent"
+                  : l?"bg-white text-slate-600 border-slate-200 hover:border-gray-300":"bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50 hover:border-[#1e3a5f]"
               }`}>
               <span className="font-black text-[11px]">{m.name}</span>
               <span className={`text-[10px] tabular-nums mt-0.5 ${sel===i?"opacity-80":up(pp)?"text-emerald-500":"text-red-500"}`}>
@@ -843,7 +839,7 @@ function IndicesSection({ ticks, connected }: any) {
 
       <Card className="overflow-hidden">
         {/* Price header */}
-        <div className={`flex items-start justify-between px-5 pt-4 pb-3 border-b ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
+        <div className={`flex items-start justify-between px-5 pt-4 pb-3 border-b ${l?"border-slate-100":"border-[#1e3a5f]/50"}`}>
           <div>
             <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${tx.t3(l)}`}>{idx.sym} · {idx.ex}</p>
             {tick?.last_price!=null ? (
@@ -862,10 +858,10 @@ function IndicesSection({ ticks, connected }: any) {
           </div>
           {tick?.ohlc && (
             <div className="flex-col gap-1 shrink-0 hidden xs:flex sm:flex">
-              <div className={`flex items-center gap-2 px-2.5 py-1 rounded-lg border text-xs ${l?"bg-emerald-50 border-emerald-100":"bg-emerald-900/15 border-emerald-800/30"}`}>
+              <div className={`flex items-center gap-2 px-2.5 py-1 rounded-lg border text-xs ${l?"bg-emerald-50 border-emerald-100":"bg-emerald-500/10 border-emerald-500/20"}`}>
                 <span className={tx.t3(l)}>H</span><span className="font-bold text-emerald-600 tabular-nums">₹{fmt(tick.ohlc.high)}</span>
               </div>
-              <div className={`flex items-center gap-2 px-2.5 py-1 rounded-lg border text-xs ${l?"bg-red-50 border-red-100":"bg-red-900/15 border-red-800/30"}`}>
+              <div className={`flex items-center gap-2 px-2.5 py-1 rounded-lg border text-xs ${l?"bg-red-50 border-red-100":"bg-red-500/10 border-red-500/20"}`}>
                 <span className={tx.t3(l)}>L</span><span className="font-bold text-red-600 tabular-nums">₹{fmt(tick.ohlc.low)}</span>
               </div>
             </div>
@@ -876,7 +872,7 @@ function IndicesSection({ ticks, connected }: any) {
         <CandleChart key={idx.token} token={idx.token} height={typeof window !== "undefined" && window.innerWidth < 640 ? 240 : 340} liveTick={tick}/>
 
         {/* OHLCV row */}
-        <div className={`grid grid-cols-3 sm:grid-cols-6 border-t ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
+        <div className={`grid grid-cols-3 sm:grid-cols-6 border-t ${l?"border-slate-100":"border-[#1e3a5f]/50"}`}>
           {[
             { label:"Open",   val:tick?.ohlc?.open,  cls:tx.t1(l) },
             { label:"High",   val:tick?.ohlc?.high,  cls:"text-emerald-600" },
@@ -885,7 +881,7 @@ function IndicesSection({ ticks, connected }: any) {
             { label:"LTP",    val:tick?.last_price,  cls:"text-blue-600" },
             { label:"Volume", raw:fmtV(tick?.volume) },
           ].map((s,i) => (
-            <div key={s.label} className={`text-center py-3 ${i>0?(l?"border-l border-gray-100":"border-l border-[#1a2d3f]"):""} ${l?"bg-gray-50":"bg-[#081017]"}`}>
+            <div key={s.label} className={`text-center py-3 ${i>0?(l?"border-l border-slate-100":"border-l border-[#1e3a5f]/50"):""} ${l?"bg-slate-50":"bg-[#070e1a]"}`}>
               <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${tx.t3(l)}`}>{s.label}</p>
               <p className={`text-xs font-black tabular-nums ${s.cls ?? tx.t1(l)}`}>
                 {s.raw ?? (s.val!=null?`₹${fmt(s.val)}`:"—")}
@@ -906,8 +902,11 @@ function StockRow({ s, tick, last, maxVol }: { s:typeof STOCKS[0]; tick?:KiteTic
   const p   = getPct(tick);
   const l   = useIL();
   const vol = tick?.volume ?? 0;
+  const nseUrl = `https://www.nseindia.com/get-quotes/equity?symbol=${encodeURIComponent(s.sym)}`;
   return (
-    <div className={`grid grid-cols-3 sm:grid-cols-9 items-center px-3 sm:px-5 ${!last?(l?"border-b border-gray-50":"border-b border-[#111e28]"):""} ${l?"hover:bg-gray-50/60":"hover:bg-white/[0.015]"}`}>
+    <div
+      onClick={() => window.open(nseUrl, "_blank")}
+      className={`grid grid-cols-3 sm:grid-cols-9 items-center px-3 sm:px-5 cursor-pointer ${!last?(l?"border-b border-slate-100":"border-b border-[#1e3a5f]/30"):""} ${l?"hover:bg-slate-50/60":"hover:bg-white/[0.015]"}`}>
       <div className="col-span-1 sm:col-span-2 flex items-center gap-1.5 sm:gap-2 py-1.5 sm:py-3">
         <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center text-[9px] font-black shrink-0 ${tx.pill(l,up(p))}`}>{s.sym.slice(0,2)}</div>
         <div className="min-w-0">
@@ -924,7 +923,7 @@ function StockRow({ s, tick, last, maxVol }: { s:typeof STOCKS[0]; tick?:KiteTic
       <div className={`text-right text-xs tabular-nums hidden md:block ${tx.t2(l)}`}>{tick?.ohlc?.close!=null?`₹${fmt(tick.ohlc.close)}`:"—"}</div>
       <div className="text-right py-1.5 sm:py-3 hidden sm:block">
         <p className={`text-xs tabular-nums ${tx.t2(l)}`}>{fmtV(vol)}</p>
-        <div className={`mt-1 h-1 rounded-full overflow-hidden ${l?"bg-gray-100":"bg-[#1a2d3f]"}`}>
+        <div className={`mt-1 h-1 rounded-full overflow-hidden ${l?"bg-slate-100":"bg-[#1e3a5f]"}`}>
           <div className="h-full bg-blue-400/60 rounded-full transition-all duration-700" style={{ width:maxVol>0?`${(vol/maxVol)*100}%`:"0%" }}/>
         </div>
       </div>
@@ -965,7 +964,7 @@ function DepthCard({ sym, ticks }: { sym:string; ticks:any }) {
   const name = sym.split(":")[1];
   return (
     <Card className="overflow-hidden">
-      <div className={`px-4 py-3 border-b ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
+      <div className={`px-4 py-3 border-b ${l?"border-slate-100":"border-[#1e3a5f]/50"}`}>
         <div className="flex items-center justify-between mb-1">
           <span className={`font-black text-sm ${tx.t1(l)}`}>{name}</span>
           <PctTag p={getPct(tick)} sm/>
@@ -988,7 +987,7 @@ function DepthCard({ sym, ticks }: { sym:string; ticks:any }) {
             const a = tick.depth!.sell[i];
             const mx = Math.max(...tick.depth!.buy.map(x=>x.quantity),...tick.depth!.sell.map(x=>x.quantity),1);
             return (
-              <div key={i} className={`grid grid-cols-3 px-3 py-1.5 text-xs relative ${i<4?(l?"border-b border-gray-50":"border-b border-[#111e28]"):""} ${l?"hover:bg-gray-50/60":"hover:bg-white/[0.015]"}`}>
+              <div key={i} className={`grid grid-cols-3 px-3 py-1.5 text-xs relative ${i<4?(l?"border-b border-slate-100":"border-b border-[#1e3a5f]/30"):""} ${l?"hover:bg-slate-50/60":"hover:bg-white/[0.015]"}`}>
                 <div className="absolute inset-y-0 left-0 bg-emerald-500/6" style={{ width:`${(b?b.quantity/mx:0)*33}%` }}/>
                 <div className="absolute inset-y-0 right-0 bg-red-500/6"    style={{ width:`${(a?a.quantity/mx:0)*33}%` }}/>
                 <span className="text-emerald-600 font-bold tabular-nums z-10 relative">{b?b.quantity.toLocaleString("en-IN"):"—"}</span>
@@ -1009,11 +1008,61 @@ function DepthCard({ sym, ticks }: { sym:string; ticks:any }) {
 }
 
 function DepthSection({ ticks }: { ticks:any }) {
+  const l = useIL();
+  const DEFAULT_SYMS = ["NSE:RELIANCE","NSE:TCS","NSE:HDFCBANK"];
+  const [selected, setSelected] = useState<string[]>(DEFAULT_SYMS);
+  const [searchVal, setSearchVal] = useState("");
+
+  const allStockKeys = STOCKS.map(s => s.key);
+  const filtered = searchVal.length > 0
+    ? allStockKeys.filter(k => k.toLowerCase().includes(searchVal.toLowerCase()))
+    : allStockKeys;
+
+  const handleAdd = (sym: string) => {
+    if (!selected.includes(sym)) {
+      setSelected(prev => [...prev.slice(-2), sym]); // keep max 3
+    }
+    setSearchVal("");
+  };
+
   return (
     <section className="mb-8">
       <SecHead id="depth" icon={ArrowUpDown} title="Market Depth" sub="Level 2 Order Book · 5 Best Bids & Asks" live/>
+      {/* Search/Select for stocks */}
+      <div className={`flex items-center gap-2 mb-3 p-3 rounded-xl border ${tx.card(l)}`}>
+        <Search className={`w-3.5 h-3.5 shrink-0 ${tx.t3(l)}`}/>
+        <input
+          value={searchVal}
+          onChange={e => setSearchVal(e.target.value)}
+          placeholder="Search stock to view depth (e.g. INFY, WIPRO)…"
+          className={`flex-1 bg-transparent text-xs font-bold outline-none placeholder:font-normal ${tx.t1(l)}`}
+        />
+        {searchVal && (
+          <button onClick={() => setSearchVal("")}><X className={`w-3.5 h-3.5 ${tx.t3(l)}`}/></button>
+        )}
+      </div>
+      {/* Dropdown suggestions */}
+      {searchVal.length > 0 && filtered.length > 0 && (
+        <div className={`mb-3 rounded-xl border overflow-hidden ${l?"bg-white border-slate-200":"bg-[#0c1a2e] border-[#1e3a5f]/50"}`}>
+          {filtered.slice(0,6).map(sym => (
+            <button key={sym} onClick={() => handleAdd(sym)}
+              className={`w-full text-left px-4 py-2.5 text-xs font-bold transition-colors ${l?"hover:bg-slate-50":"hover:bg-white/[0.04]"} ${tx.t1(l)}`}>
+              {sym.split(":")[1]}
+            </button>
+          ))}
+        </div>
+      )}
+      {/* Selected chips */}
+      <div className="flex gap-2 mb-3 flex-wrap">
+        {selected.map(sym => (
+          <div key={sym} className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border text-xs font-bold ${l?"bg-blue-50 border-blue-200 text-blue-700":"bg-blue-900/20 border-[#5194F6]/25 text-blue-400"}`}>
+            {sym.split(":")[1]}
+            <button onClick={() => setSelected(prev => prev.filter(s => s !== sym))}><X className="w-3 h-3"/></button>
+          </div>
+        ))}
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {["NSE:RELIANCE","NSE:TCS","NSE:HDFCBANK"].map(s => <DepthCard key={s} sym={s} ticks={ticks}/>)}
+        {selected.map(s => <DepthCard key={s} sym={s} ticks={ticks}/>)}
       </div>
     </section>
   );
@@ -1030,7 +1079,6 @@ function OptionsSection({ ticks }: { ticks:any }) {
   // F&O instruments from backend
   const [foName,   setFoName]   = useState("NIFTY");
   const [foExpiry, setFoExpiry] = useState("");
-  const [foView,   setFoView]   = useState<"chain"|"futures"|"instruments">("chain");
 
   const { data: foData, loading: foLoad, error: foErr, meta: foMeta, refresh: foRefresh } = useAPI<any>(
     `/kite/fo/instruments?name=${foName}${foExpiry ? `&expiry=${foExpiry}` : ""}`,
@@ -1085,9 +1133,6 @@ function OptionsSection({ ticks }: { ticks:any }) {
       .finally(() => setQuotesLoading(false));
   }, [strikes.join(","), foItems.length]);
 
-  // Futures list
-  const futures = useMemo(() => foItems.filter(i => i.instrument_type === "FUT"), [foItems]);
-
   const FO_NAMES = ["NIFTY","BANKNIFTY","FINNIFTY","MIDCPNIFTY"];
 
   return (
@@ -1100,59 +1145,50 @@ function OptionsSection({ ticks }: { ticks:any }) {
         {FO_NAMES.map(n => (
           <button key={n} onClick={() => { setFoName(n); setFoExpiry(""); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all shrink-0 ${
-              foName===n ? "bg-[#16a34a] text-white border-transparent"
-                : l?"bg-white text-gray-600 border-gray-200":"bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f]"
+              foName===n ? "bg-[#5194F6] text-white border-transparent"
+                : l?"bg-white text-slate-600 border-slate-200":"bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
             }`}>{n}</button>
         ))}
 
         {/* Divider */}
-        <div className={`w-px h-5 shrink-0 ${l?"bg-gray-200":"bg-[#1a2d3f]"}`}/>
+        <div className={`w-px h-5 shrink-0 ${l?"bg-slate-200":"bg-[#1e3a5f]"}`}/>
 
         {/* Expiry select */}
         {foExpiries.length > 0 && (
           <select
             value={foExpiry || curExpiry}
             onChange={e => setFoExpiry(e.target.value)}
-            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border shrink-0 ${l?"bg-white text-gray-600 border-gray-200":"bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f]"}`}>
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border shrink-0 ${l?"bg-white text-slate-600 border-slate-200":"bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"}`}>
             {foExpiries.map(e => <option key={e} value={e}>{e}</option>)}
           </select>
         )}
 
         {/* Divider */}
-        <div className={`w-px h-5 shrink-0 ${l?"bg-gray-200":"bg-[#1a2d3f]"}`}/>
-
-        {/* View toggle: Chain / Futures / Instruments */}
-        {(["chain","futures","instruments"] as const).map(v => (
-          <button key={v} onClick={() => setFoView(v)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all capitalize shrink-0 ${
-              foView===v ? "bg-[#2563eb] text-white border-transparent"
-                : l?"bg-white text-gray-600 border-gray-200":"bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f]"
-            }`}>{v}</button>
-        ))}
+        <div className={`w-px h-5 shrink-0 ${l?"bg-slate-200":"bg-[#1e3a5f]"}`}/>
 
         {/* Refresh */}
         <button onClick={foRefresh}
-          className={`px-2.5 py-1.5 rounded-lg border flex items-center shrink-0 ${l?"bg-white text-gray-600 border-gray-200":"bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f]"}`}>
+          className={`px-2.5 py-1.5 rounded-lg border flex items-center shrink-0 ${l?"bg-white text-slate-600 border-slate-200":"bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"}`}>
           <RefreshCw className={`w-3.5 h-3.5 ${foLoad?"animate-spin":""}`}/>
         </button>
       </div>
 
       {foErr && (
-        <div className={`mb-3 px-4 py-3 rounded-xl border flex items-center gap-2 text-xs ${l?"bg-red-50 border-red-200 text-red-600":"bg-red-900/15 border-red-800/30 text-red-400"}`}>
+        <div className={`mb-3 px-4 py-3 rounded-xl border flex items-center gap-2 text-xs ${l?"bg-red-50 border-red-200 text-red-600":"bg-red-500/10 border-red-500/20 text-red-400"}`}>
           <AlertCircle className="w-3.5 h-3.5 shrink-0"/>{foErr}
         </div>
       )}
 
       {foLoad ? (
         <Card className="p-4 space-y-2">{[...Array(6)].map((_,i) => <Skel key={i} h="h-9"/>)}</Card>
-      ) : foView === "chain" ? (
+      ) : (
         /* ── Options Chain ── */
         <Card className="overflow-x-auto">
           <div className="min-w-[520px]">
           <div className={`flex items-center justify-between px-5 py-3 border-b ${l?"bg-blue-50 border-blue-100":"bg-blue-900/10 border-blue-800/20"}`}>
             <div className="flex items-center gap-3">
               {spot && <span className={`text-xs font-bold ${l?"text-blue-700":"text-blue-300"}`}>Spot ₹{fmt(spot)}</span>}
-              {ATM  && <span className={`text-xs font-bold px-2 py-0.5 rounded ${l?"bg-blue-100 text-blue-700":"bg-blue-800/30 text-blue-300"}`}>ATM {ATM}</span>}
+              {ATM  && <span className={`text-xs font-bold px-2 py-0.5 rounded ${l?"bg-blue-100 text-blue-700":"bg-[#5194F6]/20 text-[#5194F6]"}`}>ATM {ATM}</span>}
               <span className={`text-[10px] ${tx.t3(l)}`}>{foName} · {foExpiry || curExpiry}</span>
             </div>
             <span className={`text-[10px] hidden sm:block ${tx.t3(l)}`}>{foItems.length} instruments loaded</span>
@@ -1197,8 +1233,8 @@ function OptionsSection({ ticks }: { ticks:any }) {
             return (
               <div key={strike} className={`grid grid-cols-7 px-5 py-2 text-xs items-center
                 ${isATM ? (l?"bg-amber-50":"bg-amber-900/10") : ""}
-                ${i < strikes.length-1 ? (l?"border-b border-gray-50":"border-b border-[#111e28]") : ""}
-                ${l?"hover:bg-gray-50/60":"hover:bg-white/[0.015]"}`}>
+                ${i < strikes.length-1 ? (l?"border-b border-slate-100":"border-b border-[#1e3a5f]/30") : ""}
+                ${l?"hover:bg-slate-50/60":"hover:bg-white/[0.015]"}`}>
                 <span className="text-emerald-700 font-bold">{cOI > 0 ? fmtV(cOI) : <span className={`text-[10px] ${tx.t3(l)}`}>—</span>}</span>
                 <span className={`text-right ${tx.t2(l)}`}>{cVol > 0 ? fmtV(cVol) : "—"}</span>
                 <span className="text-right text-emerald-600 font-bold">
@@ -1218,75 +1254,6 @@ function OptionsSection({ ticks }: { ticks:any }) {
           })}
           </div>
         </Card>
-      ) : foView === "futures" ? (
-        /* ── Futures ── */
-        <Card className="overflow-x-auto">
-          <div className={`grid grid-cols-5 px-5 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
-            <div className="col-span-2">Symbol</div>
-            <div className="text-right">Expiry</div>
-            <div className="text-right">Lot Size</div>
-            <div className="text-right">Last Price</div>
-          </div>
-          {futures.length === 0 ? (
-            <div className={`p-8 text-center text-sm ${tx.t2(l)}`}>No futures found</div>
-          ) : futures.map((f:any, i:number) => {
-            const wsKey = `NFO:${f.tradingsymbol}`;
-            const tick  = ticks[wsKey];
-            return (
-              <div key={f.instrument_token} className={`grid grid-cols-5 px-5 py-3 items-center text-xs
-                ${i<futures.length-1?(l?"border-b border-gray-50":"border-b border-[#111e28]"):""}
-                ${l?"hover:bg-gray-50/60":"hover:bg-white/[0.015]"}`}>
-                <div className="col-span-2">
-                  <p className={`font-bold ${tx.t1(l)}`}>{f.tradingsymbol}</p>
-                  <p className={`text-[10px] ${tx.t3(l)}`}>Token: {f.instrument_token}</p>
-                </div>
-                <div className={`text-right tabular-nums ${tx.t2(l)}`}>{f.expiry}</div>
-                <div className={`text-right tabular-nums ${tx.t2(l)}`}>{f.lot_size}</div>
-                <div className={`text-right font-bold tabular-nums ${tx.t1(l)}`}>
-                  {(() => {
-                    const q = liveQuotes["NFO:" + f.tradingsymbol];
-                    const ltp = tick?.last_price || q?.last_price || 0;
-                    return ltp > 0 ? "₹" + fmt(ltp) : "—";
-                  })()}
-                </div>
-              </div>
-            );
-          })}
-        </Card>
-      ) : (
-        /* ── All Instruments ── */
-        <Card className="overflow-x-auto">
-          <div className={`grid grid-cols-6 px-5 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
-            <div className="col-span-2">Symbol</div>
-            <div>Type</div>
-            <div className="text-right">Strike</div>
-            <div className="text-right">Expiry</div>
-            <div className="text-right">Lot Size</div>
-          </div>
-          {foItems.length === 0 ? (
-            <div className={`p-8 text-center text-sm ${tx.t2(l)}`}>No instruments found</div>
-          ) : foItems.slice(0,100).map((f:any, i:number) => (
-            <div key={f.instrument_token} className={`grid grid-cols-6 px-5 py-2.5 items-center text-xs
-              ${i<Math.min(foItems.length,100)-1?(l?"border-b border-gray-50":"border-b border-[#111e28]"):""}
-              ${l?"hover:bg-gray-50/60":"hover:bg-white/[0.015]"}`}>
-              <div className="col-span-2">
-                <p className={`font-bold text-xs truncate ${tx.t1(l)}`}>{f.tradingsymbol}</p>
-                <p className={`text-[10px] ${tx.t3(l)}`}>Token: {f.instrument_token}</p>
-              </div>
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded w-fit ${
-                f.instrument_type==="CE" ? l?"bg-emerald-100 text-emerald-700":"bg-emerald-900/20 text-emerald-400"
-                : f.instrument_type==="PE" ? l?"bg-red-100 text-red-600":"bg-red-900/20 text-red-400"
-                : l?"bg-blue-100 text-blue-700":"bg-blue-900/20 text-blue-400"
-              }`}>{f.instrument_type}</span>
-              <div className={`text-right tabular-nums ${tx.t2(l)}`}>{f.strike && Number(f.strike) > 0 ? `₹${fmt(Number(f.strike), 0)}` : "—"}</div>
-              <div className={`text-right tabular-nums ${tx.t2(l)}`}>{f.expiry}</div>
-              <div className={`text-right tabular-nums ${tx.t3(l)}`}>{f.lot_size}</div>
-            </div>
-          ))}
-          {foItems.length > 100 && (
-            <div className={`px-5 py-3 text-center text-xs ${tx.t3(l)}`}>Showing 100 of {foItems.length} · Filter by type using the controls above</div>
-          )}
-        </Card>
       )}
     </section>
   );
@@ -1298,14 +1265,24 @@ function OptionsSection({ ticks }: { ticks:any }) {
 function HistoricalSection() {
   const l = useIL();
   const SYMS = [
-    { label:"Nifty 50",   token:256265  },
-    { label:"Sensex",     token:265     },
-    { label:"Bank Nifty", token:260105  },
-    { label:"Nifty IT",   token:258529  },
-    { label:"Reliance",   token:738561  },
-    { label:"TCS",        token:2953217 },
-    { label:"HDFC Bank",  token:341249  },
-    { label:"Infosys",    token:408065  },
+    { label:"Nifty 50",    token:256265  },
+    { label:"Sensex",      token:265     },
+    { label:"Bank Nifty",  token:260105  },
+    { label:"Nifty IT",    token:258529  },
+    { label:"Nifty Auto",  token:258049  },
+    { label:"Nifty Pharma",token:259849  },
+    { label:"Nifty Metal", token:259337  },
+    { label:"Nifty Energy",token:258409  },
+    { label:"Nifty FMCG",  token:258537  },
+    { label:"Nifty Realty",token:260361  },
+    { label:"Reliance",    token:738561  },
+    { label:"TCS",         token:2953217 },
+    { label:"HDFC Bank",   token:341249  },
+    { label:"Infosys",     token:408065  },
+    { label:"ICICI Bank",  token:1270529 },
+    { label:"Wipro",       token:969473  },
+    { label:"HUL",         token:356865  },
+    { label:"ITC",         token:424961  },
   ];
   const IVLS = [
     { label:"5m",  val:"5minute"  },
@@ -1314,9 +1291,8 @@ function HistoricalSection() {
     { label:"1d",  val:"day"      },
   ];
 
-  const [sym, setSym]    = useState(SYMS[0]);
-  const [ivl, setIvl]    = useState("day");
-  const [view, setView]  = useState<"chart"|"table">("chart");
+  const [sym, setSym] = useState(SYMS[0]);
+  const [ivl, setIvl] = useState("day");
 
   const { data, loading, error, refresh } = useAPI<any>(
     `/kite/historical?token=${sym.token}&interval=${ivl}`,
@@ -1328,7 +1304,7 @@ function HistoricalSection() {
 
   return (
     <section className="mb-8">
-      <SecHead id="historical" icon={BookOpen} title="Historical Data" sub="OHLCV · Candlestick Chart · Table"/>
+      <SecHead id="historical" icon={BookOpen} title="Historical Data" sub="OHLCV · Table · All Stocks & Indices"/>
 
       {/* Row 1: symbol buttons — full scrollable row */}
       <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1 mb-2 flex-nowrap">
@@ -1336,75 +1312,60 @@ function HistoricalSection() {
           <button key={s.token} onClick={() => setSym(s)}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all shrink-0 ${
               sym.token===s.token
-                ? "bg-[#16a34a] text-white border-transparent"
-                : l?"bg-white text-gray-600 border-gray-200":"bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f]"
+                ? "bg-[#5194F6] text-white border-transparent"
+                : l?"bg-white text-slate-600 border-slate-200":"bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
             }`}>{s.label}</button>
         ))}
       </div>
 
-      {/* Row 2: interval + refresh + chart/table toggle — all in one scroll row */}
+      {/* Row 2: interval + refresh — no chart toggle */}
       <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1 mb-3 flex-nowrap">
         {IVLS.map(iv => (
           <button key={iv.val} onClick={() => setIvl(iv.val)}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all shrink-0 ${
               ivl===iv.val
                 ? "bg-[#d97706] text-white border-transparent"
-                : l?"bg-white text-gray-600 border-gray-200":"bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f]"
+                : l?"bg-white text-slate-600 border-slate-200":"bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
             }`}>{iv.label}</button>
         ))}
-        <button onClick={refresh} className={`px-2.5 py-1.5 rounded-lg border flex items-center shrink-0 ${l?"bg-white text-gray-600 border-gray-200":"bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f]"}`}>
+        <button onClick={refresh} className={`px-2.5 py-1.5 rounded-lg border flex items-center shrink-0 ${l?"bg-white text-slate-600 border-slate-200":"bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"}`}>
           <RefreshCw className={`w-3.5 h-3.5 ${loading?"animate-spin":""}`}/>
         </button>
-        <div className={`w-px h-5 shrink-0 ${l?"bg-gray-200":"bg-[#1a2d3f]"}`}/>
-        {(["chart","table"] as const).map(v => (
-          <button key={v} onClick={() => setView(v)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all shrink-0 ${
-              view===v
-                ? "bg-[#2563eb] text-white border-transparent"
-                : l?"bg-white text-gray-600 border-gray-200":"bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f]"
-            }`}>{v==="chart"?"📊 Chart":"📋 Table"}</button>
-        ))}
       </div>
 
       {error && (
-        <div className={`px-4 py-3 rounded-xl border mb-3 flex items-center gap-2 text-xs ${l?"bg-red-50 border-red-200 text-red-600":"bg-red-900/15 border-red-800/30 text-red-400"}`}>
+        <div className={`px-4 py-3 rounded-xl border mb-3 flex items-center gap-2 text-xs ${l?"bg-red-50 border-red-200 text-red-600":"bg-red-500/10 border-red-500/20 text-red-400"}`}>
           <AlertCircle className="w-3.5 h-3.5 shrink-0"/>{error}
         </div>
       )}
 
       <Card className="overflow-hidden">
-        {view==="chart" ? (
-          <CandleChart key={`${sym.token}-${ivl}`} token={sym.token} height={360}/>
-        ) : (
-          <>
-            <div className={`grid grid-cols-6 px-5 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
-              <div>Date</div><div className="text-right">Open</div><div className="text-right text-emerald-600">High</div>
-              <div className="text-right text-red-500">Low</div><div className="text-right">Close</div><div className="text-right">Volume</div>
-            </div>
-            {loading
-              ? <div className="p-4 space-y-2">{[...Array(8)].map((_,i) => <Skel key={i} h="h-9"/>)}</div>
-              : rows.length===0
-                ? <div className={`p-8 text-center text-sm ${tx.t2(l)}`}>No data available</div>
-                : rows.map((c,i) => {
-                    const o=c.y?.[0], h=c.y?.[1], lo=c.y?.[2], cl=c.y?.[3];
-                    const isu=(cl??0)>=(o??0);
-                    return (
-                      <div key={i} className={`grid grid-cols-6 px-5 py-2.5 items-center ${i<rows.length-1?(l?"border-b border-gray-50":"border-b border-[#111e28]"):""} ${l?"hover:bg-gray-50/60":"hover:bg-white/[0.015]"}`}>
-                        <div className={`text-xs font-semibold flex items-center gap-1.5 ${tx.t2(l)}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${isu?"bg-emerald-500":"bg-red-500"}`}/>
-                          {c.x ? new Date(c.x).toLocaleDateString("en-IN",{day:"numeric",month:"short"}) : "—"}
-                        </div>
-                        <div className={`text-right text-xs tabular-nums ${tx.t1(l)}`}>₹{fmt(o)}</div>
-                        <div className="text-right text-xs tabular-nums text-emerald-600 font-semibold">₹{fmt(h)}</div>
-                        <div className="text-right text-xs tabular-nums text-red-500 font-semibold">₹{fmt(lo)}</div>
-                        <div className={`text-right text-xs tabular-nums font-bold ${isu?"text-emerald-600":"text-red-500"}`}>₹{fmt(cl)}</div>
-                        <div className={`text-right text-xs tabular-nums ${tx.t3(l)}`}>{fmtV(c.volume)}</div>
-                      </div>
-                    );
-                  })
-            }
-          </>
-        )}
+        <div className={`grid grid-cols-6 px-5 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
+          <div>Date</div><div className="text-right">Open</div><div className="text-right text-emerald-600">High</div>
+          <div className="text-right text-red-500">Low</div><div className="text-right">Close</div><div className="text-right">Volume</div>
+        </div>
+        {loading
+          ? <div className="p-4 space-y-2">{[...Array(8)].map((_,i) => <Skel key={i} h="h-9"/>)}</div>
+          : rows.length===0
+            ? <div className={`p-8 text-center text-sm ${tx.t2(l)}`}>No data available</div>
+            : rows.map((c,i) => {
+                const o=c.y?.[0], h=c.y?.[1], lo=c.y?.[2], cl=c.y?.[3];
+                const isu=(cl??0)>=(o??0);
+                return (
+                  <div key={i} className={`grid grid-cols-6 px-5 py-2.5 items-center ${i<rows.length-1?(l?"border-b border-slate-100":"border-b border-[#1e3a5f]/30"):""} ${l?"hover:bg-slate-50/60":"hover:bg-white/[0.015]"}`}>
+                    <div className={`text-xs font-semibold flex items-center gap-1.5 ${tx.t2(l)}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${isu?"bg-emerald-500":"bg-red-500"}`}/>
+                      {c.x ? new Date(c.x).toLocaleDateString("en-IN",{day:"numeric",month:"short"}) : "—"}
+                    </div>
+                    <div className={`text-right text-xs tabular-nums ${tx.t1(l)}`}>₹{fmt(o)}</div>
+                    <div className="text-right text-xs tabular-nums text-emerald-600 font-semibold">₹{fmt(h)}</div>
+                    <div className="text-right text-xs tabular-nums text-red-500 font-semibold">₹{fmt(lo)}</div>
+                    <div className={`text-right text-xs tabular-nums font-bold ${isu?"text-emerald-600":"text-red-500"}`}>₹{fmt(cl)}</div>
+                    <div className={`text-right text-xs tabular-nums ${tx.t3(l)}`}>{fmtV(c.volume)}</div>
+                  </div>
+                );
+              })
+        }
       </Card>
     </section>
   );
@@ -1436,11 +1397,11 @@ function CorporateSection() {
 
   const typeColor = (subject: string) => {
     const s = (subject || "").toLowerCase();
-    if (s.includes("dividend")) return l ? "bg-emerald-50 text-emerald-700" : "bg-emerald-900/20 text-emerald-400";
-    if (s.includes("bonus"))    return l ? "bg-blue-50 text-blue-700"       : "bg-blue-900/20 text-blue-400";
+    if (s.includes("dividend")) return l ? "bg-emerald-50 text-emerald-700" : "bg-emerald-500/15 text-emerald-400";
+    if (s.includes("bonus"))    return l ? "bg-blue-50 text-blue-700"       : "bg-[#5194F6]/12 text-[#5194F6]";
     if (s.includes("split"))    return l ? "bg-amber-50 text-amber-700"     : "bg-amber-900/20 text-amber-400";
-    if (s.includes("buyback"))  return l ? "bg-purple-50 text-purple-700"   : "bg-purple-900/20 text-purple-400";
-    return l ? "bg-gray-50 text-gray-600" : "bg-gray-800/30 text-gray-400";
+    if (s.includes("buyback"))  return l ? "bg-purple-50 text-purple-700"   : "bg-purple-500/15 text-purple-400";
+    return l ? "bg-slate-50 text-slate-600" : "bg-gray-800/30 text-slate-400";
   };
 
   return (
@@ -1454,25 +1415,25 @@ function CorporateSection() {
           <button key={t} onClick={() => setFilter(t)}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
               filter === t
-                ? "bg-[#16a34a] text-white border-transparent"
-                : l ? "bg-white text-gray-600 border-gray-200" : "bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f]"
+                ? "bg-[#5194F6] text-white border-transparent"
+                : l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
             }`}>{t}</button>
         ))}
         {source && (
           <span className={`text-[10px] font-black px-2 py-0.5 rounded border ${
             source === "NSE"
-              ? l?"bg-blue-50 text-blue-700 border-blue-200":"bg-blue-900/15 text-blue-400 border-blue-800/30"
+              ? l?"bg-blue-50 text-blue-700 border-blue-200":"bg-[#5194F6]/10 text-[#5194F6] border-[#5194F6]/25"
               : l?"bg-orange-50 text-orange-700 border-orange-200":"bg-orange-900/15 text-orange-400 border-orange-800/30"
           }`}>via {source}</span>
         )}
         <button onClick={refresh}
-          className={`px-2.5 py-1.5 rounded-lg border flex items-center ml-auto transition-all ${l?"bg-white text-gray-600 border-gray-200":"bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f]"}`}>
+          className={`px-2.5 py-1.5 rounded-lg border flex items-center ml-auto transition-all ${l?"bg-white text-slate-600 border-slate-200":"bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"}`}>
           <RefreshCw className={`w-3.5 h-3.5 ${loading?"animate-spin":""}`}/>
         </button>
       </div>
 
       {error && (
-        <div className={`mb-3 px-4 py-3 rounded-xl border flex items-start gap-2 text-xs ${l?"bg-amber-50 border-amber-200 text-amber-700":"bg-amber-900/10 border-amber-800/30 text-amber-400"}`}>
+        <div className={`mb-3 px-4 py-3 rounded-xl border flex items-start gap-2 text-xs ${l?"bg-amber-50 border-amber-200 text-amber-700":"bg-amber-500/10 border-amber-500/20 text-amber-400"}`}>
           <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5"/>
           <div>
             <p className="font-bold">NSE &amp; BSE blocked the request ({error})</p>
@@ -1481,11 +1442,11 @@ function CorporateSection() {
               {[["NSE","https://www.nseindia.com/companies-listing/corporate-filings-actions"],
                 ["BSE","https://www.bseindia.com/corporates/corporate_act.html"]].map(([nm,url]) => (
                 <a key={nm} href={url} target="_blank" rel="noreferrer"
-                  className={`inline-flex items-center gap-1 font-bold px-2 py-1 rounded border ${l?"bg-blue-50 text-blue-700 border-blue-200":"bg-blue-900/20 text-blue-400 border-blue-800/30"}`}>
+                  className={`inline-flex items-center gap-1 font-bold px-2 py-1 rounded border ${l?"bg-blue-50 text-blue-700 border-blue-200":"bg-[#5194F6]/12 text-[#5194F6] border-[#5194F6]/25"}`}>
                   <ExternalLink className="w-3 h-3"/>{nm}
                 </a>
               ))}
-              <button onClick={refresh} className={`inline-flex items-center gap-1 font-bold px-2 py-1 rounded border ${l?"bg-white text-gray-700 border-gray-200":"bg-[#0a1826] text-[#c0d8ea] border-[#1a2d3f]"}`}>
+              <button onClick={refresh} className={`inline-flex items-center gap-1 font-bold px-2 py-1 rounded border ${l?"bg-white text-gray-700 border-slate-200":"bg-[#0c1a2e] text-white border-[#1e3a5f]/50"}`}>
                 <RefreshCw className={`w-3 h-3 ${loading?"animate-spin":""}`}/>Retry
               </button>
             </div>
@@ -1514,7 +1475,7 @@ function CorporateSection() {
               {[["NSE","https://www.nseindia.com/companies-listing/corporate-filings-actions"],
                 ["BSE","https://www.bseindia.com/corporates/corporate_act.html"]].map(([nm,url]) => (
                 <a key={nm} href={url} target="_blank" rel="noreferrer"
-                  className={`inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-lg border transition-colors ${l?"bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100":"bg-blue-900/15 text-blue-300 border-blue-800/30 hover:bg-blue-900/25"}`}>
+                  className={`inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-lg border transition-colors ${l?"bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100":"bg-[#5194F6]/10 text-[#5194F6] border-[#5194F6]/25 hover:bg-[#5194F6]/20"}`}>
                   <ExternalLink className="w-3 h-3"/>{nm} Corporate Actions
                 </a>
               ))}
@@ -1526,8 +1487,8 @@ function CorporateSection() {
               <div
                 onClick={() => setExpanded(expanded === i ? null : i)}
                 className={`grid grid-cols-5 px-4 sm:px-5 py-2 items-center cursor-pointer
-                  ${i < filtered.length-1 ? (l?"border-b border-gray-50":"border-b border-[#111e28]") : ""}
-                  ${l?"hover:bg-gray-50/60":"hover:bg-white/[0.015]"}`}>
+                  ${i < filtered.length-1 ? (l?"border-b border-slate-100":"border-b border-[#1e3a5f]/30") : ""}
+                  ${l?"hover:bg-slate-50/60":"hover:bg-white/[0.015]"}`}>
                 <div className="col-span-2">
                   <p className={`font-bold text-xs ${tx.t1(l)}`}>{a.symbol ?? a.comp ?? "—"}</p>
                   <p className={`text-[10px] truncate ${tx.t3(l)}`}>{a.series ? `Series: ${a.series}` : a.companyName ?? ""}</p>
@@ -1547,7 +1508,7 @@ function CorporateSection() {
                 </div>
               </div>
               {expanded === i && (
-                <div className={`px-4 sm:px-5 py-3 grid grid-cols-2 sm:grid-cols-4 gap-2 ${l?"bg-gray-50 border-b border-gray-100":"bg-[#081017] border-b border-[#1a2d3f]"}`}>
+                <div className={`px-4 sm:px-5 py-3 grid grid-cols-2 sm:grid-cols-4 gap-2 ${l?"bg-slate-50 border-b border-slate-100":"bg-[#070e1a] border-b border-[#1e3a5f]/50"}`}>
                   {[
                     ["Symbol",      a.symbol],
                     ["Series",      a.series],
@@ -1558,7 +1519,7 @@ function CorporateSection() {
                     ["BC End",      a.bcEndDate   !== "-" ? a.bcEndDate   : null],
                     ["Remarks",     a.remarks],
                   ].filter(([,v]) => v).map(([label, val]) => (
-                    <div key={label as string} className={`rounded-lg border px-3 py-2 ${l?"bg-white border-gray-100":"bg-[#0c1821] border-[#1a2d3f]"}`}>
+                    <div key={label as string} className={`rounded-lg border px-3 py-2 ${l?"bg-white border-slate-100":"bg-[#0c1a2e] border-[#1e3a5f]/50"}`}>
                       <p className={`text-[9px] font-black uppercase tracking-wider mb-0.5 ${tx.t3(l)}`}>{label as string}</p>
                       <p className={`text-xs font-bold ${tx.t1(l)}`}>{val as string}</p>
                     </div>
@@ -1570,7 +1531,7 @@ function CorporateSection() {
         )}
         </div>
         {filtered.length > 0 && (
-          <div className={`px-5 py-2 text-[10px] border-t ${l?"border-gray-100 text-gray-400":"border-[#1a2d3f] text-[#3d5f78]"}`}>
+          <div className={`px-5 py-2 text-[10px] border-t ${l?"border-slate-100 text-slate-400":"border-[#1e3a5f]/50 text-slate-500"}`}>
             {filtered.length} actions · scroll to see all
           </div>
         )}
@@ -1597,7 +1558,7 @@ function PortfolioRow({ h, last }: { h:any; last:boolean }) {
   // h.day_change_percentage = Kite's own day % change from close
 
   return (
-    <div className={`grid grid-cols-9 items-center px-4 sm:px-5 py-3 ${!last?(l?"border-b border-gray-50":"border-b border-[#111e28]"):""} ${l?"hover:bg-gray-50/60":"hover:bg-white/[0.015]"}`}>
+    <div className={`grid grid-cols-9 items-center px-4 sm:px-5 py-3 ${!last?(l?"border-b border-slate-100":"border-b border-[#1e3a5f]/30"):""} ${l?"hover:bg-slate-50/60":"hover:bg-white/[0.015]"}`}>
       {/* Stock name + exchange */}
       <div className="col-span-2">
         <p className={`font-bold text-xs ${tx.t1(l)}`}>{h.tradingsymbol}</p>
@@ -1691,7 +1652,7 @@ function PortfolioSection({ ticks }: { ticks:any }) {
       <SecHead id="portfolio" icon={PieChart} title="Portfolio / Holdings" sub="Live P&L · Kite Connect `/portfolio/holdings`"/>
       {isAuth && <KiteBanner msg="Session expired — please login again to Zerodha Kite"/>}
       {isErr && (
-        <div className={`mb-4 px-4 py-3 rounded-xl border flex items-center gap-2 text-xs ${l?"bg-red-50 border-red-200 text-red-600":"bg-red-900/15 border-red-800/30 text-red-400"}`}>
+        <div className={`mb-4 px-4 py-3 rounded-xl border flex items-center gap-2 text-xs ${l?"bg-red-50 border-red-200 text-red-600":"bg-red-500/10 border-red-500/20 text-red-400"}`}>
           <AlertCircle className="w-3.5 h-3.5 shrink-0"/>{error}
           <button onClick={refresh} className="ml-auto underline">Retry</button>
         </div>
@@ -1802,12 +1763,12 @@ function MFSection() {
       <div className="flex gap-2 mb-3">
         {(["holdings","sips"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold border transition-all ${tab===t?"bg-[#16a34a] text-white border-transparent":l?"bg-white text-gray-600 border-gray-200":"bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f]"}`}>
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold border transition-all ${tab===t?"bg-[#5194F6] text-white border-transparent":l?"bg-white text-slate-600 border-slate-200":"bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"}`}>
             {t==="holdings" ? `Holdings ${holdings.length>0?`(${holdings.length})`:""}` : `Active SIPs ${sips.length>0?`(${sips.length})`:""}`}
           </button>
         ))}
         <button onClick={tab==="holdings"?hRefresh:sRefresh}
-          className={`px-2.5 py-1.5 rounded-lg border flex items-center transition-all ${l?"bg-white text-gray-600 border-gray-200":"bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f]"}`}>
+          className={`px-2.5 py-1.5 rounded-lg border flex items-center transition-all ${l?"bg-white text-slate-600 border-slate-200":"bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"}`}>
           <RefreshCw className={`w-3.5 h-3.5 ${(hLoad||sLoad)?"animate-spin":""}`}/>
         </button>
       </div>
@@ -1836,7 +1797,7 @@ function MFSection() {
                   const inv    = h.average_price * h.quantity;
                   const pnlPct = inv > 0 ? (pnl / inv) * 100 : 0;
                   return (
-                    <div key={i} className={`grid grid-cols-6 px-4 sm:px-5 py-3 items-center ${i<holdings.length-1?(l?"border-b border-gray-50":"border-b border-[#111e28]"):""} ${l?"hover:bg-gray-50/60":"hover:bg-white/[0.015]"}`}>
+                    <div key={i} className={`grid grid-cols-6 px-4 sm:px-5 py-3 items-center ${i<holdings.length-1?(l?"border-b border-slate-100":"border-b border-[#1e3a5f]/30"):""} ${l?"hover:bg-slate-50/60":"hover:bg-white/[0.015]"}`}>
                       <div className="col-span-2">
                         {/* Kite field: h.fund (fund name), NOT h.fund_name */}
                         <p className={`font-bold text-xs truncate pr-2 ${tx.t1(l)}`} title={h.fund}>
@@ -1889,7 +1850,7 @@ function MFSection() {
                   <p className="text-xs mt-1">Start a SIP on Zerodha Coin to see them here</p>
                 </div>
               : sips.map((s: any, i: number) => (
-                  <div key={s.sip_id ?? i} className={`grid grid-cols-6 px-4 sm:px-5 py-3 items-center ${i<sips.length-1?(l?"border-b border-gray-50":"border-b border-[#111e28]"):""} ${l?"hover:bg-gray-50/60":"hover:bg-white/[0.015]"}`}>
+                  <div key={s.sip_id ?? i} className={`grid grid-cols-6 px-4 sm:px-5 py-3 items-center ${i<sips.length-1?(l?"border-b border-slate-100":"border-b border-[#1e3a5f]/30"):""} ${l?"hover:bg-slate-50/60":"hover:bg-white/[0.015]"}`}>
                     <div className="col-span-2">
                       {/* Kite field: s.fund (fund name) */}
                       <p className={`font-bold text-xs truncate pr-2 ${tx.t1(l)}`} title={s.fund}>{s.fund ?? s.tradingsymbol}</p>
@@ -1905,10 +1866,10 @@ function MFSection() {
                     <div className="text-right">
                       <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                         s.status === "ACTIVE"
-                          ? l?"bg-emerald-100 text-emerald-700":"bg-emerald-900/25 text-emerald-400"
+                          ? l?"bg-emerald-100 text-emerald-700":"bg-emerald-500/15 text-emerald-400"
                           : s.status === "PAUSED"
-                            ? l?"bg-amber-100 text-amber-700":"bg-amber-900/25 text-amber-400"
-                            : l?"bg-gray-100 text-gray-500":"bg-gray-800/40 text-gray-400"
+                            ? l?"bg-amber-100 text-amber-700":"bg-amber-500/15 text-amber-400"
+                            : l?"bg-slate-100 text-slate-500":"bg-gray-800/40 text-slate-400"
                       }`}>{s.status}</span>
                     </div>
                   </div>
@@ -1924,30 +1885,30 @@ function MFSection() {
 // ORDERS — Last 7 days orders via /kite/orders
 // ══════════════════════════════════════════════════════════════════
 const ORDER_STATUS_COLORS: Record<string,(l:boolean)=>string> = {
-  COMPLETE:  (l) => l?"bg-emerald-100 text-emerald-700":"bg-emerald-900/25 text-emerald-400",
-  OPEN:      (l) => l?"bg-blue-100 text-blue-700":"bg-blue-900/25 text-blue-400",
-  REJECTED:  (l) => l?"bg-red-100 text-red-600":"bg-red-900/25 text-red-400",
-  CANCELLED: (l) => l?"bg-gray-100 text-gray-500":"bg-gray-800/40 text-gray-400",
-  TRIGGER_PENDING: (l) => l?"bg-amber-100 text-amber-700":"bg-amber-900/25 text-amber-400",
+  COMPLETE:  (l) => l?"bg-emerald-100 text-emerald-700":"bg-emerald-500/15 text-emerald-400",
+  OPEN:      (l) => l?"bg-blue-100 text-blue-700":"bg-[#5194F6]/15 text-[#5194F6]",
+  REJECTED:  (l) => l?"bg-red-100 text-red-600":"bg-red-500/15 text-red-400",
+  CANCELLED: (l) => l?"bg-slate-100 text-slate-500":"bg-gray-800/40 text-slate-400",
+  TRIGGER_PENDING: (l) => l?"bg-amber-100 text-amber-700":"bg-amber-500/15 text-amber-400",
 };
 
 function OrderRow({ o, last }: { o:any; last:boolean }) {
   const l      = useIL();
   const isBuy  = o.transaction_type === "BUY";
-  const sc     = ORDER_STATUS_COLORS[o.status] ?? ((l:boolean) => l?"bg-gray-100 text-gray-500":"bg-gray-800/30 text-gray-400");
+  const sc     = ORDER_STATUS_COLORS[o.status] ?? ((l:boolean) => l?"bg-slate-100 text-slate-500":"bg-gray-800/30 text-slate-400");
   const ts     = o.order_timestamp ? new Date(o.order_timestamp).toLocaleString("en-IN",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit",hour12:true}) : "—";
 
   return (
     <div className={`grid grid-cols-4 sm:grid-cols-8 items-center px-3 sm:px-5 py-2 sm:py-3 text-xs
-      ${!last?(l?"border-b border-gray-50":"border-b border-[#111e28]"):""}
-      ${l?"hover:bg-gray-50/60":"hover:bg-white/[0.015]"}`}>
+      ${!last?(l?"border-b border-slate-100":"border-b border-[#1e3a5f]/30"):""}
+      ${l?"hover:bg-slate-50/60":"hover:bg-white/[0.015]"}`}>
       {/* Symbol + type */}
       <div className="col-span-2">
         <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
           <span className={`font-black text-[11px] sm:text-xs ${tx.t1(l)}`}>{o.tradingsymbol}</span>
           <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${isBuy
-            ? l?"bg-emerald-100 text-emerald-700":"bg-emerald-900/20 text-emerald-400"
-            : l?"bg-red-100 text-red-600":"bg-red-900/20 text-red-400"}`}>
+            ? l?"bg-emerald-100 text-emerald-700":"bg-emerald-500/15 text-emerald-400"
+            : l?"bg-red-100 text-red-600":"bg-red-500/15 text-red-400"}`}>
             {o.transaction_type}
           </span>
         </div>
@@ -2018,7 +1979,7 @@ function OrdersSection() {
       {orders.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3">
           {Object.entries(statusCounts).map(([st, cnt]) => {
-            const sc = ORDER_STATUS_COLORS[st] ?? ((l:boolean) => l?"bg-gray-100 text-gray-500":"bg-gray-800/30 text-gray-400");
+            const sc = ORDER_STATUS_COLORS[st] ?? ((l:boolean) => l?"bg-slate-100 text-slate-500":"bg-gray-800/30 text-slate-400");
             return (
               <span key={st} className={`text-[10px] font-bold px-2.5 py-1 rounded-lg ${sc(l)}`}>
                 {st}: {cnt}
@@ -2033,29 +1994,29 @@ function OrdersSection() {
         {["All","COMPLETE","OPEN","REJECTED","CANCELLED"].map(s => (
           <button key={s} onClick={() => setStatusFilter(s)}
             className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-all shrink-0 ${
-              statusFilter===s ? "bg-[#16a34a] text-white border-transparent"
-                : l?"bg-white text-gray-600 border-gray-200":"bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f]"
+              statusFilter===s ? "bg-[#5194F6] text-white border-transparent"
+                : l?"bg-white text-slate-600 border-slate-200":"bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
             }`}>{s}</button>
         ))}
-        <div className={`w-px h-5 shrink-0 mx-0.5 ${l?"bg-gray-200":"bg-[#1a2d3f]"}`}/>
+        <div className={`w-px h-5 shrink-0 mx-0.5 ${l?"bg-slate-200":"bg-[#1e3a5f]"}`}/>
         {["All","BUY","SELL"].map(t => (
           <button key={t} onClick={() => setTxFilter(t)}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all shrink-0 ${
               txFilter===t
                 ? t==="BUY" ? "bg-emerald-600 text-white border-transparent"
                   : t==="SELL" ? "bg-red-600 text-white border-transparent"
-                  : "bg-[#16a34a] text-white border-transparent"
-                : l?"bg-white text-gray-600 border-gray-200":"bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f]"
+                  : "bg-[#5194F6] text-white border-transparent"
+                : l?"bg-white text-slate-600 border-slate-200":"bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
             }`}>{t}</button>
         ))}
         <button onClick={refresh}
-          className={`px-2.5 py-1.5 rounded-lg border flex items-center shrink-0 ${l?"bg-white text-gray-600 border-gray-200":"bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f]"}`}>
+          className={`px-2.5 py-1.5 rounded-lg border flex items-center shrink-0 ${l?"bg-white text-slate-600 border-slate-200":"bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"}`}>
           <RefreshCw className={`w-3.5 h-3.5 ${loading?"animate-spin":""}`}/>
         </button>
       </div>
 
       {!isAuth && error && (
-        <div className={`mb-3 px-4 py-3 rounded-xl border flex items-center gap-2 text-xs ${l?"bg-red-50 border-red-200 text-red-600":"bg-red-900/15 border-red-800/30 text-red-400"}`}>
+        <div className={`mb-3 px-4 py-3 rounded-xl border flex items-center gap-2 text-xs ${l?"bg-red-50 border-red-200 text-red-600":"bg-red-500/10 border-red-500/20 text-red-400"}`}>
           <AlertCircle className="w-3.5 h-3.5 shrink-0"/>{error}
           <button onClick={refresh} className="ml-auto underline">Retry</button>
         </div>
@@ -2145,13 +2106,13 @@ function MarginSection() {
     finally { setCalcLoad(false); }
   };
 
-  const InpCls = `w-full px-3 py-2 rounded-lg border text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#16a34a] transition-all ${
-    l ? "bg-white border-gray-200 text-gray-800 placeholder:text-gray-400"
-      : "bg-[#0a1826] border-[#1a2d3f] text-[#e2ecf4] placeholder:text-[#3d5f78]"
+  const InpCls = `w-full px-3 py-2 rounded-lg border text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#5194F6] transition-all ${
+    l ? "bg-white border-slate-200 text-slate-800 placeholder:text-slate-400"
+      : "bg-[#0c1a2e] border-[#1e3a5f]/50 text-white placeholder:text-slate-500"
   }`;
-  const SelCls = `w-full px-3 py-2 rounded-lg border text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#16a34a] transition-all ${
-    l ? "bg-white border-gray-200 text-gray-800"
-      : "bg-[#0a1826] border-[#1a2d3f] text-[#e2ecf4]"
+  const SelCls = `w-full px-3 py-2 rounded-lg border text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#5194F6] transition-all ${
+    l ? "bg-white border-slate-200 text-slate-800"
+      : "bg-[#0c1a2e] border-[#1e3a5f]/50 text-white"
   }`;
 
   return (
@@ -2163,7 +2124,7 @@ function MarginSection() {
         <div className="flex items-center justify-between mb-3">
           <p className={`text-xs font-black uppercase tracking-widest ${tx.t3(l)}`}>Available Margins</p>
           <button onClick={umRefresh}
-            className={`px-2.5 py-1.5 rounded-lg border flex items-center gap-1.5 text-xs ${l?"bg-white text-gray-600 border-gray-200":"bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f]"}`}>
+            className={`px-2.5 py-1.5 rounded-lg border flex items-center gap-1.5 text-xs ${l?"bg-white text-slate-600 border-slate-200":"bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"}`}>
             <RefreshCw className={`w-3 h-3 ${umLoad?"animate-spin":""}`}/> Refresh
           </button>
         </div>
@@ -2178,12 +2139,12 @@ function MarginSection() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[["Equity", equity], ["Commodity", commodity]].filter(([,d]) => d).map(([seg, d]: any) => (
               <Card key={seg} className="overflow-hidden">
-                <div className={`px-4 py-2.5 border-b flex items-center justify-between ${l?"border-gray-100 bg-gray-50":"border-[#1a2d3f] bg-[#081017]"}`}>
+                <div className={`px-4 py-2.5 border-b flex items-center justify-between ${l?"border-slate-100 bg-slate-50":"border-[#1e3a5f]/50 bg-[#070e1a]"}`}>
                   <span className={`text-xs font-black uppercase tracking-wider ${tx.t1(l)}`}>{seg}</span>
                   {d.enabled ? (
-                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${l?"bg-emerald-100 text-emerald-700":"bg-emerald-900/20 text-emerald-400"}`}>ENABLED</span>
+                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${l?"bg-emerald-100 text-emerald-700":"bg-emerald-500/15 text-emerald-400"}`}>ENABLED</span>
                   ) : (
-                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${l?"bg-red-100 text-red-600":"bg-red-900/20 text-red-400"}`}>DISABLED</span>
+                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${l?"bg-red-100 text-red-600":"bg-red-500/15 text-red-400"}`}>DISABLED</span>
                   )}
                 </div>
                 <div className="p-3 grid grid-cols-2 gap-2">
@@ -2197,7 +2158,7 @@ function MarginSection() {
                     { label:"Exposure",      val: d.utilised?.exposure,           cls:tx.t2(l) },
                     { label:"Option Premium",val: d.utilised?.option_premium,    cls:tx.t2(l) },
                   ].map(({ label, val, cls }) => val != null ? (
-                    <div key={label} className={`rounded-lg border px-3 py-2 ${l?"bg-gray-50 border-gray-100":"bg-[#0a1826] border-[#1a2d3f]"}`}>
+                    <div key={label} className={`rounded-lg border px-3 py-2 ${l?"bg-slate-50 border-slate-100":"bg-[#0c1a2e] border-[#1e3a5f]/50"}`}>
                       <p className={`text-[9px] font-black uppercase tracking-wider mb-1 ${tx.t3(l)}`}>{label}</p>
                       <p className={`tabular-nums text-xs ${cls}`}>₹{fmt(val)}</p>
                     </div>
@@ -2217,7 +2178,7 @@ function MarginSection() {
       {/* ── Order Margin Calculator ── */}
       <Card className="overflow-hidden">
         <div className={`px-4 sm:px-5 py-3 border-b flex items-center gap-2 ${tx.header(l)}`}>
-          <DollarSign className="w-4 h-4 text-[#16a34a]"/>
+          <DollarSign className="w-4 h-4 text-[#5194F6]"/>
           <span className={`text-sm font-black ${tx.t1(l)}`}>Order Margin Calculator</span>
           <span className={`text-[10px] ml-1 ${tx.t3(l)}`}>Kite Connect POST `/margins/orders`</span>
         </div>
@@ -2312,14 +2273,14 @@ function MarginSection() {
           </div>
 
           {calcErr && (
-            <div className={`mb-3 px-3 py-2.5 rounded-lg border flex items-center gap-2 text-xs ${l?"bg-red-50 border-red-200 text-red-600":"bg-red-900/15 border-red-800/30 text-red-400"}`}>
+            <div className={`mb-3 px-3 py-2.5 rounded-lg border flex items-center gap-2 text-xs ${l?"bg-red-50 border-red-200 text-red-600":"bg-red-500/10 border-red-500/20 text-red-400"}`}>
               <AlertCircle className="w-3.5 h-3.5 shrink-0"/>{calcErr}
             </div>
           )}
 
           <button
             onClick={handleCalc} disabled={calcLoad}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-black bg-[#16a34a] text-white hover:bg-[#15803d] transition-colors disabled:opacity-60">
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-black bg-[#5194F6] text-white hover:bg-[#4080e0] transition-colors disabled:opacity-60">
             {calcLoad ? <RefreshCw className="w-3.5 h-3.5 animate-spin"/> : <Send className="w-3.5 h-3.5"/>}
             {calcLoad ? "Calculating…" : "Calculate Margin"}
           </button>
@@ -2327,7 +2288,7 @@ function MarginSection() {
           {/* Result */}
           {result && (
             <div className="mt-5">
-              <div className={`rounded-xl border p-4 ${l?"bg-emerald-50 border-emerald-200":"bg-emerald-900/10 border-emerald-800/30"}`}>
+              <div className={`rounded-xl border p-4 ${l?"bg-emerald-50 border-emerald-200":"bg-emerald-500/8 border-emerald-500/15"}`}>
                 <p className={`text-[10px] font-black uppercase tracking-widest mb-3 ${l?"text-emerald-700":"text-emerald-400"}`}>
                   Margin Required · {result.tradingsymbol} · {result.exchange}
                 </p>
@@ -2342,7 +2303,7 @@ function MarginSection() {
                     { label:"Additional",   val: result.additional,     cls:tx.t2(l) },
                     { label:"Cash Credit",  val: result.cash,           cls:"text-emerald-600" },
                   ].map(({ label, val, raw, cls }) => (
-                    <div key={label} className={`rounded-lg border px-3 py-2 ${l?"bg-white border-gray-100":"bg-[#0c1821] border-[#1a2d3f]"}`}>
+                    <div key={label} className={`rounded-lg border px-3 py-2 ${l?"bg-white border-slate-100":"bg-[#0c1a2e] border-[#1e3a5f]/50"}`}>
                       <p className={`text-[9px] font-black uppercase tracking-wider mb-1 ${tx.t3(l)}`}>{label}</p>
                       <p className={`tabular-nums text-xs ${cls}`}>
                         {raw ?? (val != null && val !== 0 ? `₹${fmt(val)}` : "—")}
@@ -2366,7 +2327,7 @@ function MarginSection() {
                         { label:"Stamp Duty",        val: result.charges.stamp_duty,                cls:tx.t2(l) },
                         { label:"GST Total",         val: result.charges.gst?.total,                cls:tx.t2(l) },
                       ].map(({ label, val, cls }) => val != null ? (
-                        <div key={label} className={`rounded-lg border px-3 py-2 ${l?"bg-white border-gray-100":"bg-[#0c1821] border-[#1a2d3f]"}`}>
+                        <div key={label} className={`rounded-lg border px-3 py-2 ${l?"bg-white border-slate-100":"bg-[#0c1a2e] border-[#1e3a5f]/50"}`}>
                           <p className={`text-[9px] font-black uppercase tracking-wider mb-1 ${tx.t3(l)}`}>{label}</p>
                           <p className={`tabular-nums text-xs ${cls}`}>₹{fmt(val, 4)}</p>
                         </div>
@@ -2409,9 +2370,9 @@ function BreadthVixSection({ ticks }: { ticks: any }) {
   const adRatio   = advances && declines ? advances / declines : null;
   const mood =
     !adRatio   ? null
-    : adRatio > 1.5 ? { label: "Risk-On",  cls: l ? "text-emerald-700" : "text-emerald-400", bg: l ? "bg-emerald-50 border-emerald-200" : "bg-emerald-900/15 border-emerald-800/30" }
-    : adRatio < 0.7 ? { label: "Risk-Off", cls: l ? "text-red-600"     : "text-red-400",     bg: l ? "bg-red-50 border-red-200"         : "bg-red-900/15 border-red-800/30"         }
-    :                 { label: "Neutral",  cls: l ? "text-gray-500"    : "text-gray-400",    bg: l ? "bg-gray-50 border-gray-200"       : "bg-[#1a2d3f]/60 border-[#1a2d3f]"       };
+    : adRatio > 1.5 ? { label: "Risk-On",  cls: l ? "text-emerald-700" : "text-emerald-400", bg: l ? "bg-emerald-50 border-emerald-200" : "bg-emerald-500/10 border-emerald-500/20" }
+    : adRatio < 0.7 ? { label: "Risk-Off", cls: l ? "text-red-600"     : "text-red-400",     bg: l ? "bg-red-50 border-red-200"         : "bg-red-500/10 border-red-500/20"         }
+    :                 { label: "Neutral",  cls: l ? "text-slate-500"    : "text-slate-400",    bg: l ? "bg-slate-50 border-slate-200"       : "bg-[#1e3a5f]/60 border-[#1e3a5f]/50"       };
  
   return (
     <section className="mb-8">
@@ -2419,61 +2380,67 @@ function BreadthVixSection({ ticks }: { ticks: any }) {
         sub="Advance · Decline · India VIX · 52-Week H/L" live/>
  
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 mb-3">
- 
+
         {/* Market Mood */}
         {mood && (
-          <Card className={`col-span-2 sm:col-span-2 px-3 py-2.5 border ${mood.bg}`}>
+          <a href="https://www.nseindia.com/market-data/live-market-indices" target="_blank" rel="noreferrer"
+            className={`col-span-2 sm:col-span-2 px-3 py-2.5 rounded-xl border cursor-pointer transition-opacity hover:opacity-80 text-center ${mood.bg}`}>
             <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${tx.t3(l)}`}>Market Mood</p>
             <p className={`text-xl font-black ${mood.cls}`}>{mood.label}</p>
             {bd?.ad_ratio && <p className={`text-[10px] mt-0.5 ${tx.t3(l)}`}>A/D ratio {bd.ad_ratio}</p>}
-          </Card>
+          </a>
         )}
         {!mood && !bdLoad && (
-          <Card className="col-span-2 sm:col-span-2 px-3 py-2.5">
+          <Card className="col-span-2 sm:col-span-2 px-3 py-2.5 text-center">
             <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${tx.t3(l)}`}>Market Mood</p>
             {bdLoad ? <Skel h="h-7" w="w-24"/> : <p className={`text-sm font-bold ${tx.t3(l)}`}>—</p>}
           </Card>
         )}
- 
+
         {/* Advances */}
-        <Card className="px-3 py-2.5">
+        <a href="https://www.nseindia.com/market-data/live-equity-market" target="_blank" rel="noreferrer"
+          className={`rounded-xl border cursor-pointer hover:opacity-80 transition-opacity px-3 py-2.5 text-center ${tx.card(l)}`}>
           <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${tx.t3(l)}`}>Advances</p>
           {bdLoad ? <Skel h="h-6" w="w-16"/> : (
             <p className="text-lg font-black text-emerald-500 tabular-nums">{advances ?? "—"}</p>
           )}
-        </Card>
- 
+        </a>
+
         {/* Declines */}
-        <Card className="px-3 py-2.5">
+        <a href="https://www.nseindia.com/market-data/live-equity-market" target="_blank" rel="noreferrer"
+          className={`rounded-xl border cursor-pointer hover:opacity-80 transition-opacity px-3 py-2.5 text-center ${tx.card(l)}`}>
           <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${tx.t3(l)}`}>Declines</p>
           {bdLoad ? <Skel h="h-6" w="w-16"/> : (
             <p className="text-lg font-black text-red-500 tabular-nums">{declines ?? "—"}</p>
           )}
-        </Card>
- 
+        </a>
+
         {/* Unchanged */}
-        <Card className="px-3 py-2.5">
+        <a href="https://www.nseindia.com/market-data/live-equity-market" target="_blank" rel="noreferrer"
+          className={`rounded-xl border cursor-pointer hover:opacity-80 transition-opacity px-3 py-2.5 text-center ${tx.card(l)}`}>
           <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${tx.t3(l)}`}>Unchanged</p>
           {bdLoad ? <Skel h="h-6" w="w-16"/> : (
             <p className={`text-lg font-black tabular-nums ${tx.t2(l)}`}>{unchanged ?? "—"}</p>
           )}
-        </Card>
- 
+        </a>
+
         {/* 52-Week High */}
-        <Card className="px-3 py-2.5">
+        <a href="https://www.nseindia.com/market-data/52-week-high-equity" target="_blank" rel="noreferrer"
+          className={`rounded-xl border cursor-pointer hover:opacity-80 transition-opacity px-3 py-2.5 text-center ${tx.card(l)}`}>
           <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${tx.t3(l)}`}>52W High</p>
           {bdLoad ? <Skel h="h-6" w="w-12"/> : (
             <p className="text-lg font-black text-emerald-600 tabular-nums">{bd?.high_52w ?? "—"}</p>
           )}
-        </Card>
- 
+        </a>
+
         {/* 52-Week Low */}
-        <Card className="px-3 py-2.5">
+        <a href="https://www.nseindia.com/market-data/52-week-low-equity" target="_blank" rel="noreferrer"
+          className={`rounded-xl border cursor-pointer hover:opacity-80 transition-opacity px-3 py-2.5 text-center ${tx.card(l)}`}>
           <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${tx.t3(l)}`}>52W Low</p>
           {bdLoad ? <Skel h="h-6" w="w-12"/> : (
             <p className="text-lg font-black text-red-600 tabular-nums">{bd?.low_52w ?? "—"}</p>
           )}
-        </Card>
+        </a>
       </div>
  
       {/* A/D Progress bar */}
@@ -2495,7 +2462,7 @@ function BreadthVixSection({ ticks }: { ticks: any }) {
  
       {/* India VIX */}
       <div className={`rounded-xl border overflow-hidden ${tx.card(l)}`}>
-        <div className={`flex items-center justify-between px-4 py-3 border-b ${l ? "border-gray-100" : "border-[#1a2d3f]"}`}>
+        <div className={`flex items-center justify-between px-4 py-3 border-b ${l ? "border-slate-100" : "border-[#1e3a5f]/50"}`}>
           <div className="flex items-center gap-2">
             <Zap className="w-4 h-4 text-amber-400"/>
             <span className={`font-black text-sm ${tx.t1(l)}`}>India VIX</span>
@@ -2513,7 +2480,7 @@ function BreadthVixSection({ ticks }: { ticks: any }) {
             { label: "High",       val: vixTick?.ohlc?.high,         fmt: (v: number) => v.toFixed(2),                   cls: "text-red-500" },
             { label: "Prev Close", val: vixTick?.ohlc?.close,        fmt: (v: number) => v.toFixed(2),                   cls: tx.t2(l) },
           ].map((cell, i) => (
-            <div key={cell.label} className={`${l ? "divide-gray-100" : "divide-[#1a2d3f]"} text-center py-3 px-2`}>
+            <div key={cell.label} className={`${l ? "divide-gray-100" : "divide-[#1a2f4a]"} text-center py-3 px-2`}>
               <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${tx.t3(l)}`}>{cell.label}</p>
               <p className={`font-black tabular-nums text-sm ${cell.cls}`}>
                 {cell.val != null ? cell.fmt(cell.val) : "—"}
@@ -2521,7 +2488,7 @@ function BreadthVixSection({ ticks }: { ticks: any }) {
             </div>
           ))}
         </div>
-        <div className={`px-4 py-2 text-[10px] border-t ${l ? "border-gray-100 text-gray-400" : "border-[#1a2d3f] text-[#3d5f78]"}`}>
+        <div className={`px-4 py-2 text-[10px] border-t ${l ? "border-slate-100 text-slate-400" : "border-[#1e3a5f]/50 text-slate-500"}`}>
           VIX &lt;13: Calm · 13–20: Normal · 20–30: Elevated · &gt;30: Panic · Source: NSE via Kite WebSocket (token 264969)
         </div>
       </div>
@@ -2555,12 +2522,12 @@ function SectorSection({ ticks }: { ticks: any }) {
       {/* Top / Bottom chips */}
       <div className="flex flex-wrap gap-2 mb-3">
         {topSec.pct != null && (
-          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold ${l ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-emerald-900/15 border-emerald-800/30 text-emerald-400"}`}>
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold ${l ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"}`}>
             <TrendingUp className="w-3 h-3"/>Top: {topSec.name} {topSec.pct >= 0 ? "+" : ""}{topSec.pct.toFixed(2)}%
           </div>
         )}
         {botSec.pct != null && (
-          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold ${l ? "bg-red-50 border-red-200 text-red-600" : "bg-red-900/15 border-red-800/30 text-red-400"}`}>
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold ${l ? "bg-red-50 border-red-200 text-red-600" : "bg-red-500/10 border-red-500/20 text-red-400"}`}>
             <TrendingDown className="w-3 h-3"/>Lagging: {botSec.name} {botSec.pct >= 0 ? "+" : ""}{botSec.pct.toFixed(2)}%
           </div>
         )}
@@ -2577,11 +2544,14 @@ function SectorSection({ ticks }: { ticks: any }) {
           const isPos  = (s.pct ?? 0) >= 0;
           const barPct = s.pct != null ? (Math.abs(s.pct) / maxAbs) * 100 : 0;
           const chg    = getChg(s.tick);
-          const f      = useFlash(s.tick?.last_price); // ← each row uses its own flash
+          const f      = useFlash(s.tick?.last_price);
+          const nseUrl = `https://www.nseindia.com/market-data/live-equity-market?symbol=${encodeURIComponent(s.sym)}`;
           return (
-            <div key={s.key} className={`grid grid-cols-5 px-4 sm:px-5 py-3 items-center relative overflow-hidden
-              ${i < sorted.length - 1 ? (l ? "border-b border-gray-50" : "border-b border-[#111e28]") : ""}
-              ${l ? "hover:bg-gray-50/60" : "hover:bg-white/[0.015]"}`}>
+            <div key={s.key}
+              onClick={() => window.open(nseUrl, "_blank")}
+              className={`grid grid-cols-5 px-4 sm:px-5 py-3 items-center relative overflow-hidden cursor-pointer
+              ${i < sorted.length - 1 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""}
+              ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}>
               {/* Background bar */}
               <div
                 className={`absolute top-0 bottom-0 ${isPos ? "bg-emerald-500/5" : "bg-red-500/5"}`}
@@ -2645,20 +2615,28 @@ function GainersLosersSection() {
   const loading = tab === "active" ? maLoad : glLoad;
  
   const StockLine = ({ r, rank }: { r: any; rank: number }) => {
-    const isPos = (r.change_pct ?? 0) >= 0;
+    // Support multiple possible field names from different API responses
+    const symbol   = r.symbol || r.tradingsymbol || r.sym || "—";
+    const ltp      = r.last_price ?? r.ltp ?? r.lastPrice ?? 0;
+    const changePct= r.change_pct ?? r.pChange ?? r.changePercent ?? r.perChange ?? 0;
+    const vol      = r.volume ?? r.totalTradedVolume ?? r.totalTradedValue ?? 0;
+    const isPos    = (changePct ?? 0) >= 0;
+    const nseUrl   = `https://www.nseindia.com/get-quotes/equity?symbol=${encodeURIComponent(symbol)}`;
     return (
-      <div className={`flex items-center gap-3 px-4 sm:px-5 py-3 text-xs
-        ${rank < rows.length - 1 ? (l ? "border-b border-gray-50" : "border-b border-[#111e28]") : ""}
-        ${l ? "hover:bg-gray-50/60" : "hover:bg-white/[0.015]"}`}>
+      <div
+        onClick={() => window.open(nseUrl, "_blank")}
+        className={`flex items-center gap-3 px-4 sm:px-5 py-3 text-xs cursor-pointer
+        ${rank < rows.length - 1 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""}
+        ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}>
         <span className={`text-[10px] font-black w-5 text-center shrink-0 ${tx.t3(l)}`}>{rank + 1}</span>
         <div className="flex-1 min-w-0">
-          <p className={`font-black ${tx.t1(l)}`}>{r.symbol}</p>
+          <p className={`font-black ${tx.t1(l)}`}>{symbol}</p>
         </div>
-        <span className={`tabular-nums font-bold ${tx.t1(l)}`}>₹{fmt(r.last_price)}</span>
+        <span className={`tabular-nums font-bold ${tx.t1(l)}`}>{ltp > 0 ? `₹${fmt(ltp)}` : "—"}</span>
         <span className={`tabular-nums font-bold text-right w-20 shrink-0 ${isPos ? "text-emerald-500" : "text-red-500"}`}>
-          {isPos ? "+" : ""}{r.change_pct?.toFixed(2) ?? "—"}%
+          {isPos ? "+" : ""}{changePct != null ? changePct.toFixed(2) : "—"}%
         </span>
-        <span className={`tabular-nums text-right w-16 shrink-0 hidden sm:block ${tx.t3(l)}`}>{fmtV(r.volume)}</span>
+        <span className={`tabular-nums text-right w-16 shrink-0 hidden sm:block ${tx.t3(l)}`}>{fmtV(vol)}</span>
       </div>
     );
   };
@@ -2676,14 +2654,14 @@ function GainersLosersSection() {
               tab === t
                 ? t === "gainers" ? "bg-emerald-600 text-white border-transparent"
                   : t === "losers" ? "bg-red-600 text-white border-transparent"
-                  : "bg-[#16a34a] text-white border-transparent"
-                : l ? "bg-white text-gray-600 border-gray-200" : "bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f]"
+                  : "bg-[#5194F6] text-white border-transparent"
+                : l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
             }`}>
             {t === "gainers" ? "▲ Top Gainers" : t === "losers" ? "▼ Top Losers" : "⚡ Most Active"}
           </button>
         ))}
         <button onClick={tab === "active" ? maRefresh : glRefresh}
-          className={`px-2.5 py-1.5 rounded-lg border flex items-center ml-auto ${l ? "bg-white text-gray-600 border-gray-200" : "bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f]"}`}>
+          className={`px-2.5 py-1.5 rounded-lg border flex items-center ml-auto ${l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"}`}>
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`}/>
         </button>
       </div>
@@ -2691,7 +2669,7 @@ function GainersLosersSection() {
       <Card className="overflow-hidden">
         {/* By-Value subheader for most active */}
         {tab === "active" && (
-          <div className={`px-4 sm:px-5 py-2 text-[10px] border-b ${l ? "border-gray-100 text-gray-400" : "border-[#1a2d3f] text-[#3d5f78]"}`}>
+          <div className={`px-4 sm:px-5 py-2 text-[10px] border-b ${l ? "border-slate-100 text-slate-400" : "border-[#1e3a5f]/50 text-slate-500"}`}>
             By Volume (sorted) · Top 20 NSE stocks
           </div>
         )}
@@ -2730,16 +2708,22 @@ function GainersLosersSection() {
               <div className="text-right hidden sm:block">Value</div>
             </div>
             {byVal.slice(0, 10).map((r: any, i: number) => {
-              const isPos = (r.change_pct ?? 0) >= 0;
+              const symbol   = r.symbol || r.tradingsymbol || r.sym || "—";
+              const ltp      = r.last_price ?? r.ltp ?? 0;
+              const changePct= r.change_pct ?? r.pChange ?? r.changePercent ?? 0;
+              const isPos    = (changePct ?? 0) >= 0;
+              const nseUrl   = `https://www.nseindia.com/get-quotes/equity?symbol=${encodeURIComponent(symbol)}`;
               return (
-                <div key={r.symbol + i} className={`grid grid-cols-5 sm:grid-cols-6 px-4 sm:px-5 py-3 items-center text-xs
-                  ${i < 9 ? (l ? "border-b border-gray-50" : "border-b border-[#111e28]") : ""}
-                  ${l ? "hover:bg-gray-50/60" : "hover:bg-white/[0.015]"}`}>
+                <div key={symbol + i}
+                  onClick={() => window.open(nseUrl, "_blank")}
+                  className={`grid grid-cols-5 sm:grid-cols-6 px-4 sm:px-5 py-3 items-center text-xs cursor-pointer
+                  ${i < 9 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""}
+                  ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}>
                   <span className={`text-[10px] font-black ${tx.t3(l)}`}>{i + 1}</span>
-                  <div className="col-span-2"><p className={`font-black ${tx.t1(l)}`}>{r.symbol}</p></div>
-                  <div className={`text-right font-bold tabular-nums ${tx.t1(l)}`}>₹{fmt(r.last_price)}</div>
+                  <div className="col-span-2"><p className={`font-black ${tx.t1(l)}`}>{symbol}</p></div>
+                  <div className={`text-right font-bold tabular-nums ${tx.t1(l)}`}>{ltp > 0 ? `₹${fmt(ltp)}` : "—"}</div>
                   <div className={`text-right font-bold tabular-nums ${isPos ? "text-emerald-500" : "text-red-500"}`}>
-                    {isPos ? "+" : ""}{r.change_pct?.toFixed(2) ?? "—"}%
+                    {isPos ? "+" : ""}{changePct?.toFixed(2) ?? "—"}%
                   </div>
                   <div className={`text-right hidden sm:block tabular-nums ${tx.t3(l)}`}>{fmtV(r.value * 1e5)}</div>
                 </div>
@@ -2764,7 +2748,7 @@ function FiiDiiSection() {
   const date   = fii?.date ?? dii?.date ?? null;
  
   const Row = ({ label, val, cls }: { label: string; val: number | null; cls?: string }) => (
-    <div className={`text-center py-3 ${l ? "border-l border-gray-50 first:border-0" : "border-l border-[#111e28] first:border-0"}`}>
+    <div className={`text-center py-3 ${l ? "border-l border-slate-100 first:border-0" : "border-l border-[#1e3a5f]/30 first:border-0"}`}>
       <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${tx.t3(l)}`}>{label}</p>
       <p className={`text-sm font-black tabular-nums ${cls ?? tx.t1(l)}`}>
         {val != null ? `₹${fmtV(val)}Cr` : "—"}
@@ -2818,7 +2802,7 @@ function FiiDiiSection() {
       )}
  
       {error && !data && (
-        <div className={`mt-2 px-4 py-3 rounded-xl border flex items-center gap-2 text-xs ${l ? "bg-amber-50 border-amber-200 text-amber-700" : "bg-amber-900/10 border-amber-800/30 text-amber-400"}`}>
+        <div className={`mt-2 px-4 py-3 rounded-xl border flex items-center gap-2 text-xs ${l ? "bg-amber-50 border-amber-200 text-amber-700" : "bg-amber-500/10 border-amber-500/20 text-amber-400"}`}>
           <AlertCircle className="w-3.5 h-3.5 shrink-0"/>
           NSE/BSE blocked the request. Data will auto-recover. <button onClick={refresh} className="ml-auto underline">Retry</button>
         </div>
@@ -2863,12 +2847,12 @@ function PcrMaxPainWidget({ ticks }: { ticks: any }) {
     <Card className="overflow-hidden mb-4">
       {/* Header */}
       <div className={`flex items-center gap-3 px-5 py-3 border-b ${tx.header(l)}`}>
-        <Layers className="w-4 h-4 text-[#16a34a]"/>
+        <Layers className="w-4 h-4 text-[#5194F6]"/>
         <span className={`font-black text-sm ${tx.t1(l)}`}>PCR · Max Pain</span>
         <div className="flex gap-1.5 ml-2">
           {(["NIFTY", "BANKNIFTY"] as const).map(n => (
             <button key={n} onClick={() => setName(n)}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-bold border transition-all ${name === n ? "bg-[#16a34a] text-white border-transparent" : l ? "bg-white text-gray-500 border-gray-200" : "bg-[#0a1826] text-[#5a7a92] border-[#1a2d3f]"}`}>
+              className={`px-2.5 py-1 rounded-md text-[11px] font-bold border transition-all ${name === n ? "bg-[#5194F6] text-white border-transparent" : l ? "bg-white text-slate-500 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"}`}>
               {n}
             </button>
           ))}
@@ -2893,7 +2877,7 @@ function PcrMaxPainWidget({ ticks }: { ticks: any }) {
               { label: "Spot vs Max Pain",  val: spot && maxPain ? (spot > maxPain ? `Spot above (${fmt(spot - maxPain, 0)} pts)` : `Spot below (${fmt(maxPain - spot, 0)} pts)`) : "—", cls: spot && maxPain && spot > maxPain ? "text-emerald-500" : "text-red-500" },
               { label: "Total Put OI",      val: fmtV(totalPE),                         cls: "text-red-500" },
             ].map((cell, i) => (
-              <div key={cell.label} className={`text-center py-3 px-2 ${l ? "divide-gray-50" : "divide-[#111e28]"}`}>
+              <div key={cell.label} className={`text-center py-3 px-2 ${l ? "divide-gray-50" : "divide-[#0f1e32]"}`}>
                 <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${tx.t3(l)}`}>{cell.label}</p>
                 <p className={`text-sm font-black tabular-nums ${cell.cls}`}>{cell.val}</p>
               </div>
@@ -2901,7 +2885,7 @@ function PcrMaxPainWidget({ ticks }: { ticks: any }) {
           </div>
  
           {pcrState && (
-            <div className={`px-5 py-2 border-t text-xs flex items-center gap-2 ${l ? "border-gray-100 bg-gray-50" : "border-[#1a2d3f] bg-[#081017]"}`}>
+            <div className={`px-5 py-2 border-t text-xs flex items-center gap-2 ${l ? "border-slate-100 bg-slate-50" : "border-[#1e3a5f]/50 bg-[#070e1a]"}`}>
               <span className={`font-bold ${pcrState.cls}`}>● {pcrState.label}</span>
               <span className={`${tx.t3(l)}`}>· PCR &gt;1.0 = more puts = bullish sentiment · Max Pain = gravity for expiry price</span>
             </div>
@@ -2916,19 +2900,19 @@ function PcrMaxPainWidget({ ticks }: { ticks: any }) {
                   Highest Call OI (Resistance)
                 </div>
                 {topCE.slice(0, 5).map((s: any, i: number) => (
-                  <div key={s.strike} className={`flex items-center justify-between px-4 py-1.5 text-xs ${i < 4 ? (l ? "border-b border-gray-50" : "border-b border-[#111e28]") : ""}`}>
+                  <div key={s.strike} className={`flex items-center justify-between px-4 py-1.5 text-xs ${i < 4 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""}`}>
                     <span className={`font-bold ${tx.t1(l)}`}>{s.strike}</span>
                     <span className="text-emerald-600 tabular-nums">{fmtV(s.oi)}</span>
                   </div>
                 ))}
               </div>
               {/* Top Put OI */}
-              <div className={`border-l ${l ? "border-gray-100" : "border-[#1a2d3f]"}`}>
+              <div className={`border-l ${l ? "border-slate-100" : "border-[#1e3a5f]/50"}`}>
                 <div className={`px-4 py-1.5 text-[9px] font-black uppercase tracking-widest text-red-500 ${l ? "bg-red-50/60" : "bg-red-900/10"}`}>
                   Highest Put OI (Support)
                 </div>
                 {topPE.slice(0, 5).map((s: any, i: number) => (
-                  <div key={s.strike} className={`flex items-center justify-between px-4 py-1.5 text-xs ${i < 4 ? (l ? "border-b border-gray-50" : "border-b border-[#111e28]") : ""}`}>
+                  <div key={s.strike} className={`flex items-center justify-between px-4 py-1.5 text-xs ${i < 4 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""}`}>
                     <span className={`font-bold ${tx.t1(l)}`}>{s.strike}</span>
                     <span className="text-red-500 tabular-nums">{fmtV(s.oi)}</span>
                   </div>
@@ -3004,7 +2988,7 @@ function MacroSection() {
             <Card key={c.label} className="px-3 py-3">
               <div className="flex items-start justify-between gap-1 mb-1">
                 <p className={`text-[9px] font-black uppercase tracking-widest ${tx.t3(l)}`}>{c.label}</p>
-                <span className={`text-[8px] font-bold px-1 py-0.5 rounded border shrink-0 ${l ? "bg-gray-50 text-gray-400 border-gray-100" : "bg-[#0a1826] text-[#3d5f78] border-[#1a2d3f]"}`}>
+                <span className={`text-[8px] font-bold px-1 py-0.5 rounded border shrink-0 ${l ? "bg-slate-50 text-slate-400 border-slate-100" : "bg-[#0c1a2e] text-slate-500 border-[#1e3a5f]/50"}`}>
                   {c.source}
                 </span>
               </div>
@@ -3015,7 +2999,7 @@ function MacroSection() {
       </div>
  
       {error && !data && (
-        <div className={`px-4 py-3 rounded-xl border flex items-center gap-2 text-xs ${l ? "bg-amber-50 border-amber-200 text-amber-700" : "bg-amber-900/10 border-amber-800/30 text-amber-400"}`}>
+        <div className={`px-4 py-3 rounded-xl border flex items-center gap-2 text-xs ${l ? "bg-amber-50 border-amber-200 text-amber-700" : "bg-amber-500/10 border-amber-500/20 text-amber-400"}`}>
           <AlertCircle className="w-3.5 h-3.5 shrink-0"/>Some macro data unavailable — using cached values where possible.
           <button onClick={refresh} className="ml-auto underline">Retry</button>
         </div>
@@ -3047,12 +3031,12 @@ function MarketStatusWidget({ connected }: { connected: boolean }) {
  
   const status = isWeekend ? "Weekend" : isOpen ? "Open" : isPreOpen ? "Pre-Open" : "Closed";
   const statusCls =
-    isOpen     ? l ? "text-emerald-700 bg-emerald-50 border-emerald-200"   : "text-emerald-400 bg-emerald-900/15 border-emerald-800/30"
+    isOpen     ? l ? "text-emerald-700 bg-emerald-50 border-emerald-200"   : "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
     : isPreOpen ? l ? "text-amber-700 bg-amber-50 border-amber-200"        : "text-amber-400 bg-amber-900/15 border-amber-800/30"
-    :             l ? "text-gray-500 bg-gray-50 border-gray-100"           : "text-[#5a7a92] bg-[#0a1826]/40 border-[#1a2d3f]";
+    :             l ? "text-slate-500 bg-slate-50 border-slate-100"           : "text-slate-400 bg-[#0c1a2e]/40 border-[#1e3a5f]/50";
  
   return (
-    <div className={`flex flex-wrap items-center gap-3 px-4 py-3 rounded-xl border mb-5 text-xs ${l ? "bg-gray-50 border-gray-100" : "bg-[#0c1821] border-[#1a2d3f]"}`}>
+    <div className={`flex flex-wrap items-center gap-3 px-4 py-3 rounded-xl border mb-5 text-xs ${l ? "bg-slate-50 border-slate-100" : "bg-[#0c1a2e] border-[#1e3a5f]/50"}`}>
       <span className={`flex items-center gap-1.5 font-bold px-2.5 py-1 rounded border ${statusCls}`}>
         <span className={`w-1.5 h-1.5 rounded-full ${isOpen ? "bg-emerald-500 animate-pulse" : isPreOpen ? "bg-amber-400 animate-pulse" : "bg-gray-400"}`}/>
         {status}
@@ -3117,30 +3101,30 @@ export default function DomesticView() {
           <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-2 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <button className="lg:hidden p-1.5 rounded-lg border transition-colors"
-                style={{ borderColor:l?"#e5e7eb":"#1a2d3f", background:l?"#f9fafb":"rgba(255,255,255,0.03)" }}
+                style={{ borderColor:l?"#e2e8f0":"#1e3a5f", background:l?"#f9fafb":"rgba(12,26,46,0.6)" }}
                 onClick={() => setSidebar(v=>!v)}>
                 {sidebar ? <X className={`w-4 h-4 ${tx.t1(l)}`}/> : <Menu className={`w-4 h-4 ${tx.t1(l)}`}/>}
               </button>
               <span className={`text-[9px] font-black px-2 py-1 rounded-md border ${
                 mktOpen&&connected
-                  ? l?"bg-emerald-50 border-emerald-200 text-emerald-700":"bg-emerald-900/15 border-emerald-800/30 text-emerald-400"
-                  : l?"bg-gray-50 border-gray-100 text-gray-400":"bg-[#1a2d3f]/40 border-[#1a2d3f] text-[#3d5f78]"
+                  ? l?"bg-emerald-50 border-emerald-200 text-emerald-700":"bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                  : l?"bg-slate-50 border-slate-100 text-slate-400":"bg-[#1e3a5f]/40 border-[#1e3a5f]/50 text-slate-500"
               }`}>{mktOpen?(connected?"● LIVE":"○ CONNECTING…"):"MARKET CLOSED"}</span>
               <h1 className={`text-sm font-black hidden sm:block ${tx.t1(l)}`}>
-                Indian Markets <span className={`font-normal ml-1 text-xs ${tx.t2(l)}`}>Pro Dashboard</span>
+                Indian Markets
               </h1>
             </div>
             {/* ── Search bar ── */}
             <SearchBar rawTicks={rawTicks} onResult={setSearchResult}/>
             <div className="flex items-center gap-2">
               {connected && instrCount>0 && (
-                <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md border ${l?"bg-emerald-50 border-emerald-200 text-emerald-700":"bg-emerald-900/15 border-emerald-800/30 text-emerald-400"}`}>
+                <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md border ${l?"bg-emerald-50 border-emerald-200 text-emerald-700":"bg-emerald-500/10 border-emerald-500/20 text-emerald-400"}`}>
                   <Activity className="w-3 h-3"/>
                   <span className="hidden sm:inline">{instrCount} instruments</span>
                 </div>
               )}
               {!connected && (
-                <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md border ${l?"bg-red-50 border-red-200 text-red-600":"bg-red-900/15 border-red-800/30 text-red-400"}`}>
+                <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md border ${l?"bg-red-50 border-red-200 text-red-600":"bg-red-500/10 border-red-500/20 text-red-400"}`}>
                   <WifiOff className="w-3 h-3"/><span className="hidden sm:inline">Disconnected</span>
                 </div>
               )}
@@ -3165,32 +3149,18 @@ export default function DomesticView() {
               <SearchResultCard item={searchResult} onClose={() => setSearchResult(null)} rawTicks={rawTicks}/>
             )}
  
-          
             <MarketStatusWidget connected={connected}/>
- 
-            
-            <div id="overview" className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 mb-4 scroll-mt-24">
-              {INDICES.map(idx => <IdxCard key={idx.key} idx={idx} tick={ticks[idx.key]}/>)}
+
+            {/* Overview: only show prompt when no stock searched */}
+            <div id="overview" className="scroll-mt-24 mb-6">
+              {!searchResult && (
+                <div className={`flex flex-col items-center justify-center py-10 rounded-2xl border ${tx.card(l)}`}>
+                  <Search className={`w-8 h-8 mb-3 opacity-30 ${tx.t3(l)}`}/>
+                  <p className={`text-sm font-bold mb-1 ${tx.t1(l)}`}>Search a stock or index to view its chart</p>
+                  <p className={`text-xs ${tx.t3(l)}`}>Type in the search bar above — e.g. RELIANCE, TCS, NIFTY 50</p>
+                </div>
+              )}
             </div>
-            {ticks["NSE:INDIA VIX"] && (
-              <div className="mb-6 flex items-center gap-2 flex-wrap">
-                <span className={`text-[10px] font-black px-2.5 py-1.5 rounded-lg border ${
-                  (() => {
-                    const v = ticks["NSE:INDIA VIX"]?.last_price;
-                    return !v ? "bg-gray-50 border-gray-200 text-gray-500"
-                      : v < 13 ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                      : v < 20 ? "bg-blue-50 border-blue-200 text-blue-700"
-                      : v < 30 ? "bg-amber-50 border-amber-200 text-amber-700"
-                      : "bg-red-50 border-red-200 text-red-700";
-                  })()
-                }`}>
-                  ⚡ VIX {ticks["NSE:INDIA VIX"]?.last_price?.toFixed(2)}
-                  {getPct(ticks["NSE:INDIA VIX"]) != null
-                    ? `  (${getPct(ticks["NSE:INDIA VIX"])! >= 0 ? "+" : ""}${getPct(ticks["NSE:INDIA VIX"])!.toFixed(2)}%)`
-                    : ""}
-                </span>
-              </div>
-            )}
  
         
             <BreadthVixSection ticks={ticks}/>

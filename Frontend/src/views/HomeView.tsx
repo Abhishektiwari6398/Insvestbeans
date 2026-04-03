@@ -137,7 +137,7 @@ const HomeView = ({ activeTab, onChangeTab }: HomeViewProps) => {
   }
 
   return (
-    <Layout>
+    // <Layout>
       <div style={{ background: pageBg, minHeight: "100vh", color: isLight ? "#041421" : "#f1f5f9", position: "relative", overflow: "hidden" }}>
         {!isLight && (
           <>
@@ -185,13 +185,13 @@ const HomeView = ({ activeTab, onChangeTab }: HomeViewProps) => {
         )}
 
         <div style={{ position: "relative", zIndex: 1 }}>
-          <Hero />
+          {/* <Hero /> */}
 
           <div className="container mx-auto px-6 py-16">
 
 
             {/* ── Live Dashboard ──────────────────────────────────────────── */}
-            <section className="mb-20 rounded-3xl p-5 md:p-7" style={sectionPanelStyle}>
+            {/* <section className="mb-20 rounded-3xl p-5 md:p-7" style={sectionPanelStyle}>
               <div>
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10">
                   <div className="mb-6 md:mb-0">
@@ -233,7 +233,7 @@ const HomeView = ({ activeTab, onChangeTab }: HomeViewProps) => {
                   ) : (
                     <TradingViewWidget mode={activeTab} theme={isLight ? "light" : "dark"} height="600px" />
                   )}
-                  {/* ── Data freshness strip ── */}
+                 
                   <TVDataStamp mode={activeTab} type="chart" isLight={isLight} />
                 </div>
 
@@ -254,42 +254,42 @@ const HomeView = ({ activeTab, onChangeTab }: HomeViewProps) => {
                   </div>
                 </div>
               </div>
-            </section>
+            </section> */}
             {/* ── Decode Market ────────────────────────────────────────────── */}
-            <section className="mt-12 rounded-3xl p-5 md:p-7" style={sectionPanelStyle}>
+            {/* <section className="mt-12 rounded-3xl p-5 md:p-7" style={sectionPanelStyle}>
               <DecodeMarket activeTab={activeTab} />
-            </section>
+            </section> */}
             {/* ── IPO Section ─────────────────────────────────────────────── */}
-            <section className="mt-2"><IPOSection /></section>
+            {/* <section className="mt-2"><IPOSection /></section> */}
 
 
 
             {/* ── Beans of Wisdom ──────────────────────────────────────────── */}
-            <section className="mt-12 rounded-3xl p-5 md:p-7" style={sectionPanelStyle}>
+            {/* <section className="mt-12 rounded-3xl p-5 md:p-7" style={sectionPanelStyle}>
               <BeansOfWisdomView />
-            </section>
+            </section> */}
                 {/* ── Testimonials ─────────────────────────────────────────────── */}
-                <div className="mt-14 rounded-3xl p-5 md:p-7" style={sectionPanelStyle}>
+                {/* <div className="mt-14 rounded-3xl p-5 md:p-7" style={sectionPanelStyle}>
               <TestimonialsPage />
-            </div>
+            </div> */}
             {/* ═══════════════════════════════════════════════════════════════
               PRICING PLANS SECTION
           ═══════════════════════════════════════════════════════════════ */}
-            <section className="mt-16 mb-8 rounded-3xl p-5 md:p-7" style={sectionPanelStyle}>
+            {/* <section className="mt-16 mb-8 rounded-3xl p-5 md:p-7" style={sectionPanelStyle}>
 
-              {/* ── Section Heading ── */}
-              <div className="text-center mb-4">
+             
+              <div className="text-center mb-4"> */}
 
-                {/* Badge */}
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg mb-5" style={goldBadge}>
+             
+                {/* <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg mb-5" style={goldBadge}>
                   <TrendingUp className="w-4 h-4" style={{ color: isLight ? OCEAN : SKY }} />
                   <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: isLight ? OCEAN : SKY }}>
                     Pricing Plans
                   </span>
-                </div>
+                </div> */}
 
-                {/* Main heading */}
-                <h2
+           
+                {/* <h2
                   className={`text-4xl md:text-5xl font-extrabold mb-4 leading-tight tracking-tight ${headingCls}`}
                 >
                   Invest Smarter,{" "}
@@ -298,27 +298,27 @@ const HomeView = ({ activeTab, onChangeTab }: HomeViewProps) => {
                   </span>
                 </h2>
 
-                {/* Subtext */}
+             
                 <p className={`text-base max-w-xl mx-auto leading-relaxed ${subTextCls}`}>
                   From market basics to pro-level dashboards — pick the plan that
                   powers your investing journey.
                 </p>
-              </div>
+              </div> */}
 
         
 
               {/* ── Plan Cards ── */}
-              <PlanCards
+              {/* <PlanCards
                 isLight={isLight}
                 userSubscriptions={userSubscriptions}
                 onCta={(planId: string) => navigate(`/plans/${planId}/checkout`)}
-              />
+              /> */}
 
-            </section>
+            {/* </section> */}
 
 
             {/* ── Newsletter ───────────────────────────────────────────────── */}
-            <div className="mt-14 rounded-2xl px-6 py-5 sm:px-10 sm:py-6" style={sectionPanelStyle}>
+            {/* <div className="mt-14 rounded-2xl px-6 py-5 sm:px-10 sm:py-6" style={sectionPanelStyle}>
               <Subscribeview
                 sectionWrapBg={sectionWrapBg}
                 sectionWrapBorder={sectionWrapBorder}
@@ -331,12 +331,12 @@ const HomeView = ({ activeTab, onChangeTab }: HomeViewProps) => {
                 emailInputBorder={emailInputBorder}
                 emailInputText={emailInputText}
               />
-            </div>
+            </div> */}
 
           </div>
         </div>
       </div>
-    </Layout>
+    // </Layout>
   );
 };
 

@@ -782,31 +782,10 @@ const Hero = () => {
               color: isLight ? "#041421" : "#e8edf5",
             }}
           >
-            Baazigar Banein… Sattebaaz Nahi
+            Where Vision Meets Values
           </h1>
-
-          {/* ── Subtitle ── */}
-          <p
-            className="mx-auto max-w-2xl"
-            style={{
-              fontSize: "clamp(0.75rem, 1.3vw, 0.95rem)",
-              lineHeight: 1.5,
-              letterSpacing: "0.01em",
-              color: isLight ? "#35566f" : "#94a3b8",
-              marginBottom: 0,
-            }}>
-            Daily research-backed stock insights —{" "}
-            <span style={{
-              color: isLight ? "#1F5F89" : "#9bc1da",
-              fontWeight: 600,
-            }}>
-              where every pick is powered by analysis
-            </span>
-            , not assumptions.
-          </p>
-
-          {/* ── Coming Soon badge ── */}
-          <div style={{ marginTop: 10, marginBottom: 0 }}>
+            {/* ── Coming Soon badge ── */}
+            <div style={{ marginTop: 10, marginBottom: 8 }}>
             <span style={{
               display: "inline-flex", alignItems: "center", gap: 7,
               padding: "4px 12px 4px 6px", borderRadius: 99,
@@ -829,6 +808,28 @@ const Hero = () => {
               </span>
             </span>
           </div>
+
+          {/* ── Subtitle ── */}
+          <p
+            className="mx-auto max-w-2xl"
+            style={{
+              fontSize: "clamp(0.75rem, 1.3vw, 0.95rem)",
+              lineHeight: 1.5,
+              letterSpacing: "0.01em",
+              color: isLight ? "#35566f" : "#94a3b8",
+              marginBottom: 0,
+            }}>
+            Daily research-backed stock insights —{" "}
+            <span style={{
+              color: isLight ? "#1F5F89" : "#9bc1da",
+              fontWeight: 600,
+            }}>
+              where every pick is powered by analysis
+            </span>
+            , not assumptions.
+          </p>
+
+        
 
           {/* Divider + Tab Switcher */}
           <div className="flex flex-col items-center" style={{ marginTop: 12 }}>
