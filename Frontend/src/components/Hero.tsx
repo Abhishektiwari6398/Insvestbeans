@@ -5,39 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { useTheme } from "@/controllers/Themecontext";
 
-// ─── Icons ─────────────────────────────────────────────────────────────────────
-const PieChartIcon = ({ className, style }) => (
-  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} style={style} strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="22" cy="26" r="15" stroke="currentColor" strokeWidth="2" fill="none" />
-    <path d="M22 26 L22 11 A15 15 0 0 1 36.3 18.5 Z" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.25" />
-    <path d="M22 26 L36.3 18.5 A15 15 0 0 1 34 40 Z" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.12" />
-    <path d="M30 8 L36 4 L42 8" stroke="currentColor" strokeWidth="2.2" />
-    <path d="M36 4 L36 14" stroke="currentColor" strokeWidth="2.2" />
-    <circle cx="10" cy="14" r="1.5" fill="currentColor" opacity="0.5" />
-  </svg>
-);
 
-const GrowthPlantIcon = ({ className, style }) => (
-  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} style={style} strokeLinecap="round" strokeLinejoin="round">
-    <path d="M24 40 L24 18" stroke="currentColor" strokeWidth="2.2" />
-    <path d="M24 28 C20 26, 14 27, 13 22 C12 17, 18 14, 24 20" stroke="currentColor" strokeWidth="1.8" fill="currentColor" fillOpacity="0.2" />
-    <path d="M24 22 C28 20, 34 20, 35 15 C36 10, 30 8, 24 14" stroke="currentColor" strokeWidth="1.8" fill="currentColor" fillOpacity="0.2" />
-    <path d="M14 40 L34 40" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    <path d="M24 14 L25.2 11 L26.4 14 L29.5 14 L27 16 L28.2 19 L24 17 L19.8 19 L21 16 L18.5 14 L21.6 14 Z" stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.35" />
-  </svg>
-);
-
-const IndexChartIcon = ({ className, style }) => (
-  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} style={style} strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 38 L42 38" stroke="currentColor" strokeWidth="2" />
-    <path d="M6 38 L6 8" stroke="currentColor" strokeWidth="2" />
-    <rect x="10" y="26" width="6" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.8" fill="currentColor" fillOpacity="0.2" />
-    <rect x="20" y="20" width="6" height="18" rx="1.5" stroke="currentColor" strokeWidth="1.8" fill="currentColor" fillOpacity="0.2" />
-    <rect x="30" y="14" width="6" height="24" rx="1.5" stroke="currentColor" strokeWidth="1.8" fill="currentColor" fillOpacity="0.2" />
-    <path d="M13 25 L23 18 L33 11" stroke="currentColor" strokeWidth="2.2" />
-    <circle cx="33" cy="11" r="2.5" fill="currentColor" />
-  </svg>
-);
 
 // ─── Mini Sparkline SVG ──────────────────────────────────────────────────────
 const Sparkline = ({ positive, color }) => {
@@ -583,8 +551,8 @@ const Hero = () => {
     const prevClose = item.ohlc?.close ?? null;
     // Kite OHLC doesn't have change% directly; quote does
     const chg = item.change != null ? item.change
-      : (price && prevClose && item.ohlc?.open)
-        ? ((price - item.ohlc.open) / item.ohlc.open) * 100
+      : (price && prevClose )
+        ? ((price - prevClose) / prevClose) * 100
         : null;
     return { price, chg };
   };
@@ -608,40 +576,98 @@ const Hero = () => {
   }, [API]);
 
   // ── Fetch US global + Yahoo-based USD/INR + Gold (for US Stats tab) ───────
+  // useEffect(() => {
+  //   fetch(`${API}/markets/global`)
+  //     .then(r => r.json())
+  //     .then(data => {
+  //       const us    = data?.indices?.us   || [];
+  //       const forex = data?.forex          || [];
+  //       const comms = data?.commodities    || [];
+  //       const nasdaq  = us.find(m => m.symbol === "^IXIC");
+  //       const dow     = us.find(m => m.symbol === "^DJI");
+  //       const usdinr  = forex.find(m => m.pair === "USD/INR");
+  //       const gold    = comms.find(m => m.symbol === "GC=F");
+  //       const fmt = (v) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+  //       setUsData({
+  //         nasdaq:    nasdaq ? fmt(nasdaq.changePercent)                    : "N/A",
+  //         usdInr:    usdinr?.changePercent != null ? fmt(usdinr.changePercent) : "N/A",
+  //         gold:      gold   ? fmt(gold.changePercent)                      : "N/A",
+  //         dow:       dow    ? fmt(dow.changePercent)                       : "N/A",
+  //         nasdaqPos: nasdaq ? nasdaq.changePercent >= 0                    : null,
+  //         usdInrPos: usdinr?.changePercent != null ? usdinr.changePercent >= 0 : null,
+  //         goldPos:   gold   ? gold.changePercent >= 0                      : null,
+  //         dowPos:    dow    ? dow.changePercent >= 0                       : null,
+  //         usdInrRate: usdinr?.rate ? Number(usdinr.rate)                   : 84,
+  //       });
+
+  //       // USD/INR for the Bharat card
+  //       setBharatData(prev => ({
+  //         ...prev,
+  //         usdInr:      usdinr?.rate       ?? prev.usdInr,
+  //         usdInrChange: usdinr?.changePercent ?? prev.usdInrChange,
+  //       }));
+  //     })
+  //     .catch(() => {});
+  // }, [API]);
   useEffect(() => {
     fetch(`${API}/markets/global`)
       .then(r => r.json())
       .then(data => {
         const us    = data?.indices?.us   || [];
-        const forex = data?.forex          || [];
         const comms = data?.commodities    || [];
+  
         const nasdaq  = us.find(m => m.symbol === "^IXIC");
         const dow     = us.find(m => m.symbol === "^DJI");
-        const usdinr  = forex.find(m => m.pair === "USD/INR");
         const gold    = comms.find(m => m.symbol === "GC=F");
+  
         const fmt = (v) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+  
         setUsData({
-          nasdaq:    nasdaq ? fmt(nasdaq.changePercent)                    : "N/A",
-          usdInr:    usdinr?.changePercent != null ? fmt(usdinr.changePercent) : "N/A",
-          gold:      gold   ? fmt(gold.changePercent)                      : "N/A",
-          dow:       dow    ? fmt(dow.changePercent)                       : "N/A",
-          nasdaqPos: nasdaq ? nasdaq.changePercent >= 0                    : null,
-          usdInrPos: usdinr?.changePercent != null ? usdinr.changePercent >= 0 : null,
-          goldPos:   gold   ? gold.changePercent >= 0                      : null,
-          dowPos:    dow    ? dow.changePercent >= 0                       : null,
-          usdInrRate: usdinr?.rate ? Number(usdinr.rate)                   : 84,
+          nasdaq:    nasdaq ? fmt(nasdaq.changePercent) : "N/A",
+          gold:      gold   ? fmt(gold.changePercent)   : "N/A",
+          dow:       dow    ? fmt(dow.changePercent)    : "N/A",
+  
+          nasdaqPos: nasdaq ? nasdaq.changePercent >= 0 : null,
+          goldPos:   gold   ? gold.changePercent >= 0   : null,
+          dowPos:    dow    ? dow.changePercent >= 0    : null,
+  
+          // ❌ USDINR removed from here
+          usdInr: "N/A",
+          usdInrPos: null,
+          usdInrRate: null,
         });
-
-        // USD/INR for the Bharat card
-        setBharatData(prev => ({
-          ...prev,
-          usdInr:      usdinr?.rate       ?? prev.usdInr,
-          usdInrChange: usdinr?.changePercent ?? prev.usdInrChange,
-        }));
       })
       .catch(() => {});
   }, [API]);
 
+  useEffect(() => {
+    fetch(`${API}/kite/macro`)
+      .then(r => r.json())
+      .then(json => {
+        const fx = json?.data?.inr_usd;
+  
+        const fmt = (v) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+  
+        // 👉 US CARD (USD/INR fix)
+        setUsData(prev => ({
+          ...prev,
+          usdInr: fx?.change_pct != null ? fmt(fx.change_pct) : "N/A",
+          usdInrPos: fx?.change_pct != null ? fx.change_pct >= 0 : null,
+          usdInrRate: fx?.rate ?? null,
+        }));
+  
+        // 👉 BHARAT CARD (same source)
+        setBharatData(prev => ({
+          ...prev,
+          usdInr: fx?.rate ?? prev.usdInr,
+          usdInrChange: fx?.change_pct ?? prev.usdInrChange,
+        }));
+      })
+      .catch(err => {
+        console.error("Macro API error:", err);
+      });
+  }, [API]);
+  
   // ── GIFT NIFTY — Kite NSE_IFSC near-month futures ───────────────────────
   useEffect(() => {
     const load = async () => {

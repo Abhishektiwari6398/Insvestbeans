@@ -19,7 +19,7 @@ const YF_HEADERS = {
 
 // Period → Yahoo interval + range params (INCREASED for more candles)
 const PERIOD_PARAMS = {
-  "1D":  { interval: "5m",   range: "1d"  },   // 5-min candles (more data points)
+  "15M": { interval: "15m", range: "1d" },   // 5-min candles (more data points)
   "1W":  { interval: "30m",  range: "5d"  },   // 30-min candles (more data points)
   "1M":  { interval: "1d",   range: "1mo" },   // daily candles, 1 month
   "3M":  { interval: "1d",   range: "3mo" },   // daily candles, 3 months
@@ -31,7 +31,7 @@ const PERIOD_PARAMS = {
 // Per-period cache: key = "SYMBOL_PERIOD"
 const _historyCache = new Map();
 const CACHE_TTL = {
-  "1D":  5  * 60 * 1000,   // 5 min  (intraday refreshes often)
+  "15M":  5  * 60 * 1000,   // 5 min  (intraday refreshes often)
   "1W":  15 * 60 * 1000,   // 15 min
   "1M":  30 * 60 * 1000,   // 30 min
   "3M":  60 * 60 * 1000,   // 1 hr

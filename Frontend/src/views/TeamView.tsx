@@ -417,7 +417,7 @@ const TeamView = () => {
         </div>
 
         {/* Sticky sub-navigation */}
-        <div className={`sticky top-0 z-20 border-b backdrop-blur-lg ${isLight ? "border-gray-100 bg-white/90" : "border-white/10 bg-slate-950/85"}`}>
+        <div className={`sticky top-[var(--header-height,56px)] z-20 border-b backdrop-blur-lg ${isLight ? "border-gray-100 bg-white/90" : "border-white/10 bg-slate-950/85"}`}>
           <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-2 sm:gap-3 py-3" role="tablist" aria-label="About page sections">
               <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar flex-1">
@@ -533,7 +533,7 @@ const TeamView = () => {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
               {teamMembers.map((member, idx) => (
-                <Reveal key={member.id} delay={idx * 80} className="gsap-section-card">
+                <Reveal key={member.id} delay={idx * 80}>
                   <div className={`relative overflow-hidden rounded-[28px] p-6 h-full ${isLight ? "bg-white border border-gray-100 shadow-lg" : "border border-white/10 bg-white/5 backdrop-blur-xl"}`}>
                     <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-blue-500/10 pointer-events-none"></div>
                     <div className="relative flex flex-col gap-5">
@@ -696,9 +696,9 @@ const TeamView = () => {
                       )}
 
                       <div className="flex flex-col items-center">
-                        <div className={`relative w-28 h-28 rounded-full bg-gradient-to-br ${value.gradient} flex items-center justify-center shadow-xl group-hover:scale-110 group-hover:shadow-2xl transition-all duration-500 cursor-pointer`}>
+                        <div className={`relative w-28 h-28 rounded-full bg-gradient-to-br ${value.gradient} flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-300 cursor-pointer`}>
                           <div className="w-24 h-24 rounded-full border-4 border-white/30 flex items-center justify-center backdrop-blur-sm">
-                            <svg className="w-10 h-10 text-white group-hover:scale-110 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-10 h-10 text-white transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={value.icon} />
                             </svg>
                           </div>
@@ -738,9 +738,9 @@ const TeamView = () => {
                           </svg>
                         </div>
 
-                        <div className={`relative w-28 h-28 rounded-full bg-gradient-to-br ${value.gradient} flex items-center justify-center shadow-xl group-hover:scale-110 group-hover:shadow-2xl transition-all duration-500 cursor-pointer`}>
+                        <div className={`relative w-28 h-28 rounded-full bg-gradient-to-br ${value.gradient} flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-300 cursor-pointer`}>
                           <div className="w-24 h-24 rounded-full border-4 border-white/30 flex items-center justify-center backdrop-blur-sm">
-                            <svg className="w-10 h-10 text-white group-hover:scale-110 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-10 h-10 text-white transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={value.icon} />
                             </svg>
                           </div>

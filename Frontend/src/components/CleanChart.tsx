@@ -27,11 +27,11 @@ interface CleanChartProps {
   candles?: CandlePoint[];
   historyUrl?: string;
 }
-type Period = '1D' | '1W' | '1M' | '3M' | '1Y';
-const PERIODS: Period[] = ['1D', '1W', '1M', '3M', '1Y'];
+type Period = '15M' | '1W' | '1M' | '3M' | '1Y';
+const PERIODS: Period[] = ['15M', '1W', '1M', '3M', '1Y'];
 // Delay labels — Yahoo Finance ke same (CBOE/CBOT disclaimer match)
 const DELAY_LABEL: Record<Period, string> = {
-  '1D': 'CBOE · ~15 min delayed · 5 min bars',
+  '15M': 'CBOE · ~15 min delayed · 5 min bars',
   '1W': '~15 min delayed · 30 min bars',
   '1M': 'End-of-day · daily bars',
   '3M': 'End-of-day · daily bars',
@@ -128,7 +128,7 @@ const CleanChart = ({
   const chartRef     = useRef<IChartApi | null>(null);
   const seriesRef    = useRef<ISeriesApi<'Candlestick'> | null>(null);
 
-  const [period,    setPeriod]    = useState<Period>('1D');
+  const [period,    setPeriod]    = useState<Period>('15M');
   const [chartData, setChartData] = useState<CandlePoint[]>([]);
   const [loading,   setLoading]   = useState(false);
   const [isFallback, setFallback] = useState(false);
@@ -168,7 +168,7 @@ const CleanChart = ({
 
   // ── Auto-refresh every 15 min for intraday periods ───────────
   useEffect(() => {
-    if (period !== '1D' && period !== '1W') return;
+    if (period !== '15M' && period !== '1W') return;
     const id = setInterval(() => { fetch_(period); }, AUTO_REFRESH_MS);
     return () => clearInterval(id);
   }, [period, fetch_]);
@@ -208,12 +208,12 @@ const CleanChart = ({
       // ── TIME SCALE ───────────────────────────────────────────
       timeScale: {
         borderVisible:  false,
-        timeVisible:    period === '1D' || period === '1W',
+        timeVisible:    period === '15M' || period === '1W',
         secondsVisible: false,
         fixLeftEdge:    true,
         fixRightEdge:   true,
         // Yahoo Finance jaisi tight candles — 1D/1W mein zyada candles hain to spacing kam
-        barSpacing: period === '1D' ? 4
+        barSpacing: period === '15M' ? 4
                   : period === '1W' ? 5
                   : period === '1M' ? 8
                   : period === '3M' ? 6
@@ -255,7 +255,7 @@ const CleanChart = ({
     if (!seriesRef.current || !chartRef.current || !chartData.length) return;
     seriesRef.current.setData(toLWC(chartData));
     chartRef.current.timeScale().fitContent();
-    chartRef.current.applyOptions({ timeScale: { timeVisible: period === '1D' || period === '1W' } });
+    chartRef.current.applyOptions({ timeScale: { timeVisible: period === '15M' || period === '1W' } });
   }, [chartData, period]);
 
   // ── Period button — stop propagation so modal doesn't open ───
@@ -269,7 +269,7 @@ const CleanChart = ({
   // ── Next-refresh countdown (1D / 1W only) ────────────────────
   const [nextRefreshIn, setNextRefreshIn] = useState<string>('');
   useEffect(() => {
-    if ((period !== '1D' && period !== '1W') || !lastFetch || isFallback) { setNextRefreshIn(''); return; }
+    if ((period !== '15M' && period !== '1W') || !lastFetch || isFallback) { setNextRefreshIn(''); return; }
     const tick = () => {
       const elapsed = Date.now() - lastFetch.getTime();
       const remaining = Math.max(0, AUTO_REFRESH_MS - elapsed);
@@ -285,7 +285,7 @@ const CleanChart = ({
   const dataAgoLabel = (): string => {
     if (!lastFetch || isFallback) return '';
     const diff = Math.round((Date.now() - lastFetch.getTime()) / 60_000);
-    const delay = (period === '1D' || period === '1W') ? 15 : 0;
+    const delay = (period === '15M' || period === '1W') ? 15 : 0;
     const total = diff + delay;
     if (total < 1)  return 'just now';
     if (total < 60) return `${total} min ago`;

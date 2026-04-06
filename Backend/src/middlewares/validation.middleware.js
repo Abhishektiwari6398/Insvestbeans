@@ -9,7 +9,7 @@ export const handleValidationErrors = (req, res, next) => {
   if (!errors.isEmpty()) {
     return res.status(400).json({
       success: false,
-      message: errors.array()[0].msg, // pehli error dikhao
+      message: errors.array()[0].msg,
       errors:  errors.array().map(e => ({ field: e.path, message: e.msg })),
     });
   }
@@ -23,13 +23,13 @@ export const validateRegister = [
     .notEmpty().withMessage("Name required hai")
     .isLength({ min: 2, max: 50 }).withMessage("Name 2-50 characters ka hona chahiye")
     .matches(/^[a-zA-Z\s\u0900-\u097F]+$/).withMessage("Name mein sirf letters allowed hain")
-    .escape(), // HTML tags remove karo (XSS prevention)
+    .escape(),
 
   body("email")
     .trim()
     .notEmpty().withMessage("Email required hai")
     .isEmail().withMessage("Valid email enter karo")
-    .normalizeEmail() // lowercase + trim
+    .normalizeEmail()
     .isLength({ max: 100 }).withMessage("Email bahut lamba hai"),
 
   body("password")
@@ -81,40 +81,105 @@ export const validateResetPassword = [
 ];
 
 // ─── Insight create/update validation ────────────────────────────────────────
+//
+// BUG FIX 1: .escape() title/description se hata diya.
+//   .escape() HTML-encode kar deta hai (&amp; &lt; etc.) req.body ko in-place,
+//   toh controller ko already-mutated string milti thi. Controller apna khud
+//   ka .trim() karta hai — sanitization wahan kaafi hai.
+//
+// BUG FIX 2: impactScore ke liye .isInt() → .isFloat() + toInt() sanitizer.
+//   Frontend Number type bhejta hai (e.g. 5). express-validator ka .isInt()
+//   nested object mein JS number pe fail ho jaata hai. .isFloat() pass karta
+//   hai aur .toInt() ensure karta hai integer store ho.
+//
+// BUG FIX 3: credits.url — agar empty string bheja toh .isURL() fail karta
+//   tha. .if(body(...).notEmpty()) guard se sirf non-empty values validate hoti.
+// ─────────────────────────────────────────────────────────────────────────────
 export const validateInsight = [
+  // ── Core fields ────────────────────────────────────────────────────────────
   body("title")
     .trim()
     .notEmpty().withMessage("Title required hai")
-    .isLength({ max: 200 }).withMessage("Title 200 characters se zyada nahi ho sakta")
-    .escape(),
+    .isLength({ max: 200 }).withMessage("Title 200 characters se zyada nahi ho sakta"),
+    // ❌ .escape() removed — controller already trims; escaping here corrupts saved data
 
   body("description")
     .trim()
     .notEmpty().withMessage("Description required hai")
-    .isLength({ max: 1000 }).withMessage("Description 1000 characters se zyada nahi ho sakta")
-    .escape(),
+    .isLength({ max: 1000 }).withMessage("Description 1000 characters se zyada nahi ho sakta"),
+    // ❌ .escape() removed — same reason as above
 
   body("category")
     .trim()
     .notEmpty().withMessage("Category required hai")
-    .isLength({ max: 50 }).withMessage("Category bahut lamba hai")
-    .escape(),
+    .isLength({ max: 50 }).withMessage("Category bahut lamba hai"),
+    // ❌ .escape() removed — category text bhi corrupt ho jaati thi
 
   body("marketType")
-    .isIn(["domestic", "global", "commodities"]).withMessage("marketType: domestic, global ya commodities hona chahiye"),
+    .notEmpty().withMessage("marketType required hai")
+    .isIn(["domestic", "global", "commodities"])
+    .withMessage("marketType: domestic, global ya commodities hona chahiye"),
 
   body("sentiment")
     .optional()
-    .isIn(["positive", "negative", "neutral"]).withMessage("sentiment: positive, negative ya neutral hona chahiye"),
+    .isIn(["positive", "negative", "neutral"])
+    .withMessage("sentiment: positive, negative ya neutral hona chahiye"),
+
+  // ── investBeansInsight nested fields ───────────────────────────────────────
+  body("investBeansInsight.summary")
+    .trim()
+    .notEmpty().withMessage("investBeansInsight.summary required hai")
+    .isLength({ max: 500 }).withMessage("Summary bahut lamba hai"),
+
+  body("investBeansInsight.marketSignificance")
+    .trim()
+    .notEmpty().withMessage("investBeansInsight.marketSignificance required hai")
+    .isLength({ max: 600 }).withMessage("Market significance bahut lamba hai"),
+
+  body("investBeansInsight.impactArea")
+    .trim()
+    .notEmpty().withMessage("investBeansInsight.impactArea required hai")
+    .isLength({ max: 300 }).withMessage("Impact area bahut lamba hai"),
+
+  body("investBeansInsight.shortTermView")
+    .trim()
+    .notEmpty().withMessage("investBeansInsight.shortTermView required hai")
+    .isLength({ max: 600 }).withMessage("Short term view bahut lamba hai"),
+
+  body("investBeansInsight.longTermView")
+    .trim()
+    .notEmpty().withMessage("investBeansInsight.longTermView required hai")
+    .isLength({ max: 600 }).withMessage("Long term view bahut lamba hai"),
+
+  body("investBeansInsight.keyRisk")
+    .trim()
+    .notEmpty().withMessage("investBeansInsight.keyRisk required hai")
+    .isLength({ max: 500 }).withMessage("Key risk bahut lamba hai"),
+
+  body("investBeansInsight.stocksImpacted")
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isLength({ max: 500 }).withMessage("Stocks impacted bahut lamba hai"),
 
   body("investBeansInsight.impactScore")
     .optional()
-    .isInt({ min: 1, max: 10 }).withMessage("Impact score 1-10 ke beech hona chahiye"),
+    // ✅ FIX: .isFloat() instead of .isInt() — works for both JS number and string "5"
+    .isFloat({ min: 1, max: 10 }).withMessage("Impact score 1-10 ke beech hona chahiye")
+    // ✅ Sanitize to integer so DB mein clean value jaye
+    .toInt(),
+
+  // ── Credits ────────────────────────────────────────────────────────────────
+  body("credits.source")
+    .trim()
+    .notEmpty().withMessage("Credit source required hai")
+    .isLength({ max: 100 }).withMessage("Source name bahut lamba hai"),
 
   body("credits.url")
-    .optional()
+    // ✅ FIX: Only validate URL format if a non-empty value was actually sent.
+    //    Empty string "" se pehle .isURL() fail karta tha.
+    .if(body("credits.url").notEmpty())
     .trim()
-    .isURL().withMessage("Valid URL enter karo"),
+    .isURL({ require_protocol: true }).withMessage("Valid URL enter karo (https:// required)"),
 
   handleValidationErrors,
 ];
@@ -124,7 +189,7 @@ export const validatePayment = [
   body("amount")
     .notEmpty().withMessage("Amount required hai")
     .isFloat({ min: 1 }).withMessage("Amount valid hona chahiye")
-    .customSanitizer(v => Math.round(Number(v))), // integer ensure karo
+    .customSanitizer(v => Math.round(Number(v))),
 
   body("userId")
     .notEmpty().withMessage("UserId required hai")

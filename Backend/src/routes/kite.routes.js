@@ -837,6 +837,21 @@ router.get("/fii-dii", async (req, res) => {
     };
   };
 
+  async function fetchFiiDiiFromBsePublic() {
+    const today = new Date();
+    const dd = String(today.getDate()).padStart(2,'0');
+    const mm = String(today.getMonth()+1).padStart(2,'0');
+    const yyyy = today.getFullYear();
+    const r = await axios.get(
+      `https://www.bseindia.com/markets/equity/EQReports/fii_dii_data.aspx`,
+      { timeout: 10000, headers: { 
+        "User-Agent": NSE_UA, 
+        "Referer": "https://www.bseindia.com/",
+        "Accept": "text/html,*/*"
+      }}
+    );
+    // Parse response... (BSE HTML page, requires parsing)
+  }
   // ── TIER 0: MoneyControl — VPS-friendly, no IP blocking ────────────────────
   try {
     const data = await fetchFiiDiiFromMoneyControl();

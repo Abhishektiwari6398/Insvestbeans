@@ -23,7 +23,7 @@ import { useTheme } from '@/controllers/Themecontext';
 import { useKiteTicks } from "@/hooks/useKiteTicks";
 
 // ─── Hook: smooth hover dropdown (no blink) ───────────────────────────────────
-function useHoverDropdown(closeDelay = 150) {
+function useHoverDropdown(closeDelay = 250) {
   const [open, setOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -107,20 +107,24 @@ function useIndianTicker(): IndianTick[] {
 
 
 const TICKER_CSS = `
-  @keyframes mktTicker {
-    from { transform: translateX(0); }
-    to   { transform: translateX(-50%); }
-  }
-  .mkt-ticker-strip {
-    display: inline-flex;
-    align-items: center;
-    width: max-content;
-    will-change: transform;
-    animation: mktTicker 55s linear infinite;
-  }
-  .mkt-ticker-strip:hover {
-    animation-play-state: paused;
-  }
+@keyframes mktTicker {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.mkt-ticker-strip {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  will-change: transform;
+  animation: mktTicker 55s linear infinite;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.mkt-ticker-strip:hover {
+  animation-play-state: paused;
+}
 `;
 function injectTickerCSS() {
   if (document.getElementById("mkt-ticker-style")) return;
@@ -128,6 +132,7 @@ function injectTickerCSS() {
   el.id = "mkt-ticker-style";
   el.textContent = TICKER_CSS;
   document.head.appendChild(el);
+  
 }
 
 
@@ -180,7 +185,7 @@ const TickerStrip = React.memo(({
         onClick={() => onNavigate(market.route)}
         title={`View on ${market.route === "/domestic" ? "Domestic" : "Global"} Markets`}
       
-        className="flex items-center gap-4 whitespace-nowrap group hover:scale-110 transition-transform cursor-pointer"
+        className="flex items-center gap-4 whitespace-nowrap group hover:opacity-75 transition-opacity cursor-pointer"
         style={{ padding: "0 6px", minWidth: "220px", flexShrink: 0 }}
       >
         <div className="flex items-center gap-2">
@@ -232,7 +237,7 @@ const TickerStrip = React.memo(({
   </div>
 ));
 
-const MarketTickerInline = () => {
+const MarketTickerInline =React.memo( () => {
   const { data } = useGlobalMarkets();
   const { theme } = useTheme();
   const isLight = theme === "light";
@@ -298,7 +303,7 @@ const MarketTickerInline = () => {
       )}
     </div>
   );
-};
+});
 
 // ─── Shared dropdown pieces ────────────────────────────────────────────────────
 const DropSection = ({ label, theme }: { label: string; theme: "dark" | "light" }) => (
@@ -384,7 +389,7 @@ const CommodityTabLink = ({
 }) => {
   const navigate = useNavigate();
   return (
-    <DropdownMenuItem asChild>
+    <DropdownMenuItem asChild >
       <button
         onClick={() => { onClick?.(); navigate(to); }}
         className="w-full text-left px-3 py-2 rounded-md transition cursor-pointer flex items-center gap-2.5"
@@ -428,7 +433,7 @@ const NavItem = ({
   const navigate = useNavigate();
   return (
     <li onMouseEnter={dd.enter} onMouseLeave={dd.leave}>
-      <DropdownMenu open={dd.open} onOpenChange={dd.setOpen}>
+      <DropdownMenu open={dd.open} onOpenChange={dd.setOpen} modal={false}>
         <DropdownMenuTrigger asChild>
           <button
             className="text-[13.5px] font-medium transition-colors px-2 py-1 rounded-md flex items-center gap-0.5 focus:outline-none whitespace-nowrap"
@@ -612,8 +617,8 @@ const Header = () => {
     : "md:hidden bg-[#041421]/95 border-t border-[#0b314d]/50";
 
   const userBtnCls = isLight
-    ? "p-2.5 rounded-full bg-[#0A3656]/8 hover:bg-[#0A3656]/15 transition-all hover:scale-110"
-    : "p-2.5 rounded-full bg-[#0A3656]/60 hover:bg-[#0A3656] text-[#9bc1da] transition-all hover:scale-110 border border-[#0A3656]";
+    ? "p-2.5 rounded-full bg-[#0A3656]/8 hover:bg-[#0A3656]/15 transition-all"
+    : "p-2.5 rounded-full bg-[#0A3656]/60 hover:bg-[#0A3656] text-[#9bc1da] transition-all border border-[#0A3656]";
 
   const userIconCls = isLight ? "text-[#041421]" : "text-[#9bc1da]";
 
@@ -757,7 +762,7 @@ const Header = () => {
             <button
               onClick={toggleTheme}
               aria-label={isLight ? "Switch to dark mode" : "Switch to light mode"}
-              className={`relative flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#0A3656]/40 ${
+              className={`relative flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#0A3656]/40 ${
                 isLight
                   ? "bg-slate-100 hover:bg-slate-200 text-navy shadow-sm border border-slate-300"
                   : "bg-[#1C3656]/60 hover:bg-[#1C3656] text-[#9bc1da] border border-[#1C3656]"
