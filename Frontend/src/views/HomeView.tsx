@@ -202,7 +202,7 @@ const HomeView = ({ activeTab, onChangeTab }: HomeViewProps) => {
                       </span>
                     </div>
                     <h2 className={`text-4xl md:text-5xl font-bold mb-2 ${headingCls}`}>
-                      {activeTab === "domestic" ? "BharatPulse" : "Live Dashboard"}
+                      {activeTab === "domestic" ? "BharatPulse" : "GlobalPulse"}
                     </h2>
                     <p className={subTextCls}>
                       {activeTab === "domestic"

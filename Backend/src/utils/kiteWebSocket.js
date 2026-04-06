@@ -14,18 +14,22 @@ export const TOKEN_SYMBOL = {
   // ── NSE Broad Indices ───────────────────────────────────────────
   256265:  "NSE:NIFTY 50",
   260105:  "NSE:NIFTY BANK",
+  288009:  "NSE:NIFTY LARGEMID250",
+  258801:  "NSE:NIFTY MIDCAP 100",
+  259329:  "NSE:NIFTY SMLCAP 100",
   // ── NSE Volatility ──────────────────────────────────────────────
-  264969:  "NSE:INDIA VIX",          // ← NEW: India VIX
+  264969:  "NSE:INDIA VIX",
   // ── NSE Sectoral Indices ────────────────────────────────────────
   258529:  "NSE:NIFTY IT",
   258049:  "NSE:NIFTY AUTO",
   259849:  "NSE:NIFTY PHARMA",
-  261889:  "NSE:NIFTY FIN SERVICE",  // ← NEW
-  258537:  "NSE:NIFTY FMCG",         // ← NEW
-  259337:  "NSE:NIFTY METAL",        // ← NEW
-  258409:  "NSE:NIFTY ENERGY",       // ← NEW (Oil & Gas)
-  260361:  "NSE:NIFTY REALTY",       // ← NEW
-  260649:  "NSE:NIFTY PSU BANK",     // ← NEW
+  259337:  "NSE:NIFTY METAL",
+  260361:  "NSE:NIFTY REALTY",
+  300265:  "NSE:NIFTY IND DEFENCE",
+  261889:  "NSE:NIFTY FIN SERVICE",
+  258537:  "NSE:NIFTY FMCG",
+  258409:  "NSE:NIFTY ENERGY",
+  260649:  "NSE:NIFTY PSU BANK",
   // ── BSE Broad Indices ───────────────────────────────────────────
   265:     "BSE:SENSEX",
   // ── NSE Top Stocks ──────────────────────────────────────────────
@@ -165,18 +169,22 @@ const INDEX_TOKENS = [
   256265,  // NIFTY 50
   260105,  // NIFTY BANK
   265,     // SENSEX
+  288009,  // NIFTY LARGEMID250
+  258801,  // NIFTY MIDCAP 100
+  259329,  // NIFTY SMLCAP 100
   // Volatility
-  264969,  // INDIA VIX  ← NEW
+  264969,  // INDIA VIX
   // Sectoral
   258529,  // NIFTY IT
   258049,  // NIFTY AUTO
   259849,  // NIFTY PHARMA
-  261889,  // NIFTY FIN SERVICE  ← NEW
-  258537,  // NIFTY FMCG         ← NEW
-  259337,  // NIFTY METAL        ← NEW
-  258409,  // NIFTY ENERGY       ← NEW
-  260361,  // NIFTY REALTY       ← NEW
-  260649,  // NIFTY PSU BANK     ← NEW
+  259337,  // NIFTY METAL
+  260361,  // NIFTY REALTY
+  300265,  // NIFTY IND DEFENCE
+  261889,  // NIFTY FIN SERVICE
+  258537,  // NIFTY FMCG
+  258409,  // NIFTY ENERGY
+  260649,  // NIFTY PSU BANK
 ];
 
 const STOCK_TOKENS = [738561, 2953217, 341249, 408065, 1270529, 969473, 356865, 424961];
@@ -297,9 +305,11 @@ export class KiteWebSocketManager {
   /** Returns all sector index ticks keyed by "NSE:NIFTY IT" etc. */
   getSectorTicks() {
     const SECTOR_KEYS = [
-      "NSE:NIFTY IT", "NSE:NIFTY AUTO", "NSE:NIFTY PHARMA",
-      "NSE:NIFTY FIN SERVICE", "NSE:NIFTY FMCG", "NSE:NIFTY METAL",
-      "NSE:NIFTY ENERGY", "NSE:NIFTY REALTY", "NSE:NIFTY PSU BANK",
+      "NSE:NIFTY IT",          "NSE:NIFTY AUTO",        "NSE:NIFTY PHARMA",
+      "NSE:NIFTY METAL",       "NSE:NIFTY REALTY",      "NSE:NIFTY IND DEFENCE",
+      "NSE:NIFTY FIN SERVICE", "NSE:NIFTY FMCG",        "NSE:NIFTY ENERGY",
+      "NSE:NIFTY PSU BANK",    "NSE:NIFTY LARGEMID250", "NSE:NIFTY MIDCAP 100",
+      "NSE:NIFTY SMLCAP 100",
     ];
     return Object.fromEntries(
       SECTOR_KEYS.map(k => [k, this.lastTicks[k]]).filter(([, v]) => v)

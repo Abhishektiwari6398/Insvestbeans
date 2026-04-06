@@ -36,6 +36,8 @@ const CACHE_TTL = {
   "1M":  30 * 60 * 1000,   // 30 min
   "3M":  60 * 60 * 1000,   // 1 hr
   "1Y":  60 * 60 * 1000,   // 1 hr
+  "2Y":  60 * 60 * 1000,   // 1 hr
+  "5Y":  60 * 60 * 1000,   // 1 hr
 };
 
 async function fetchYahooHistory(symbol, period) {

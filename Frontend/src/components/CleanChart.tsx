@@ -29,8 +29,9 @@ interface CleanChartProps {
 }
 type Period = '1D' | '1W' | '1M' | '3M' | '1Y';
 const PERIODS: Period[] = ['1D', '1W', '1M', '3M', '1Y'];
+// Delay labels — Yahoo Finance ke same (CBOE/CBOT disclaimer match)
 const DELAY_LABEL: Record<Period, string> = {
-  '1D': '~15 min delayed · 15 min bars',
+  '1D': 'CBOE · ~15 min delayed · 5 min bars',
   '1W': '~15 min delayed · 30 min bars',
   '1M': 'End-of-day · daily bars',
   '3M': 'End-of-day · daily bars',
@@ -211,8 +212,13 @@ const CleanChart = ({
         secondsVisible: false,
         fixLeftEdge:    true,
         fixRightEdge:   true,
-        barSpacing: period === '1Y' ? 18 : 10,  // bigger candles, less gap
-        rightOffset:    3,
+        // Yahoo Finance jaisi tight candles — 1D/1W mein zyada candles hain to spacing kam
+        barSpacing: period === '1D' ? 4
+                  : period === '1W' ? 5
+                  : period === '1M' ? 8
+                  : period === '3M' ? 6
+                  : 16,  // 1Y — monthly, kam bars, zyada spacing
+        rightOffset: 3,
       },
       // ── INTERACTION ──────────────────────────────────────────
       handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true },
@@ -350,7 +356,9 @@ const CleanChart = ({
       {/* ── Footer ───────────────────────────────────────────── */}
       <div className={`flex items-center justify-between px-5 py-2.5 text-[10px] border-t ${footBg}`}>
         <span>
-          {isFallback ? '🔒 Estimated shape · market closed' : `📊 ${DELAY_LABEL[period]}`}
+          {isFallback
+            ? '🔒 Estimated shape · market closed'
+            : `⏱ ${DELAY_LABEL[period]}`}
         </span>
         <span className="flex items-center gap-2">
           {!isFallback && nextRefreshIn && (

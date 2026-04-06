@@ -245,6 +245,11 @@ const FiiDiiCard = ({ cardBg, cardBorder, cardShadow, isLight, fiiNet, diiNet, f
           <span style={{ fontSize: "8px", color: "rgba(248,113,113,0.8)", fontWeight: 600 }}>{fiiPct}% selling</span>
           <span style={{ fontSize: "8px", color: "rgba(74,222,128,0.8)", fontWeight: 600 }}>{diiPct}% buying</span>
         </div>
+        {dateLabel && (
+          <div style={{ fontSize: "8px", marginTop: 6, color: isLight ? "rgba(4,20,33,0.35)" : "rgba(255,255,255,0.30)", fontWeight: 500 }}>
+            {dateLabel}
+          </div>
+        )}
       </div>
       <div className="hidden md:block">
         <div className="flex items-center gap-1.5 mb-1.5">

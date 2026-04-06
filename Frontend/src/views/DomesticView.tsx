@@ -44,13 +44,13 @@ const INDICES = [
   { name:"Bank Nifty",     key:"NSE:NIFTY BANK",         sym:"NIFTY BANK",        ex:"NSE", token:260105  },
   { name:"Nifty Auto",     key:"NSE:NIFTY AUTO",         sym:"NIFTY AUTO",        ex:"NSE", token:258049  },
   { name:"Nifty Pharma",   key:"NSE:NIFTY PHARMA",       sym:"NIFTY PHARMA",      ex:"NSE", token:259849  },
-  { name:"Nifty IT",       key:"NSE:NIFTY IT",           sym:"NIFTY IT",          ex:"NSE", token:258529  },
+  // { name:"Nifty IT",       key:"NSE:NIFTY IT",           sym:"NIFTY IT",          ex:"NSE", token:258529  },
   { name:"Nifty Metal",    key:"NSE:NIFTY METAL",        sym:"NIFTY METAL",       ex:"NSE", token:259337  },
-  { name:"Nifty Realty",   key:"NSE:NIFTY REALTY",       sym:"NIFTY REALTY",      ex:"NSE", token:260361  },
-  { name:"Nifty Energy",   key:"NSE:NIFTY ENERGY",       sym:"NIFTY ENERGY",      ex:"NSE", token:258409  },
-  { name:"Nifty FMCG",     key:"NSE:NIFTY FMCG",         sym:"NIFTY FMCG",        ex:"NSE", token:258537  },
+  // { name:"Nifty Realty",   key:"NSE:NIFTY REALTY",       sym:"NIFTY REALTY",      ex:"NSE", token:260361  },
+  // { name:"Nifty Energy",   key:"NSE:NIFTY ENERGY",       sym:"NIFTY ENERGY",      ex:"NSE", token:258409  },
+  // { name:"Nifty FMCG",     key:"NSE:NIFTY FMCG",         sym:"NIFTY FMCG",        ex:"NSE", token:258537  },
   { name:"Nifty Fin Svc",  key:"NSE:NIFTY FIN SERVICE",  sym:"NIFTY FIN SERVICE", ex:"NSE", token:261889  },
-  { name:"Nifty PSU Bank", key:"NSE:NIFTY PSU BANK",     sym:"NIFTY PSU BANK",    ex:"NSE", token:260649  },
+  // { name:"Nifty PSU Bank", key:"NSE:NIFTY PSU BANK",     sym:"NIFTY PSU BANK",    ex:"NSE", token:260649  },
   { name:"India VIX",      key:"NSE:INDIA VIX",          sym:"INDIA VIX",         ex:"NSE", token:264969  },
 ];
 const STOCKS = [
@@ -155,7 +155,8 @@ const NAV_SECTIONS = [
 const fmt  = (n?: number | null, d = 2) =>
   n != null ? n.toLocaleString("en-IN", { minimumFractionDigits: d, maximumFractionDigits: d }) : "—";
 const fmtV = (v?: number | null) => {
-  if (v == null || v === 0) return "—";
+  if (v == null) return "—";
+  if (v === 0) return "0";
   if (v >= 1e7) return `${(v/1e7).toFixed(2)} Cr`;
   if (v >= 1e5) return `${(v/1e5).toFixed(2)} L`;
   if (v >= 1e3) return `${(v/1e3).toFixed(1)}K`;
@@ -818,21 +819,22 @@ function IndicesSection({ ticks, connected }: any) {
         {INDICES.map((m,i) => {
           const tk = ticks[m.key] as KiteTick|undefined;
           const pp = getPct(tk);
-          const nseUrl = m.ex === "BSE"
-            ? `https://www.bseindia.com/sensex/code/16/`
-            : `https://www.nseindia.com/market-data/live-equity-market?symbol=${encodeURIComponent(m.sym)}`;
+    
           return (
-            <button key={m.key} onClick={() => { setSel(i); window.open(nseUrl, "_blank"); }}
-              className={`flex flex-col items-start px-3 py-2 rounded-lg text-xs font-bold transition-all border shrink-0 ${
-                sel===i
-                  ? "bg-[#5194F6] text-white border-transparent"
-                  : l?"bg-white text-slate-600 border-slate-200 hover:border-gray-300":"bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50 hover:border-[#1e3a5f]"
-              }`}>
-              <span className="font-black text-[11px]">{m.name}</span>
-              <span className={`text-[10px] tabular-nums mt-0.5 ${sel===i?"opacity-80":up(pp)?"text-emerald-500":"text-red-500"}`}>
-                {tk?.last_price!=null ? `${fmt(tk.last_price)}  ${pp!=null?(pp>=0?"+":"")+pp.toFixed(2)+"%":""}` : "···"}
-              </span>
-            </button>
+            <div key={m.key} className="relative shrink-0 group">
+              <button onClick={() => setSel(i)}
+                className={`flex flex-col items-start px-3 py-2 pr-7 rounded-lg text-xs font-bold transition-all border w-full ${
+                  sel===i
+                    ? "bg-[#5194F6] text-white border-transparent"
+                    : l?"bg-white text-slate-600 border-slate-200 hover:border-[#5194F6]/40":"bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50 hover:border-[#5194F6]/40"
+                }`}>
+                <span className="font-black text-[11px]">{m.name}</span>
+                <span className={`text-[10px] tabular-nums mt-0.5 ${sel===i?"opacity-80":up(pp)?"text-emerald-500":"text-red-500"}`}>
+                  {tk?.last_price!=null ? `${fmt(tk.last_price)}  ${pp!=null?(pp>=0?"+":"")+pp.toFixed(2)+"%":""}` : "···"}
+                </span>
+              </button>
+             
+            </div>
           );
         })}
       </div>
@@ -901,12 +903,12 @@ function StockRow({ s, tick, last, maxVol }: { s:typeof STOCKS[0]; tick?:KiteTic
   const f   = useFlash(tick?.last_price);
   const p   = getPct(tick);
   const l   = useIL();
-  const vol = tick?.volume ?? 0;
+  const vol = tick?.volume ?? null;
   const nseUrl = `https://www.nseindia.com/get-quotes/equity?symbol=${encodeURIComponent(s.sym)}`;
   return (
     <div
       onClick={() => window.open(nseUrl, "_blank")}
-      className={`grid grid-cols-3 sm:grid-cols-9 items-center px-3 sm:px-5 cursor-pointer ${!last?(l?"border-b border-slate-100":"border-b border-[#1e3a5f]/30"):""} ${l?"hover:bg-slate-50/60":"hover:bg-white/[0.015]"}`}>
+      className={`grid grid-cols-3 sm:grid-cols-10 items-center px-3 sm:px-5 cursor-pointer ${!last?(l?"border-b border-slate-100":"border-b border-[#1e3a5f]/30"):""} ${l?"hover:bg-slate-50/60":"hover:bg-white/[0.015]"}`}>
       <div className="col-span-1 sm:col-span-2 flex items-center gap-1.5 sm:gap-2 py-1.5 sm:py-3">
         <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center text-[9px] font-black shrink-0 ${tx.pill(l,up(p))}`}>{s.sym.slice(0,2)}</div>
         <div className="min-w-0">
@@ -922,12 +924,25 @@ function StockRow({ s, tick, last, maxVol }: { s:typeof STOCKS[0]; tick?:KiteTic
       <div className="text-right text-xs tabular-nums text-red-500 font-semibold hidden sm:block">{tick?.ohlc?.low!=null?`₹${fmt(tick.ohlc.low)}`:"—"}</div>
       <div className={`text-right text-xs tabular-nums hidden md:block ${tx.t2(l)}`}>{tick?.ohlc?.close!=null?`₹${fmt(tick.ohlc.close)}`:"—"}</div>
       <div className="text-right py-1.5 sm:py-3 hidden sm:block">
-        <p className={`text-xs tabular-nums ${tx.t2(l)}`}>{fmtV(vol)}</p>
-        <div className={`mt-1 h-1 rounded-full overflow-hidden ${l?"bg-slate-100":"bg-[#1e3a5f]"}`}>
-          <div className="h-full bg-blue-400/60 rounded-full transition-all duration-700" style={{ width:maxVol>0?`${(vol/maxVol)*100}%`:"0%" }}/>
-        </div>
+        <p className={`text-xs tabular-nums ${vol != null && vol > 0 ? tx.t2(l) : tx.t3(l)}`}>
+          {vol != null ? fmtV(vol) : "—"}
+        </p>
+        {vol != null && (
+          <div className={`mt-1 h-1 rounded-full overflow-hidden ${l?"bg-slate-100":"bg-[#1e3a5f]"}`}>
+            <div className="h-full bg-blue-400/60 rounded-full transition-all duration-700" style={{ width:maxVol>0&&vol>0?`${(vol/maxVol)*100}%`:"2%" }}/>
+          </div>
+        )}
       </div>
       <div className="text-right py-1.5 sm:py-3"><PctTag p={p} sm/></div>
+      {/* NSE link icon */}
+      <div className="hidden sm:flex justify-end py-1.5 sm:py-3">
+        <a href={nseUrl} target="_blank" rel="noopener noreferrer"
+          onClick={e => e.stopPropagation()}
+          title={`View ${s.sym} on NSE`}
+          className={`inline-flex items-center justify-center w-5 h-5 rounded opacity-30 hover:opacity-100 transition-opacity text-[#5194F6]`}>
+          <ExternalLink className="w-3 h-3"/>
+        </a>
+      </div>
     </div>
   );
 }
@@ -939,7 +954,7 @@ function StocksSection({ ticks }: { ticks:any }) {
     <section className="mb-8">
       <SecHead id="stocks" icon={LineChart} title="Top Stocks" sub="Live OHLCV · Volume Bars" live/>
       <Card className="overflow-hidden">
-        <div className={`grid grid-cols-3 sm:grid-cols-9 px-3 sm:px-5 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
+        <div className={`grid grid-cols-3 sm:grid-cols-10 px-3 sm:px-5 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
           <div className="col-span-1 sm:col-span-2">Symbol</div>
           <div className="text-right">LTP</div>
           <div className="text-right hidden sm:block">Open</div>
@@ -948,6 +963,7 @@ function StocksSection({ ticks }: { ticks:any }) {
           <div className="text-right hidden md:block">Prev Close</div>
           <div className="text-right hidden sm:block">Volume</div>
           <div className="text-right">Chg%</div>
+          <div className="hidden sm:block"></div>
         </div>
         {STOCKS.map((s,i) => <StockRow key={s.key} s={s} tick={ticks[s.key]} last={i===STOCKS.length-1} maxVol={maxVol}/>)}
       </Card>
@@ -1085,13 +1101,11 @@ function OptionsSection({ ticks }: { ticks:any }) {
     [foName, foExpiry]
   );
 
-  // useAPI does j.data ?? j — but our backend returns { status, data:[...], meta:{...} }
-  // so foData = the data array (instruments), foMeta = full response with meta
   const foItems:    any[]   = Array.isArray(foData) ? foData : [];
   const foExpiries: string[] = foMeta?.meta?.expiries ?? [];
   const curExpiry:  string   = foMeta?.meta?.current_expiry ?? "";
 
-  // Options chain from instruments list
+  // Options chain strikes
   const strikes = useMemo(() => {
     const calls = foItems.filter(i => i.instrument_type === "CE");
     const puts  = foItems.filter(i => i.instrument_type === "PE");
@@ -1107,7 +1121,10 @@ function OptionsSection({ ticks }: { ticks:any }) {
     return allStrikes.slice(0, 30);
   }, [foItems, ATM, foName]);
 
-  // ── Live quotes for visible options (via /quote API) ──────────────
+  // Futures list
+  const futures = useMemo(() => foItems.filter(i => i.instrument_type === "FUT"), [foItems]);
+
+  // Live quotes
   const [liveQuotes, setLiveQuotes] = useState<Record<string,any>>({});
   const [quotesLoading, setQuotesLoading] = useState(false);
 
@@ -1120,9 +1137,7 @@ function OptionsSection({ ticks }: { ticks:any }) {
       if (ce?.tradingsymbol) symbols.push("NFO:" + ce.tradingsymbol);
       if (pe?.tradingsymbol) symbols.push("NFO:" + pe.tradingsymbol);
     });
-    foItems.filter((x:any) => x.instrument_type==="FUT").slice(0,5).forEach((f:any) => {
-      symbols.push("NFO:" + f.tradingsymbol);
-    });
+    futures.slice(0,5).forEach((f:any) => { symbols.push("NFO:" + f.tradingsymbol); });
     if (symbols.length === 0) return;
     setQuotesLoading(true);
     const qs = symbols.map(s => "i=" + encodeURIComponent(s)).join("&");
@@ -1134,14 +1149,12 @@ function OptionsSection({ ticks }: { ticks:any }) {
   }, [strikes.join(","), foItems.length]);
 
   const FO_NAMES = ["NIFTY","BANKNIFTY","FINNIFTY","MIDCPNIFTY"];
-
   return (
     <section className="mb-8">
       <SecHead id="options" icon={Layers} title="F&O Instruments" sub={`Options Chain & Futures · Kite Connect \`/instruments/NFO\``}/>
 
-      {/* Controls — single scrollable row, no wrap */}
-      <div className="flex items-center gap-2 mb-3 overflow-x-auto scrollbar-none pb-1 flex-nowrap">
-        {/* F&O name pills */}
+      {/* Controls Row 1 — Index name + Expiry + Refresh */}
+      <div className="flex items-center gap-2 mb-2 overflow-x-auto scrollbar-none pb-1 flex-nowrap">
         {FO_NAMES.map(n => (
           <button key={n} onClick={() => { setFoName(n); setFoExpiry(""); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all shrink-0 ${
@@ -1149,24 +1162,14 @@ function OptionsSection({ ticks }: { ticks:any }) {
                 : l?"bg-white text-slate-600 border-slate-200":"bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
             }`}>{n}</button>
         ))}
-
-        {/* Divider */}
         <div className={`w-px h-5 shrink-0 ${l?"bg-slate-200":"bg-[#1e3a5f]"}`}/>
-
-        {/* Expiry select */}
         {foExpiries.length > 0 && (
-          <select
-            value={foExpiry || curExpiry}
-            onChange={e => setFoExpiry(e.target.value)}
+          <select value={foExpiry || curExpiry} onChange={e => setFoExpiry(e.target.value)}
             className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border shrink-0 ${l?"bg-white text-slate-600 border-slate-200":"bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"}`}>
             {foExpiries.map(e => <option key={e} value={e}>{e}</option>)}
           </select>
         )}
-
-        {/* Divider */}
         <div className={`w-px h-5 shrink-0 ${l?"bg-slate-200":"bg-[#1e3a5f]"}`}/>
-
-        {/* Refresh */}
         <button onClick={foRefresh}
           className={`px-2.5 py-1.5 rounded-lg border flex items-center shrink-0 ${l?"bg-white text-slate-600 border-slate-200":"bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"}`}>
           <RefreshCw className={`w-3.5 h-3.5 ${foLoad?"animate-spin":""}`}/>
@@ -1182,78 +1185,77 @@ function OptionsSection({ ticks }: { ticks:any }) {
       {foLoad ? (
         <Card className="p-4 space-y-2">{[...Array(6)].map((_,i) => <Skel key={i} h="h-9"/>)}</Card>
       ) : (
-        /* ── Options Chain ── */
+        /* ── OPTIONS CHAIN ── */
         <Card className="overflow-x-auto">
           <div className="min-w-[520px]">
-          <div className={`flex items-center justify-between px-5 py-3 border-b ${l?"bg-blue-50 border-blue-100":"bg-blue-900/10 border-blue-800/20"}`}>
-            <div className="flex items-center gap-3">
-              {spot && <span className={`text-xs font-bold ${l?"text-blue-700":"text-blue-300"}`}>Spot ₹{fmt(spot)}</span>}
-              {ATM  && <span className={`text-xs font-bold px-2 py-0.5 rounded ${l?"bg-blue-100 text-blue-700":"bg-[#5194F6]/20 text-[#5194F6]"}`}>ATM {ATM}</span>}
-              <span className={`text-[10px] ${tx.t3(l)}`}>{foName} · {foExpiry || curExpiry}</span>
-            </div>
-            <span className={`text-[10px] hidden sm:block ${tx.t3(l)}`}>{foItems.length} instruments loaded</span>
-          </div>
-          <div className={`grid grid-cols-7 px-5 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
-            <div className="text-emerald-600">Call OI</div>
-            <div className="text-right text-emerald-600">Call Vol</div>
-            <div className="text-right text-emerald-600">Call LTP</div>
-            <div className="text-center">Strike</div>
-            <div className="text-red-500">Put LTP</div>
-            <div className="text-right text-red-500">Put Vol</div>
-            <div className="text-right text-red-500">Put OI</div>
-          </div>
-          {/* loading overlay */}
-          {quotesLoading && (
-            <div className={`px-5 py-2 text-[10px] font-bold flex items-center gap-2 ${l?"text-blue-600":"text-blue-400"}`}>
-              <RefreshCw className="w-3 h-3 animate-spin"/> Fetching live quotes...
-            </div>
-          )}
-          {strikes.length === 0 ? (
-            <div className={`p-8 text-center text-sm ${tx.t2(l)}`}>
-              <Layers className="w-10 h-10 mx-auto mb-3 opacity-20"/>
-              No instruments loaded — select expiry above
-            </div>
-          ) : strikes.map((strike,i) => {
-            const isATM = strike === ATM;
-            const cInst = foItems.find((x:any) => x.instrument_type==="CE" && Number(x.strike)===strike);
-            const pInst = foItems.find((x:any) => x.instrument_type==="PE" && Number(x.strike)===strike);
-            const cKey  = cInst ? "NFO:" + cInst.tradingsymbol : null;
-            const pKey  = pInst ? "NFO:" + pInst.tradingsymbol : null;
-            // Priority: WebSocket tick > live REST quote > instrument CSV (always 0, skip)
-            const cWS   = cKey ? ticks[cKey]       : undefined;
-            const pWS   = pKey ? ticks[pKey]       : undefined;
-            const cQ    = cKey ? liveQuotes[cKey]  : undefined;
-            const pQ    = pKey ? liveQuotes[pKey]  : undefined;
-            const cLTP  = cWS?.last_price  || cQ?.last_price  || 0;
-            const pLTP  = pWS?.last_price  || pQ?.last_price  || 0;
-            const cOI   = cWS?.oi          || cQ?.oi          || 0;
-            const pOI   = pWS?.oi          || pQ?.oi          || 0;
-            const cVol  = cWS?.volume      || cQ?.volume      || 0;
-            const pVol  = pWS?.volume      || pQ?.volume      || 0;
-            return (
-              <div key={strike} className={`grid grid-cols-7 px-5 py-2 text-xs items-center
-                ${isATM ? (l?"bg-amber-50":"bg-amber-900/10") : ""}
-                ${i < strikes.length-1 ? (l?"border-b border-slate-100":"border-b border-[#1e3a5f]/30") : ""}
-                ${l?"hover:bg-slate-50/60":"hover:bg-white/[0.015]"}`}>
-                <span className="text-emerald-700 font-bold">{cOI > 0 ? fmtV(cOI) : <span className={`text-[10px] ${tx.t3(l)}`}>—</span>}</span>
-                <span className={`text-right ${tx.t2(l)}`}>{cVol > 0 ? fmtV(cVol) : "—"}</span>
-                <span className="text-right text-emerald-600 font-bold">
-                  {cLTP > 0 ? "₹" + fmt(cLTP) : <span className={`text-[10px] ${tx.t3(l)}`}>₹0.00</span>}
-                </span>
-                <div className={`text-center font-black text-sm ${isATM?"text-amber-600":tx.t1(l)}`}>
-                  {isATM && <span className="mr-1 text-[9px] bg-amber-400 text-white rounded px-1">ATM</span>}
-                  {strike}
-                </div>
-                <span className="text-red-600 font-bold">
-                  {pLTP > 0 ? "₹" + fmt(pLTP) : <span className={`text-[10px] ${tx.t3(l)}`}>₹0.00</span>}
-                </span>
-                <span className={`text-right ${tx.t2(l)}`}>{pVol > 0 ? fmtV(pVol) : "—"}</span>
-                <span className="text-right text-red-700 font-bold">{pOI > 0 ? fmtV(pOI) : <span className={`text-[10px] ${tx.t3(l)}`}>—</span>}</span>
+            <div className={`flex items-center justify-between px-5 py-3 border-b ${l?"bg-blue-50 border-blue-100":"bg-blue-900/10 border-blue-800/20"}`}>
+              <div className="flex items-center gap-3">
+                {spot && <span className={`text-xs font-bold ${l?"text-blue-700":"text-blue-300"}`}>Spot ₹{fmt(spot)}</span>}
+                {ATM  && <span className={`text-xs font-bold px-2 py-0.5 rounded ${l?"bg-blue-100 text-blue-700":"bg-[#5194F6]/20 text-[#5194F6]"}`}>ATM {ATM}</span>}
+                <span className={`text-[10px] ${tx.t3(l)}`}>{foName} · {foExpiry || curExpiry}</span>
               </div>
-            );
-          })}
+              <span className={`text-[10px] hidden sm:block ${tx.t3(l)}`}>{foItems.length} instruments loaded</span>
+            </div>
+            <div className={`grid grid-cols-7 px-5 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
+              <div className="text-emerald-600">Call OI</div>
+              <div className="text-right text-emerald-600">Call Vol</div>
+              <div className="text-right text-emerald-600">Call LTP</div>
+              <div className="text-center">Strike</div>
+              <div className="text-red-500">Put LTP</div>
+              <div className="text-right text-red-500">Put Vol</div>
+              <div className="text-right text-red-500">Put OI</div>
+            </div>
+            {quotesLoading && (
+              <div className={`px-5 py-2 text-[10px] font-bold flex items-center gap-2 ${l?"text-blue-600":"text-blue-400"}`}>
+                <RefreshCw className="w-3 h-3 animate-spin"/> Fetching live quotes...
+              </div>
+            )}
+            {strikes.length === 0 ? (
+              <div className={`p-8 text-center text-sm ${tx.t2(l)}`}>
+                <Layers className="w-10 h-10 mx-auto mb-3 opacity-20"/>
+                No instruments loaded — select expiry above
+              </div>
+            ) : strikes.map((strike,i) => {
+              const isATM = strike === ATM;
+              const cInst = foItems.find((x:any) => x.instrument_type==="CE" && Number(x.strike)===strike);
+              const pInst = foItems.find((x:any) => x.instrument_type==="PE" && Number(x.strike)===strike);
+              const cKey  = cInst ? "NFO:" + cInst.tradingsymbol : null;
+              const pKey  = pInst ? "NFO:" + pInst.tradingsymbol : null;
+              const cWS   = cKey ? ticks[cKey]      : undefined;
+              const pWS   = pKey ? ticks[pKey]      : undefined;
+              const cQ    = cKey ? liveQuotes[cKey] : undefined;
+              const pQ    = pKey ? liveQuotes[pKey] : undefined;
+              const cLTP  = cWS?.last_price || cQ?.last_price || 0;
+              const pLTP  = pWS?.last_price || pQ?.last_price || 0;
+              const cOI   = cWS?.oi         || cQ?.oi         || 0;
+              const pOI   = pWS?.oi         || pQ?.oi         || 0;
+              const cVol  = cWS?.volume     || cQ?.volume     || 0;
+              const pVol  = pWS?.volume     || pQ?.volume     || 0;
+              return (
+                <div key={strike} className={`grid grid-cols-7 px-5 py-2 text-xs items-center
+                  ${isATM ? (l?"bg-amber-50":"bg-amber-900/10") : ""}
+                  ${i < strikes.length-1 ? (l?"border-b border-slate-100":"border-b border-[#1e3a5f]/30") : ""}
+                  ${l?"hover:bg-slate-50/60":"hover:bg-white/[0.015]"}`}>
+                  <span className="text-emerald-700 font-bold">{cOI > 0 ? fmtV(cOI) : <span className={`text-[10px] ${tx.t3(l)}`}>—</span>}</span>
+                  <span className={`text-right ${tx.t2(l)}`}>{cVol > 0 ? fmtV(cVol) : "—"}</span>
+                  <span className="text-right text-emerald-600 font-bold">
+                    {cLTP > 0 ? "₹" + fmt(cLTP) : <span className={`text-[10px] ${tx.t3(l)}`}>₹0.00</span>}
+                  </span>
+                  <div className={`text-center font-black text-sm ${isATM?"text-amber-600":tx.t1(l)}`}>
+                    {isATM && <span className="mr-1 text-[9px] bg-amber-400 text-white rounded px-1">ATM</span>}
+                    {strike}
+                  </div>
+                  <span className="text-red-600 font-bold">
+                    {pLTP > 0 ? "₹" + fmt(pLTP) : <span className={`text-[10px] ${tx.t3(l)}`}>₹0.00</span>}
+                  </span>
+                  <span className={`text-right ${tx.t2(l)}`}>{pVol > 0 ? fmtV(pVol) : "—"}</span>
+                  <span className="text-right text-red-700 font-bold">{pOI > 0 ? fmtV(pOI) : <span className={`text-[10px] ${tx.t3(l)}`}>—</span>}</span>
+                </div>
+              );
+            })}
           </div>
         </Card>
+
       )}
     </section>
   );
@@ -1268,7 +1270,7 @@ function HistoricalSection() {
     { label:"Nifty 50",    token:256265  },
     { label:"Sensex",      token:265     },
     { label:"Bank Nifty",  token:260105  },
-    { label:"Nifty IT",    token:258529  },
+   
     { label:"Nifty Auto",  token:258049  },
     { label:"Nifty Pharma",token:259849  },
     { label:"Nifty Metal", token:259337  },
@@ -2348,6 +2350,12 @@ function BreadthVixSection({ ticks }: { ticks: any }) {
   const l = useIL();
   const { data: bdData, loading: bdLoad, refresh: bdRefresh } = useAPI<any>("/kite/market-breadth", []);
   const bd = bdData as any;
+
+  // ── Auto-refresh every 30 seconds for live breadth data ──
+  useEffect(() => {
+    const id = setInterval(() => bdRefresh(), 30_000);
+    return () => clearInterval(id);
+  }, [bdRefresh]);
  
   // India VIX from WebSocket (token 264969, subscribed in kiteWebSocket.js)
   const vixTick = ticks["NSE:INDIA VIX"] as KiteTick | undefined;
@@ -2367,80 +2375,82 @@ function BreadthVixSection({ ticks }: { ticks: any }) {
   const advPct    = total ? (advances / total) * 100 : null;
  
   // Market mood
-  const adRatio   = advances && declines ? advances / declines : null;
+  const adRatio = advances && declines ? advances / declines : null;
   const mood =
     !adRatio   ? null
     : adRatio > 1.5 ? { label: "Risk-On",  cls: l ? "text-emerald-700" : "text-emerald-400", bg: l ? "bg-emerald-50 border-emerald-200" : "bg-emerald-500/10 border-emerald-500/20" }
     : adRatio < 0.7 ? { label: "Risk-Off", cls: l ? "text-red-600"     : "text-red-400",     bg: l ? "bg-red-50 border-red-200"         : "bg-red-500/10 border-red-500/20"         }
-    :                 { label: "Neutral",  cls: l ? "text-slate-500"    : "text-slate-400",    bg: l ? "bg-slate-50 border-slate-200"       : "bg-[#1e3a5f]/60 border-[#1e3a5f]/50"       };
- 
+    :                 { label: "Neutral",  cls: l ? "text-slate-600"    : "text-slate-400",   bg: l ? "bg-slate-50 border-slate-200"     : "bg-[#1e3a5f]/60 border-[#1e3a5f]/50"     };
+
+  // ── Box definition array — easy to extend ──
+  const BREADTH_BOXES = [
+    {
+      label:   "Market Mood",
+      href:    "https://www.nseindia.com/market-data/live-market-indices",
+      content: mood
+        ? <p className={`text-xl font-black ${mood.cls}`}>{mood.label}</p>
+        : <p className={`text-sm font-bold ${tx.t3(l)}`}>—</p>,
+      sub:     bd?.ad_ratio ? `A/D ratio ${bd.ad_ratio}` : null,
+      bg:      mood?.bg ?? tx.card(l),
+    },
+    {
+      label:   "Advances",
+      href:    "https://www.nseindia.com/market-data/live-equity-market",
+      content: <p className="text-2xl font-black text-emerald-500 tabular-nums">{advances ?? "—"}</p>,
+      sub:     advPct != null ? `${advPct.toFixed(1)}% of total` : null,
+      bg:      tx.card(l),
+    },
+    {
+      label:   "Declines",
+      href:    "https://www.nseindia.com/market-data/live-equity-market",
+      content: <p className="text-2xl font-black text-red-500 tabular-nums">{declines ?? "—"}</p>,
+      sub:     total && declines != null ? `${((declines/total)*100).toFixed(1)}% of total` : null,
+      bg:      tx.card(l),
+    },
+    {
+      label:   "Unchanged",
+      href:    "https://www.nseindia.com/market-data/live-equity-market",
+      content: <p className={`text-2xl font-black tabular-nums ${tx.t2(l)}`}>{unchanged ?? "—"}</p>,
+      sub:     null,
+      bg:      tx.card(l),
+    },
+    {
+      label:   "52W High",
+      href:    "https://www.nseindia.com/market-data/52-week-high-equity-market",
+      content: <p className="text-2xl font-black text-emerald-600 tabular-nums">{bd?.high_52w ?? "—"}</p>,
+      sub:     "Stocks at new high",
+      bg:      tx.card(l),
+    },
+    {
+      label:   "52W Low",
+      href:    "https://www.nseindia.com/market-data/52-week-low-equity-market",
+      content: <p className="text-2xl font-black text-red-600 tabular-nums">{bd?.low_52w ?? "—"}</p>,
+      sub:     "Stocks at new low",
+      bg:      tx.card(l),
+    },
+  ];
+
   return (
     <section className="mb-8">
       <SecHead id="breadth" icon={BarChart3} title="Market Breadth & Volatility"
         sub="Advance · Decline · India VIX · 52-Week H/L" live/>
- 
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 mb-3">
 
-        {/* Market Mood */}
-        {mood && (
-          <a href="https://www.nseindia.com/market-data/live-market-indices" target="_blank" rel="noreferrer"
-            className={`col-span-2 sm:col-span-2 px-3 py-2.5 rounded-xl border cursor-pointer transition-opacity hover:opacity-80 text-center ${mood.bg}`}>
-            <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${tx.t3(l)}`}>Market Mood</p>
-            <p className={`text-xl font-black ${mood.cls}`}>{mood.label}</p>
-            {bd?.ad_ratio && <p className={`text-[10px] mt-0.5 ${tx.t3(l)}`}>A/D ratio {bd.ad_ratio}</p>}
+      {/* ── Breadth Boxes — single scrollable row, all clickable ── */}
+      <div className="flex gap-4 mb-3 overflow-x-auto pb-1 scrollbar-none">
+        {BREADTH_BOXES.map(box => (
+          <a key={box.label}
+            href={box.href}
+            target="_blank"
+            rel="noreferrer"
+            className={`flex-none flex flex-col items-center justify-center text-center px-9 py-8 rounded-xl border cursor-pointer hover:opacity-80 active:scale-[0.98] transition-all min-w-[110px] ${box.bg}`}>
+            <p className={`text-[9px] font-black uppercase tracking-widest mb-1.5 ${tx.t3(l)}`}>{box.label}</p>
+            {bdLoad ? <Skel h="h-7" w="w-16"/> : box.content}
+            {!bdLoad && box.sub && (
+              <p className={`text-[10px] mt-1 ${tx.t3(l)}`}>{box.sub}</p>
+            )}
+            {bdLoad && <RefreshCw className={`w-3 h-3 mt-1 animate-spin ${tx.t3(l)}`}/>}
           </a>
-        )}
-        {!mood && !bdLoad && (
-          <Card className="col-span-2 sm:col-span-2 px-3 py-2.5 text-center">
-            <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${tx.t3(l)}`}>Market Mood</p>
-            {bdLoad ? <Skel h="h-7" w="w-24"/> : <p className={`text-sm font-bold ${tx.t3(l)}`}>—</p>}
-          </Card>
-        )}
-
-        {/* Advances */}
-        <a href="https://www.nseindia.com/market-data/live-equity-market" target="_blank" rel="noreferrer"
-          className={`rounded-xl border cursor-pointer hover:opacity-80 transition-opacity px-3 py-2.5 text-center ${tx.card(l)}`}>
-          <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${tx.t3(l)}`}>Advances</p>
-          {bdLoad ? <Skel h="h-6" w="w-16"/> : (
-            <p className="text-lg font-black text-emerald-500 tabular-nums">{advances ?? "—"}</p>
-          )}
-        </a>
-
-        {/* Declines */}
-        <a href="https://www.nseindia.com/market-data/live-equity-market" target="_blank" rel="noreferrer"
-          className={`rounded-xl border cursor-pointer hover:opacity-80 transition-opacity px-3 py-2.5 text-center ${tx.card(l)}`}>
-          <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${tx.t3(l)}`}>Declines</p>
-          {bdLoad ? <Skel h="h-6" w="w-16"/> : (
-            <p className="text-lg font-black text-red-500 tabular-nums">{declines ?? "—"}</p>
-          )}
-        </a>
-
-        {/* Unchanged */}
-        <a href="https://www.nseindia.com/market-data/live-equity-market" target="_blank" rel="noreferrer"
-          className={`rounded-xl border cursor-pointer hover:opacity-80 transition-opacity px-3 py-2.5 text-center ${tx.card(l)}`}>
-          <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${tx.t3(l)}`}>Unchanged</p>
-          {bdLoad ? <Skel h="h-6" w="w-16"/> : (
-            <p className={`text-lg font-black tabular-nums ${tx.t2(l)}`}>{unchanged ?? "—"}</p>
-          )}
-        </a>
-
-        {/* 52-Week High */}
-        <a href="https://www.nseindia.com/market-data/52-week-high-equity" target="_blank" rel="noreferrer"
-          className={`rounded-xl border cursor-pointer hover:opacity-80 transition-opacity px-3 py-2.5 text-center ${tx.card(l)}`}>
-          <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${tx.t3(l)}`}>52W High</p>
-          {bdLoad ? <Skel h="h-6" w="w-12"/> : (
-            <p className="text-lg font-black text-emerald-600 tabular-nums">{bd?.high_52w ?? "—"}</p>
-          )}
-        </a>
-
-        {/* 52-Week Low */}
-        <a href="https://www.nseindia.com/market-data/52-week-low-equity" target="_blank" rel="noreferrer"
-          className={`rounded-xl border cursor-pointer hover:opacity-80 transition-opacity px-3 py-2.5 text-center ${tx.card(l)}`}>
-          <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${tx.t3(l)}`}>52W Low</p>
-          {bdLoad ? <Skel h="h-6" w="w-12"/> : (
-            <p className="text-lg font-black text-red-600 tabular-nums">{bd?.low_52w ?? "—"}</p>
-          )}
-        </a>
+        ))}
       </div>
  
       {/* A/D Progress bar */}
@@ -2499,17 +2509,50 @@ function BreadthVixSection({ ticks }: { ticks: any }) {
  
 // ── SECTOR PERFORMANCE DASHBOARD ─────────────────────────────────────────────
 function SectorSection({ ticks }: { ticks: any }) {
-  const l       = useIL();
+  const l = useIL();
+
+  // REST fallback quotes for sectors missing from WebSocket
+  const [restQuotes, setRestQuotes] = useState<Record<string, any>>({});
+  useEffect(() => {
+    // Fetch REST quotes for all sector indices — fills gap when WS ticks missing
+    const keys = SECTOR_INDICES.map(s => "i=" + encodeURIComponent(s.key)).join("&");
+    fetch(`${BASE}/kite/quote?${keys}`)
+      .then(r => r.json())
+      .then(j => { if (j.status === "success" && j.data) setRestQuotes(j.data); })
+      .catch(() => {});
+    // Refresh every 30s
+    const id = setInterval(() => {
+      fetch(`${BASE}/kite/quote?${keys}`)
+        .then(r => r.json())
+        .then(j => { if (j.status === "success" && j.data) setRestQuotes(j.data); })
+        .catch(() => {});
+    }, 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   const sectors = SECTOR_INDICES.map(s => {
-    const tick = ticks[s.key] as KiteTick | undefined;
-    const pct  = getPct(tick);
+    // Priority: live WS tick → REST quote fallback
+    const wsTick = ticks[s.key] as KiteTick | undefined;
+    const rq     = restQuotes[s.key];
+    // Merge: prefer WS last_price, fall back to REST
+    const tick: KiteTick | undefined = wsTick?.last_price != null
+      ? wsTick
+      : rq
+        ? { ...rq, symbol: s.key, instrument_token: s.token, tradable: true, mode: "quote" as const }
+        : undefined;
+    const pct = getPct(tick);
     return { ...s, tick, pct };
   });
- 
-  // Sort by % change (best first)
-  const sorted = [...sectors].sort((a, b) => (b.pct ?? -999) - (a.pct ?? -999));
-  const topSec = sorted[0];
-  const botSec = sorted[sorted.length - 1];
+
+  // Sort by % change (best first), nulls last
+  const sorted = [...sectors].sort((a, b) => {
+    if (a.pct == null && b.pct == null) return 0;
+    if (a.pct == null) return 1;
+    if (b.pct == null) return -1;
+    return b.pct - a.pct;
+  });
+  const topSec = sorted.find(s => s.pct != null);
+  const botSec = [...sorted].reverse().find(s => s.pct != null);
  
   // Max absolute pct for bar scaling
   const maxAbs = Math.max(...sectors.map(s => Math.abs(s.pct ?? 0)), 1);
@@ -2521,12 +2564,12 @@ function SectorSection({ ticks }: { ticks: any }) {
  
       {/* Top / Bottom chips */}
       <div className="flex flex-wrap gap-2 mb-3">
-        {topSec.pct != null && (
+        {topSec && topSec.pct != null && (
           <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold ${l ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"}`}>
             <TrendingUp className="w-3 h-3"/>Top: {topSec.name} {topSec.pct >= 0 ? "+" : ""}{topSec.pct.toFixed(2)}%
           </div>
         )}
-        {botSec.pct != null && (
+        {botSec && botSec.pct != null && (
           <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold ${l ? "bg-red-50 border-red-200 text-red-600" : "bg-red-500/10 border-red-500/20 text-red-400"}`}>
             <TrendingDown className="w-3 h-3"/>Lagging: {botSec.name} {botSec.pct >= 0 ? "+" : ""}{botSec.pct.toFixed(2)}%
           </div>
@@ -2534,22 +2577,24 @@ function SectorSection({ ticks }: { ticks: any }) {
       </div>
  
       <Card className="overflow-hidden">
-        <div className={`grid grid-cols-5 px-4 sm:px-5 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
-          <div className="col-span-2">Sector</div>
-          <div className="text-right">Value</div>
-          <div className="text-right">Change</div>
-          <div className="text-right hidden sm:block">Vol</div>
+        {/* Header — 5 cols: Sector | Value | Change | Vol | Link */}
+        <div className={`grid grid-cols-12 px-4 sm:px-5 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
+          <div className="col-span-4">Sector</div>
+          <div className="col-span-3 text-right">Value</div>
+          <div className="col-span-3 text-right">Change</div>
+          <div className="col-span-1 text-right hidden sm:block">Vol</div>
+          <div className="col-span-1 text-right"></div>
         </div>
         {sorted.map((s, i) => {
           const isPos  = (s.pct ?? 0) >= 0;
           const barPct = s.pct != null ? (Math.abs(s.pct) / maxAbs) * 100 : 0;
           const chg    = getChg(s.tick);
-          const f      = useFlash(s.tick?.last_price);
+          const vol    = s.tick?.volume;
+          // NSE sector-specific stocks page
           const nseUrl = `https://www.nseindia.com/market-data/live-equity-market?symbol=${encodeURIComponent(s.sym)}`;
           return (
             <div key={s.key}
-              onClick={() => window.open(nseUrl, "_blank")}
-              className={`grid grid-cols-5 px-4 sm:px-5 py-3 items-center relative overflow-hidden cursor-pointer
+              className={`grid grid-cols-12 px-4 sm:px-5 py-3 items-center relative overflow-hidden
               ${i < sorted.length - 1 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""}
               ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}>
               {/* Background bar */}
@@ -2557,17 +2602,19 @@ function SectorSection({ ticks }: { ticks: any }) {
                 className={`absolute top-0 bottom-0 ${isPos ? "bg-emerald-500/5" : "bg-red-500/5"}`}
                 style={{ left: 0, width: `${barPct * 0.5}%` }}
               />
-              {/* Sector name */}
-              <div className="col-span-2 relative z-10">
+              {/* Sector name — clickable */}
+              <div className="col-span-4 relative z-10 cursor-pointer" onClick={() => window.open(nseUrl, "_blank")}>
                 <p className={`font-bold text-xs truncate ${tx.t1(l)}`}>{s.name}</p>
                 <p className={`text-[10px] ${tx.t3(l)} hidden sm:block`}>{s.sym}</p>
               </div>
-              {/* Value */}
-              <div className={`text-right text-sm font-black tabular-nums relative z-10 transition-colors duration-500 ${f === "up" ? "text-emerald-500" : f === "dn" ? "text-red-500" : tx.t1(l)}`}>
-                {s.tick?.last_price != null ? fmt(s.tick.last_price, 2) : <Skel h="h-4" w="w-16 ml-auto"/>}
+              {/* Value / LTP */}
+              <div className={`col-span-3 text-right text-sm font-black tabular-nums relative z-10 ${tx.t1(l)}`}>
+                {s.tick?.last_price != null
+                  ? fmt(s.tick.last_price, 2)
+                  : <span className={`text-xs ${tx.t3(l)}`}>—</span>}
               </div>
-              {/* Change % */}
-              <div className="text-right relative z-10">
+              {/* Change % + abs */}
+              <div className="col-span-3 text-right relative z-10">
                 {s.pct != null ? (
                   <>
                     <p className={`text-xs font-bold tabular-nums ${isPos ? "text-emerald-500" : "text-red-500"}`}>
@@ -2581,9 +2628,18 @@ function SectorSection({ ticks }: { ticks: any }) {
                   </>
                 ) : <span className={`text-xs ${tx.t3(l)}`}>—</span>}
               </div>
-              {/* Volume */}
-              <div className={`text-right text-xs tabular-nums hidden sm:block relative z-10 ${tx.t3(l)}`}>
-                {fmtV(s.tick?.volume)}
+              {/* Volume — indices don't have volume via Kite quote mode */}
+              <div className={`col-span-1 text-right text-xs tabular-nums relative z-10 hidden sm:block ${tx.t3(l)}`}>
+                {vol != null && vol > 0 ? fmtV(vol) : <span className="text-[10px]">N/A</span>}
+              </div>
+              {/* External link */}
+              <div className="col-span-1 text-right relative z-10">
+                <a href={nseUrl} target="_blank" rel="noopener noreferrer"
+                  onClick={e => e.stopPropagation()}
+                  title={`View ${s.name} stocks on NSE`}
+                  className={`inline-flex items-center justify-center w-5 h-5 rounded opacity-40 hover:opacity-100 transition-opacity ${l?"text-[#5194F6]":"text-[#5194F6]"}`}>
+                  <ExternalLink className="w-3 h-3"/>
+                </a>
               </div>
             </div>
           );
@@ -2617,6 +2673,7 @@ function GainersLosersSection() {
   const StockLine = ({ r, rank }: { r: any; rank: number }) => {
     // Support multiple possible field names from different API responses
     const symbol   = r.symbol || r.tradingsymbol || r.sym || "—";
+    const name     = r.meta?.company_name || r.companyName || r.name || "";
     const ltp      = r.last_price ?? r.ltp ?? r.lastPrice ?? 0;
     const changePct= r.change_pct ?? r.pChange ?? r.changePercent ?? r.perChange ?? 0;
     const vol      = r.volume ?? r.totalTradedVolume ?? r.totalTradedValue ?? 0;
@@ -2625,18 +2682,19 @@ function GainersLosersSection() {
     return (
       <div
         onClick={() => window.open(nseUrl, "_blank")}
-        className={`flex items-center gap-3 px-4 sm:px-5 py-3 text-xs cursor-pointer
+        className={`grid grid-cols-12 items-center px-4 sm:px-5 py-3 text-xs cursor-pointer
         ${rank < rows.length - 1 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""}
         ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}>
-        <span className={`text-[10px] font-black w-5 text-center shrink-0 ${tx.t3(l)}`}>{rank + 1}</span>
-        <div className="flex-1 min-w-0">
-          <p className={`font-black ${tx.t1(l)}`}>{symbol}</p>
+        <span className={`col-span-1 text-[10px] font-black text-center shrink-0 ${tx.t3(l)}`}>{rank + 1}</span>
+        <div className="col-span-4 min-w-0">
+          <p className={`font-black truncate ${tx.t1(l)}`}>{symbol}</p>
+          {name && <p className={`text-[10px] truncate ${tx.t3(l)}`}>{name}</p>}
         </div>
-        <span className={`tabular-nums font-bold ${tx.t1(l)}`}>{ltp > 0 ? `₹${fmt(ltp)}` : "—"}</span>
-        <span className={`tabular-nums font-bold text-right w-20 shrink-0 ${isPos ? "text-emerald-500" : "text-red-500"}`}>
+        <span className={`col-span-3 tabular-nums font-bold text-right ${tx.t1(l)}`}>{ltp > 0 ? `₹${fmt(ltp)}` : "—"}</span>
+        <span className={`col-span-2 tabular-nums font-bold text-right ${isPos ? "text-emerald-500" : "text-red-500"}`}>
           {isPos ? "+" : ""}{changePct != null ? changePct.toFixed(2) : "—"}%
         </span>
-        <span className={`tabular-nums text-right w-16 shrink-0 hidden sm:block ${tx.t3(l)}`}>{fmtV(vol)}</span>
+        <span className={`col-span-2 tabular-nums text-right hidden sm:block ${tx.t3(l)}`}>{fmtV(vol)}</span>
       </div>
     );
   };
@@ -2674,12 +2732,12 @@ function GainersLosersSection() {
           </div>
         )}
  
-        <div className={`grid grid-cols-5 sm:grid-cols-6 px-4 sm:px-5 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
-          <div>#</div>
-          <div className="col-span-2">Symbol</div>
-          <div className="text-right">LTP</div>
-          <div className="text-right">Change %</div>
-          <div className="text-right hidden sm:block">Volume</div>
+        <div className={`grid grid-cols-12 px-4 sm:px-5 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
+          <div className="col-span-1">#</div>
+          <div className="col-span-4">Symbol</div>
+          <div className="col-span-3 text-right">LTP</div>
+          <div className="col-span-2 text-right">Change %</div>
+          <div className="col-span-2 text-right hidden sm:block">Volume</div>
         </div>
  
         {loading ? (
@@ -2702,13 +2760,14 @@ function GainersLosersSection() {
         <div className="mt-3">
           <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${tx.t3(l)}`}>By Traded Value</p>
           <Card className="overflow-hidden">
-            <div className={`grid grid-cols-5 sm:grid-cols-6 px-4 sm:px-5 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
-              <div>#</div><div className="col-span-2">Symbol</div>
-              <div className="text-right">LTP</div><div className="text-right">Chg%</div>
-              <div className="text-right hidden sm:block">Value</div>
+            <div className={`grid grid-cols-12 px-4 sm:px-5 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
+              <div className="col-span-1">#</div><div className="col-span-4">Symbol</div>
+              <div className="col-span-3 text-right">LTP</div><div className="col-span-2 text-right">Chg%</div>
+              <div className="col-span-2 text-right hidden sm:block">Value</div>
             </div>
             {byVal.slice(0, 10).map((r: any, i: number) => {
               const symbol   = r.symbol || r.tradingsymbol || r.sym || "—";
+              const name     = r.meta?.company_name || r.companyName || r.name || "";
               const ltp      = r.last_price ?? r.ltp ?? 0;
               const changePct= r.change_pct ?? r.pChange ?? r.changePercent ?? 0;
               const isPos    = (changePct ?? 0) >= 0;
@@ -2716,16 +2775,19 @@ function GainersLosersSection() {
               return (
                 <div key={symbol + i}
                   onClick={() => window.open(nseUrl, "_blank")}
-                  className={`grid grid-cols-5 sm:grid-cols-6 px-4 sm:px-5 py-3 items-center text-xs cursor-pointer
+                  className={`grid grid-cols-12 px-4 sm:px-5 py-3 items-center text-xs cursor-pointer
                   ${i < 9 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""}
                   ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}>
-                  <span className={`text-[10px] font-black ${tx.t3(l)}`}>{i + 1}</span>
-                  <div className="col-span-2"><p className={`font-black ${tx.t1(l)}`}>{symbol}</p></div>
-                  <div className={`text-right font-bold tabular-nums ${tx.t1(l)}`}>{ltp > 0 ? `₹${fmt(ltp)}` : "—"}</div>
-                  <div className={`text-right font-bold tabular-nums ${isPos ? "text-emerald-500" : "text-red-500"}`}>
+                  <span className={`col-span-1 text-[10px] font-black ${tx.t3(l)}`}>{i + 1}</span>
+                  <div className="col-span-4 min-w-0">
+                    <p className={`font-black truncate ${tx.t1(l)}`}>{symbol}</p>
+                    {name && <p className={`text-[10px] truncate ${tx.t3(l)}`}>{name}</p>}
+                  </div>
+                  <div className={`col-span-3 text-right font-bold tabular-nums ${tx.t1(l)}`}>{ltp > 0 ? `₹${fmt(ltp)}` : "—"}</div>
+                  <div className={`col-span-2 text-right font-bold tabular-nums ${isPos ? "text-emerald-500" : "text-red-500"}`}>
                     {isPos ? "+" : ""}{changePct?.toFixed(2) ?? "—"}%
                   </div>
-                  <div className={`text-right hidden sm:block tabular-nums ${tx.t3(l)}`}>{fmtV(r.value * 1e5)}</div>
+                  <div className={`col-span-2 text-right hidden sm:block tabular-nums ${tx.t3(l)}`}>{fmtV(r.value * 1e5)}</div>
                 </div>
               );
             })}

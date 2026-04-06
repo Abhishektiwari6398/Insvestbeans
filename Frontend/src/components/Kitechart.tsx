@@ -39,15 +39,29 @@ export interface KiteSymbolConfig {
 }
 
 export const DOMESTIC_SYMBOLS: KiteSymbolConfig[] = [
-  { key: 'NIFTY 50',   label: 'Nifty 50',    exchange: 'NSE' },
-  { key: 'SENSEX',     label: 'Sensex',       exchange: 'BSE' },
-  { key: 'NIFTY BANK', label: 'Bank Nifty',   exchange: 'NSE' },
-  { key: 'NIFTY AUTO', label: 'Nifty Auto',   exchange: 'NSE' },
-  { key: 'RELIANCE',   label: 'Reliance',     exchange: 'NSE' },
-  { key: 'TCS',        label: 'TCS',          exchange: 'NSE' },
-  { key: 'HDFCBANK',   label: 'HDFC Bank',    exchange: 'NSE' },
-  { key: 'INFY',       label: 'Infosys',      exchange: 'NSE' },
-  { key: 'ICICIBANK',  label: 'ICICI Bank',   exchange: 'NSE' },
+  // ── Broad Indices ────────────────────────────────────────────────
+  { key: 'NIFTY 50',          label: 'Nifty 50',       exchange: 'NSE' },
+  { key: 'SENSEX',            label: 'Sensex',          exchange: 'BSE' },
+  { key: 'NIFTY BANK',        label: 'Bank Nifty',      exchange: 'NSE' },
+  { key: 'NIFTY LARGEMID250', label: 'LargeMid 250',    exchange: 'NSE' },
+  // { key: 'NIFTY MIDCAP 100',  label: 'Midcap 100',      exchange: 'NSE' },
+  // { key: 'NIFTY SMLCAP 100',  label: 'Smallcap 100',    exchange: 'NSE' },
+  // ── Sector Indices ───────────────────────────────────────────────
+  { key: 'NIFTY AUTO',        label: 'Nifty Auto',      exchange: 'NSE' },
+  { key: 'NIFTY PHARMA',      label: 'Nifty Pharma',    exchange: 'NSE' },
+  { key: 'NIFTY METAL',       label: 'Nifty Metal',     exchange: 'NSE' },
+  // { key: 'NIFTY REALTY',      label: 'Nifty Realty',    exchange: 'NSE' },
+  // { key: 'NIFTY IND DEFENCE', label: 'Nifty Defence',   exchange: 'NSE' },
+  // { key: 'NIFTY IT',          label: 'Nifty IT',        exchange: 'NSE' },
+  { key: 'NIFTY FIN SERVICE', label: 'Nifty FinServ',   exchange: 'NSE' },
+  // { key: 'NIFTY FMCG',        label: 'Nifty FMCG',      exchange: 'NSE' },
+  // { key: 'NIFTY ENERGY',      label: 'Nifty Energy',    exchange: 'NSE' },
+  // { key: 'NIFTY PSU BANK',    label: 'Nifty PSU Bank',  exchange: 'NSE' },
+  // ── Top Stocks ───────────────────────────────────────────────────
+  { key: 'RELIANCE',          label: 'Reliance',        exchange: 'NSE' },
+  { key: 'TCS',               label: 'TCS',             exchange: 'NSE' },
+  { key: 'HDFCBANK',          label: 'HDFC Bank',       exchange: 'NSE' },
+  { key: 'INFY',              label: 'Infosys',         exchange: 'NSE' },
 ];
 
 const AUTO_REFRESH_MS = 5 * 60 * 1000; // 5 min for intraday
@@ -106,6 +120,8 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef     = useRef<IChartApi | null>(null);
   const seriesRef    = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  // ── Abort controller ref — cancels stale in-flight requests ────
+  const abortRef     = useRef<AbortController | null>(null);
 
   const [period,    setPeriod]    = useState<Period>('1D');
   const [symbol,    setSymbol]    = useState<KiteSymbolConfig>(DOMESTIC_SYMBOLS[0]);
@@ -117,11 +133,20 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
 
   // ── Fetch candles from Kite backend ─────────────────────────────
   const fetchCandles = useCallback(async (sym: KiteSymbolConfig, p: Period) => {
+    // Cancel any previous in-flight request
+    if (abortRef.current) abortRef.current.abort();
+    abortRef.current = new AbortController();
+    const signal = abortRef.current.signal;
+
     setLoading(true);
     setError(null);
+    // Clear stale data immediately so old chart doesn't show on new symbol
+    setCandles([]);
+    setStats({ change: 0, changePct: 0, high: 0, low: 0, price: 0 });
+
     try {
       const url = `${API_BASE}/api/v1/kite/markets/history/${encodeURIComponent(sym.key)}?period=${p}`;
-      const r   = await fetch(url);
+      const r   = await fetch(url, { signal });
       if (!r.ok) throw new Error(`Server ${r.status}`);
       const data = await r.json();
 
@@ -139,9 +164,11 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
       const s = calcStats(raw);
       setStats({ ...s, price: raw[raw.length - 1].y[3] });
     } catch (e: any) {
+      // Ignore abort errors — these are intentional cancellations
+      if (e?.name === 'AbortError') return;
       setError(e.message || 'Failed to load');
     } finally {
-      setLoading(false);
+      if (!signal.aborted) setLoading(false);
     }
   }, []);
 
@@ -187,7 +214,7 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
       },
       handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true },
       handleScale:  { mouseWheel: false, pinch: false },
-      autoSize:     true,
+      autoSize:     false,
       watermark:    { visible: false },
     });
 
@@ -204,9 +231,16 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
       chart.timeScale().fitContent();
     }
 
-    const ro = new ResizeObserver(() => {
-      chart.applyOptions({ width: containerRef.current?.clientWidth ?? 0 });
-    });
+    // Set initial size then watch for container resize
+    const applySize = () => {
+      if (!containerRef.current) return;
+      chart.applyOptions({
+        width:  containerRef.current.clientWidth,
+        height: containerRef.current.clientHeight,
+      });
+    };
+    applySize();
+    const ro = new ResizeObserver(applySize);
     ro.observe(containerRef.current);
 
     return () => { ro.disconnect(); chart.remove(); chartRef.current = null; seriesRef.current = null; };

@@ -120,6 +120,17 @@ router.get("/status", (req, res) => {
   });
 });
 
+// ── INDEX TOKENS DEBUG — visit /api/v1/kite/index-tokens ─────────
+// Dikhata hai ki Kite instruments API se kaun sa token mila har index ke liye
+router.get("/index-tokens", async (req, res) => {
+  try {
+    const map = await getNSEIndexTokens();
+    res.json({ status: "success", count: Object.keys(map).length, tokens: map });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
 // ── MANUAL AUTO-LOGIN TRIGGER ────────────────────────────────────
 // Visit: /api/v1/kite/refresh-token to manually refresh token
 router.get("/refresh-token", async (req, res) => {
@@ -199,29 +210,139 @@ router.get("/historical", async (req, res) => {
   }
 });
 
+// ── NSE INDEX TOKEN CACHE (auto-discovered from Kite instruments API) ────────
+// Kite ka /instruments endpoint publicly accessible hai — tokens kabhi nahi badalte for indices
+let _indexTokenCache = {};
+let _indexTokenTs    = 0;
+const INDEX_TOKEN_TTL = 6 * 60 * 60 * 1000; // 6 hours
+
+// Stocks ke liye hardcoded — ye indices nahi hain, instruments API mein alag segment mein hain
+const STOCK_TOKEN_MAP = {
+  "RELIANCE":  738561,  "TCS":       2953217, "HDFCBANK":  341249,
+  "INFY":      408065,  "ICICIBANK": 1270529, "WIPRO":     969473,
+  "HINDUNILVR":356865,  "ITC":       424961,  "SENSEX":    265,
+};
+
+// ── HARDCODED FALLBACK INDEX TOKENS ──────────────────────────────────────────
+// Agar instruments API fail ho (expired token / network issue), ye fallback use hoga.
+// NSE index tokens NEVER change — ye permanent hain.
+const NSE_INDEX_FALLBACK = {
+  // Canonical names (as used in frontend)
+  "NIFTY 50":          256265,
+  "NIFTY BANK":        260105,
+  "NIFTY LARGEMID250": 288009,
+  "NIFTY MIDCAP 100":  258801,
+  "NIFTY SMLCAP 100":  259329,
+  "INDIA VIX":         264969,
+  "NIFTY IT":          258529,
+  "NIFTY AUTO":        258049,
+  "NIFTY PHARMA":      259849,
+  "NIFTY METAL":       259337,
+  "NIFTY REALTY":      260361,
+  "NIFTY IND DEFENCE": 300265,
+  "NIFTY FIN SERVICE": 261889,
+  "NIFTY FMCG":        258537,
+  "NIFTY ENERGY":      258409,
+  "NIFTY PSU BANK":    260649,
+};
+
+// ── SYMBOL ALIAS MAP ──────────────────────────────────────────────────────────
+// Kite instruments CSV mein kuch index names alag hain (spaces, abbreviations differ).
+// Frontend jo symbol bhejta hai usse Kite ke actual tradingsymbol pe map karo.
+// Key   = frontend se aane wala symbol (uppercase)
+// Value = Kite instruments CSV ka exact tradingsymbol (uppercase)
+const SYMBOL_ALIAS = {
+  "NIFTY MIDCAP 100":  "NIFTY MID100",        // Kite CSV: "NIFTY MID100"
+  "NIFTY SMLCAP 100":  "NIFTY SMLCAP100",     // Kite CSV: "NIFTY SMLCAP100"
+  "NIFTY LARGEMID250": "NIFTY LARGEMID 250",  // Kite CSV: "NIFTY LARGEMID 250"
+  "NIFTY IND DEFENCE": "NIFTY INDIA DEFENCE", // Kite CSV: "NIFTY INDIA DEFENCE"
+  "NIFTY FIN SERVICE": "NIFTY FIN SERVICES",  // Kite CSV: "NIFTY FIN SERVICES"
+};
+
+async function getNSEIndexTokens() {
+  // Always seed fallback first — ensures all tokens exist even if API call fails
+  if (Object.keys(_indexTokenCache).length === 0) {
+    _indexTokenCache = { ...NSE_INDEX_FALLBACK };
+    console.log("📦 NSE index tokens seeded from hardcoded fallback");
+  }
+
+  // Return cache if fresh (TTL not expired)
+  if (Date.now() - _indexTokenTs < INDEX_TOKEN_TTL) {
+    return _indexTokenCache;
+  }
+
+  try {
+    console.log("🔍 Fetching NSE index tokens from Kite instruments API...");
+    const r = await axios.get("https://api.kite.trade/instruments", {
+      headers: headers(),
+      timeout: 15000,
+      responseType: "text",
+    });
+
+    const lines   = r.data.split("\n").filter(l => l.trim());
+    const hdrs    = lines[0].split(",");
+    const tokenIdx   = hdrs.indexOf("instrument_token");
+    const symbolIdx  = hdrs.indexOf("tradingsymbol");
+    const segmentIdx = hdrs.indexOf("segment");
+
+    // Start with fallback so we always have all known tokens
+    const map = { ...NSE_INDEX_FALLBACK };
+    for (const line of lines.slice(1)) {
+      const cols = line.split(",");
+      const seg  = cols[segmentIdx]?.trim();
+      if (seg !== "NSE-INDICES") continue;
+      const sym = cols[symbolIdx]?.trim().toUpperCase();
+      const tok = parseInt(cols[tokenIdx]);
+      if (sym && !isNaN(tok)) map[sym] = tok;
+    }
+
+    _indexTokenCache = map;
+    _indexTokenTs    = Date.now();
+    console.log(`✅ NSE index tokens loaded: ${Object.keys(map).length} indices`);
+    return _indexTokenCache;
+
+  } catch (err) {
+    console.warn("⚠️  Could not fetch index tokens from Kite instruments API:", err.message);
+    console.log("📦 Using hardcoded fallback NSE tokens");
+    // Reset TTL so we don't hammer API on every request
+    _indexTokenTs = Date.now();
+    return _indexTokenCache;
+  }
+}
+
 // ── MARKETS/HISTORY for CleanChart ───────────────────────────────
 router.get("/markets/history/:symbol", async (req, res) => {
   const { symbol } = req.params;
   const period     = req.query.period || "1D";
 
   const PERIOD_MAP = {
-    "1D": { interval: "5minute",  days: 1   },
-    "1W": { interval: "30minute", days: 7   },
+    "1D": { interval: "5minute",  days: 5   }, // 5 days covers weekends & holidays
+    "1W": { interval: "30minute", days: 10  }, // 10 days for a full trading week
     "1M": { interval: "day",      days: 30  },
     "3M": { interval: "day",      days: 90  },
     "1Y": { interval: "day",      days: 365 },
   };
 
-  const TOKEN_MAP = {
-    "NIFTY 50": 256265, "NIFTY50": 256265, "SENSEX": 265, "NIFTY BANK": 260105,
-    "BANKNIFTY": 260105, "NIFTY IT": 258529, "NIFTY AUTO": 258049,
-    "RELIANCE": 738561, "TCS": 2953217, "HDFCBANK": 341249, "INFY": 408065,
-    "ICICIBANK": 1270529, "WIPRO": 969473, "HINDUNILVR": 356865, "ITC": 424961,
-  };
+  const symUpper = symbol.toUpperCase();
+  // Apply alias — some frontend symbol names differ from Kite CSV tradingsymbols
+  const symResolved = SYMBOL_ALIAS[symUpper] || symUpper;
 
-  const cfg   = PERIOD_MAP[period] || PERIOD_MAP["1D"];
-  const token = TOKEN_MAP[symbol.toUpperCase()];
-  if (!token) return res.status(404).json({ status: "error", message: `Unknown symbol: ${symbol}` });
+  // 1. Check stocks first (fast, no API call)
+  let token = STOCK_TOKEN_MAP[symUpper] || STOCK_TOKEN_MAP[symResolved];
+
+  // 2. If not a stock, look up from Kite instruments (auto-discovers ALL NSE indices)
+  // Try both original name and resolved alias
+  if (!token) {
+    const indexMap = await getNSEIndexTokens();
+    token = indexMap[symUpper] || indexMap[symResolved];
+  }
+
+  // 3. If still not found, try hardcoded fallback directly (belt+suspenders)
+  if (!token) token = NSE_INDEX_FALLBACK[symUpper] || NSE_INDEX_FALLBACK[symResolved];
+
+  if (!token) return res.status(404).json({ status: "error", message: `Unknown symbol: ${symbol}. Tried: ${symUpper}, ${symResolved}` });
+
+  const cfg = PERIOD_MAP[period] || PERIOD_MAP["1D"];
 
   const toDate   = new Date().toISOString().split("T")[0];
   const fromDate = (() => { const d = new Date(); d.setDate(d.getDate() - cfg.days); return d.toISOString().split("T")[0]; })();
@@ -231,9 +352,18 @@ router.get("/markets/history/:symbol", async (req, res) => {
       `https://api.kite.trade/instruments/historical/${token}/${cfg.interval}`,
       { headers: headers(), params: { from: fromDate, to: toDate } }
     );
-    const candles = (r.data?.data?.candles || []).map(([time, open, high, low, close, volume]) => ({
+    const rawCandles = (r.data?.data?.candles || []).map(([time, open, high, low, close, volume]) => ({
       x: new Date(time).getTime(), y: [open, high, low, close], volume,
     }));
+
+    // For 1D: filter to only the last trading session (most recent date)
+    let candles = rawCandles;
+    if (period === "1D" && rawCandles.length > 0) {
+      const lastTs   = rawCandles[rawCandles.length - 1].x;
+      const lastDate = new Date(lastTs).toISOString().slice(0, 10);
+      candles = rawCandles.filter(c => new Date(c.x).toISOString().slice(0, 10) === lastDate);
+    }
+
     res.json({ status: "success", candles });
   } catch (err) {
     res.status(err?.response?.status || 500).json(err?.response?.data || { status: "error", message: err.message });
