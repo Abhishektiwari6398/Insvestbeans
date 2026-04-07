@@ -726,7 +726,7 @@ function SearchBar({ rawTicks, onResult }: {
   };
 
   return (
-    <div className="relative flex-1 max-w-[160px] sm:max-w-xs" ref={dropRef as any}>
+    <div className="relative w-full" ref={dropRef as any}>
       <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${
         l ? "bg-slate-50 border-slate-200 focus-within:border-[#5194F6] focus-within:bg-white"
           : "bg-[#0c1a2e] border-[#1e3a5f]/50 focus-within:border-[#5194F6] focus-within:bg-[#0c1a2e]"
@@ -1342,32 +1342,43 @@ function HistoricalSection() {
       )}
 
       <Card className="overflow-hidden">
-        <div className={`grid grid-cols-6 px-5 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
-          <div>Date</div><div className="text-right">Open</div><div className="text-right text-emerald-600">High</div>
-          <div className="text-right text-red-500">Low</div><div className="text-right">Close</div><div className="text-right">Volume</div>
+        <div className="overflow-x-auto scrollbar-none">
+          <div style={{minWidth:"500px"}}>
+            <div className={`grid px-3 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}
+              style={{gridTemplateColumns:"88px 1fr 1fr 1fr 1fr 64px"}}>
+              <div>Date</div>
+              <div className="text-right">Open</div>
+              <div className="text-right text-emerald-600">High</div>
+              <div className="text-right text-red-500">Low</div>
+              <div className="text-right">Close</div>
+              <div className="text-right">Vol</div>
+            </div>
+            {loading
+              ? <div className="p-4 space-y-2">{[...Array(8)].map((_,i) => <Skel key={i} h="h-9"/>)}</div>
+              : rows.length===0
+                ? <div className={`p-8 text-center text-sm ${tx.t2(l)}`}>No data available</div>
+                : rows.map((c,i) => {
+                    const o=c.y?.[0], h=c.y?.[1], lo=c.y?.[2], cl=c.y?.[3];
+                    const isu=(cl??0)>=(o??0);
+                    return (
+                      <div key={i}
+                        className={`grid px-3 py-2.5 items-center ${i<rows.length-1?(l?"border-b border-slate-100":"border-b border-[#1e3a5f]/30"):""} ${l?"hover:bg-slate-50/60":"hover:bg-white/[0.015]"}`}
+                        style={{gridTemplateColumns:"88px 1fr 1fr 1fr 1fr 64px"}}>
+                        <div className={`text-xs font-semibold flex items-center gap-1 ${tx.t2(l)}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isu?"bg-emerald-500":"bg-red-500"}`}/>
+                          {c.x ? new Date(c.x).toLocaleDateString("en-IN",{day:"numeric",month:"short"}) : "—"}
+                        </div>
+                        <div className={`text-right text-xs tabular-nums ${tx.t1(l)}`}>₹{fmt(o)}</div>
+                        <div className="text-right text-xs tabular-nums text-emerald-600 font-semibold">₹{fmt(h)}</div>
+                        <div className="text-right text-xs tabular-nums text-red-500 font-semibold">₹{fmt(lo)}</div>
+                        <div className={`text-right text-xs tabular-nums font-bold ${isu?"text-emerald-600":"text-red-500"}`}>₹{fmt(cl)}</div>
+                        <div className={`text-right text-xs tabular-nums ${tx.t3(l)}`}>{fmtV(c.volume)}</div>
+                      </div>
+                    );
+                  })
+            }
+          </div>
         </div>
-        {loading
-          ? <div className="p-4 space-y-2">{[...Array(8)].map((_,i) => <Skel key={i} h="h-9"/>)}</div>
-          : rows.length===0
-            ? <div className={`p-8 text-center text-sm ${tx.t2(l)}`}>No data available</div>
-            : rows.map((c,i) => {
-                const o=c.y?.[0], h=c.y?.[1], lo=c.y?.[2], cl=c.y?.[3];
-                const isu=(cl??0)>=(o??0);
-                return (
-                  <div key={i} className={`grid grid-cols-6 px-5 py-2.5 items-center ${i<rows.length-1?(l?"border-b border-slate-100":"border-b border-[#1e3a5f]/30"):""} ${l?"hover:bg-slate-50/60":"hover:bg-white/[0.015]"}`}>
-                    <div className={`text-xs font-semibold flex items-center gap-1.5 ${tx.t2(l)}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${isu?"bg-emerald-500":"bg-red-500"}`}/>
-                      {c.x ? new Date(c.x).toLocaleDateString("en-IN",{day:"numeric",month:"short"}) : "—"}
-                    </div>
-                    <div className={`text-right text-xs tabular-nums ${tx.t1(l)}`}>₹{fmt(o)}</div>
-                    <div className="text-right text-xs tabular-nums text-emerald-600 font-semibold">₹{fmt(h)}</div>
-                    <div className="text-right text-xs tabular-nums text-red-500 font-semibold">₹{fmt(lo)}</div>
-                    <div className={`text-right text-xs tabular-nums font-bold ${isu?"text-emerald-600":"text-red-500"}`}>₹{fmt(cl)}</div>
-                    <div className={`text-right text-xs tabular-nums ${tx.t3(l)}`}>{fmtV(c.volume)}</div>
-                  </div>
-                );
-              })
-        }
       </Card>
     </section>
   );
@@ -2577,13 +2588,13 @@ function SectorSection({ ticks }: { ticks: any }) {
       </div>
  
       <Card className="overflow-hidden">
-        {/* Header — 5 cols: Sector | Value | Change | Vol | Link */}
-        <div className={`grid grid-cols-12 px-4 sm:px-5 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
-          <div className="col-span-4">Sector</div>
-          <div className="col-span-3 text-right">Value</div>
-          <div className="col-span-3 text-right">Change</div>
-          <div className="col-span-1 text-right hidden sm:block">Vol</div>
-          <div className="col-span-1 text-right"></div>
+        {/* Header — mobile: 3 cols, desktop: 5 cols */}
+        <div className={`grid grid-cols-3 sm:grid-cols-12 px-4 sm:px-5 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
+          <div className="sm:col-span-4">Sector</div>
+          <div className="text-right sm:col-span-3">Value</div>
+          <div className="text-right sm:col-span-3">Change</div>
+          <div className="hidden sm:block sm:col-span-1 text-right">Vol</div>
+          <div className="hidden sm:block sm:col-span-1 text-right"></div>
         </div>
         {sorted.map((s, i) => {
           const isPos  = (s.pct ?? 0) >= 0;
@@ -2594,7 +2605,7 @@ function SectorSection({ ticks }: { ticks: any }) {
           const nseUrl = `https://www.nseindia.com/market-data/live-equity-market?symbol=${encodeURIComponent(s.sym)}`;
           return (
             <div key={s.key}
-              className={`grid grid-cols-12 px-4 sm:px-5 py-3 items-center relative overflow-hidden
+              className={`grid grid-cols-3 sm:grid-cols-12 px-4 sm:px-5 py-2.5 items-center relative overflow-hidden
               ${i < sorted.length - 1 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""}
               ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}>
               {/* Background bar */}
@@ -2603,25 +2614,25 @@ function SectorSection({ ticks }: { ticks: any }) {
                 style={{ left: 0, width: `${barPct * 0.5}%` }}
               />
               {/* Sector name — clickable */}
-              <div className="col-span-4 relative z-10 cursor-pointer" onClick={() => window.open(nseUrl, "_blank")}>
+              <div className="sm:col-span-4 relative z-10 cursor-pointer" onClick={() => window.open(nseUrl, "_blank")}>
                 <p className={`font-bold text-xs truncate ${tx.t1(l)}`}>{s.name}</p>
                 <p className={`text-[10px] ${tx.t3(l)} hidden sm:block`}>{s.sym}</p>
               </div>
               {/* Value / LTP */}
-              <div className={`col-span-3 text-right text-sm font-black tabular-nums relative z-10 ${tx.t1(l)}`}>
+              <div className={`sm:col-span-3 text-right text-xs sm:text-sm font-black tabular-nums relative z-10 ${tx.t1(l)}`}>
                 {s.tick?.last_price != null
                   ? fmt(s.tick.last_price, 2)
                   : <span className={`text-xs ${tx.t3(l)}`}>—</span>}
               </div>
               {/* Change % + abs */}
-              <div className="col-span-3 text-right relative z-10">
+              <div className="sm:col-span-3 text-right relative z-10">
                 {s.pct != null ? (
                   <>
                     <p className={`text-xs font-bold tabular-nums ${isPos ? "text-emerald-500" : "text-red-500"}`}>
                       {isPos ? "+" : ""}{s.pct.toFixed(2)}%
                     </p>
                     {chg != null && (
-                      <p className={`text-[10px] tabular-nums ${isPos ? "text-emerald-400" : "text-red-400"}`}>
+                      <p className={`text-[10px] tabular-nums hidden sm:block ${isPos ? "text-emerald-400" : "text-red-400"}`}>
                         {chg >= 0 ? "+" : ""}{fmt(chg)}
                       </p>
                     )}
@@ -2629,11 +2640,11 @@ function SectorSection({ ticks }: { ticks: any }) {
                 ) : <span className={`text-xs ${tx.t3(l)}`}>—</span>}
               </div>
               {/* Volume — indices don't have volume via Kite quote mode */}
-              <div className={`col-span-1 text-right text-xs tabular-nums relative z-10 hidden sm:block ${tx.t3(l)}`}>
+              <div className={`sm:col-span-1 text-right text-xs tabular-nums relative z-10 hidden sm:block ${tx.t3(l)}`}>
                 {vol != null && vol > 0 ? fmtV(vol) : <span className="text-[10px]">N/A</span>}
               </div>
               {/* External link */}
-              <div className="col-span-1 text-right relative z-10">
+              <div className="hidden sm:block sm:col-span-1 text-right relative z-10">
                 <a href={nseUrl} target="_blank" rel="noopener noreferrer"
                   onClick={e => e.stopPropagation()}
                   title={`View ${s.name} stocks on NSE`}
@@ -2671,7 +2682,6 @@ function GainersLosersSection() {
   const loading = tab === "active" ? maLoad : glLoad;
  
   const StockLine = ({ r, rank }: { r: any; rank: number }) => {
-    // Support multiple possible field names from different API responses
     const symbol   = r.symbol || r.tradingsymbol || r.sym || "—";
     const name     = r.meta?.company_name || r.companyName || r.name || "";
     const ltp      = r.last_price ?? r.ltp ?? r.lastPrice ?? 0;
@@ -2682,19 +2692,27 @@ function GainersLosersSection() {
     return (
       <div
         onClick={() => window.open(nseUrl, "_blank")}
-        className={`grid grid-cols-12 items-center px-4 sm:px-5 py-3 text-xs cursor-pointer
+        className={`grid items-center px-3 py-2.5 text-xs cursor-pointer
         ${rank < rows.length - 1 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""}
-        ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}>
-        <span className={`col-span-1 text-[10px] font-black text-center shrink-0 ${tx.t3(l)}`}>{rank + 1}</span>
-        <div className="col-span-4 min-w-0">
-          <p className={`font-black truncate ${tx.t1(l)}`}>{symbol}</p>
+        ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}
+        style={{gridTemplateColumns:"28px 1fr 90px 72px"}}>
+        {/* # */}
+        <span className={`text-[10px] font-black text-center ${tx.t3(l)}`}>{rank + 1}</span>
+        {/* Symbol */}
+        <div className="min-w-0 pr-2">
+          <p className={`font-black text-[11px] truncate ${tx.t1(l)}`}>{symbol}</p>
           {name && <p className={`text-[10px] truncate ${tx.t3(l)}`}>{name}</p>}
         </div>
-        <span className={`col-span-3 tabular-nums font-bold text-right ${tx.t1(l)}`}>{ltp > 0 ? `₹${fmt(ltp)}` : "—"}</span>
-        <span className={`col-span-2 tabular-nums font-bold text-right ${isPos ? "text-emerald-500" : "text-red-500"}`}>
-          {isPos ? "+" : ""}{changePct != null ? changePct.toFixed(2) : "—"}%
-        </span>
-        <span className={`col-span-2 tabular-nums text-right hidden sm:block ${tx.t3(l)}`}>{fmtV(vol)}</span>
+        {/* LTP */}
+        <div className="text-right">
+          <p className={`font-bold tabular-nums ${tx.t1(l)}`}>{ltp > 0 ? `₹${fmt(ltp)}` : "—"}</p>
+        </div>
+        {/* Change% */}
+        <div className="text-right">
+          <p className={`text-[11px] font-bold tabular-nums ${isPos ? "text-emerald-500" : "text-red-500"}`}>
+            {isPos ? "+" : ""}{changePct != null ? changePct.toFixed(2) : "—"}%
+          </p>
+        </div>
       </div>
     );
   };
@@ -2704,22 +2722,22 @@ function GainersLosersSection() {
       <SecHead id="gainers" icon={TrendingUp} title="Gainers · Losers · Most Active"
         sub="NSE Cash Market · Real-time from NSE API"/>
  
-      {/* Tab controls */}
-      <div className="flex items-center gap-2 mb-3 flex-wrap">
+      {/* Tab controls — single row, refresh always inline */}
+      <div className="flex items-center gap-1.5 mb-3 overflow-x-auto scrollbar-none pb-0.5">
         {(["gainers", "losers", "active"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all capitalize ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all shrink-0 ${
               tab === t
                 ? t === "gainers" ? "bg-emerald-600 text-white border-transparent"
                   : t === "losers" ? "bg-red-600 text-white border-transparent"
                   : "bg-[#5194F6] text-white border-transparent"
                 : l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
             }`}>
-            {t === "gainers" ? "▲ Top Gainers" : t === "losers" ? "▼ Top Losers" : "⚡ Most Active"}
+            {t === "gainers" ? "▲ Gainers" : t === "losers" ? "▼ Losers" : "⚡ Active"}
           </button>
         ))}
         <button onClick={tab === "active" ? maRefresh : glRefresh}
-          className={`px-2.5 py-1.5 rounded-lg border flex items-center ml-auto ${l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"}`}>
+          className={`px-2 py-1.5 rounded-lg border flex items-center shrink-0 ml-auto ${l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"}`}>
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`}/>
         </button>
       </div>
@@ -2732,12 +2750,12 @@ function GainersLosersSection() {
           </div>
         )}
  
-        <div className={`grid grid-cols-12 px-4 sm:px-5 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
-          <div className="col-span-1">#</div>
-          <div className="col-span-4">Symbol</div>
-          <div className="col-span-3 text-right">LTP</div>
-          <div className="col-span-2 text-right">Change %</div>
-          <div className="col-span-2 text-right hidden sm:block">Volume</div>
+        <div className={`grid items-center px-3 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}
+          style={{gridTemplateColumns:"28px 1fr 90px 72px"}}>
+          <span className="text-center">#</span>
+          <span>Symbol</span>
+          <span className="text-right">LTP</span>
+          <span className="text-right">Chg%</span>
         </div>
  
         {loading ? (
@@ -2760,10 +2778,12 @@ function GainersLosersSection() {
         <div className="mt-3">
           <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${tx.t3(l)}`}>By Traded Value</p>
           <Card className="overflow-hidden">
-            <div className={`grid grid-cols-12 px-4 sm:px-5 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
-              <div className="col-span-1">#</div><div className="col-span-4">Symbol</div>
-              <div className="col-span-3 text-right">LTP</div><div className="col-span-2 text-right">Chg%</div>
-              <div className="col-span-2 text-right hidden sm:block">Value</div>
+            <div className={`grid items-center px-3 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}
+              style={{gridTemplateColumns:"28px 1fr 90px 72px"}}>
+              <span className="text-center">#</span>
+              <span>Symbol</span>
+              <span className="text-right">LTP</span>
+              <span className="text-right">Chg%</span>
             </div>
             {byVal.slice(0, 10).map((r: any, i: number) => {
               const symbol   = r.symbol || r.tradingsymbol || r.sym || "—";
@@ -2775,19 +2795,23 @@ function GainersLosersSection() {
               return (
                 <div key={symbol + i}
                   onClick={() => window.open(nseUrl, "_blank")}
-                  className={`grid grid-cols-12 px-4 sm:px-5 py-3 items-center text-xs cursor-pointer
+                  className={`grid items-center px-3 py-2.5 text-xs cursor-pointer
                   ${i < 9 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""}
-                  ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}>
-                  <span className={`col-span-1 text-[10px] font-black ${tx.t3(l)}`}>{i + 1}</span>
-                  <div className="col-span-4 min-w-0">
-                    <p className={`font-black truncate ${tx.t1(l)}`}>{symbol}</p>
+                  ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}
+                  style={{gridTemplateColumns:"28px 1fr 90px 72px"}}>
+                  <span className={`text-[10px] font-black text-center ${tx.t3(l)}`}>{i + 1}</span>
+                  <div className="min-w-0 pr-2">
+                    <p className={`font-black text-[11px] truncate ${tx.t1(l)}`}>{symbol}</p>
                     {name && <p className={`text-[10px] truncate ${tx.t3(l)}`}>{name}</p>}
                   </div>
-                  <div className={`col-span-3 text-right font-bold tabular-nums ${tx.t1(l)}`}>{ltp > 0 ? `₹${fmt(ltp)}` : "—"}</div>
-                  <div className={`col-span-2 text-right font-bold tabular-nums ${isPos ? "text-emerald-500" : "text-red-500"}`}>
-                    {isPos ? "+" : ""}{changePct?.toFixed(2) ?? "—"}%
+                  <div className="text-right">
+                    <p className={`font-bold tabular-nums ${tx.t1(l)}`}>{ltp > 0 ? `₹${fmt(ltp)}` : "—"}</p>
                   </div>
-                  <div className={`col-span-2 text-right hidden sm:block tabular-nums ${tx.t3(l)}`}>{fmtV(r.value * 1e5)}</div>
+                  <div className="text-right">
+                    <p className={`text-[11px] font-bold tabular-nums ${isPos ? "text-emerald-500" : "text-red-500"}`}>
+                      {isPos ? "+" : ""}{changePct?.toFixed(2) ?? "—"}%
+                    </p>
+                  </div>
                 </div>
               );
             })}
@@ -3098,15 +3122,17 @@ function MarketStatusWidget({ connected }: { connected: boolean }) {
     :             l ? "text-slate-500 bg-slate-50 border-slate-100"           : "text-slate-400 bg-[#0c1a2e]/40 border-[#1e3a5f]/50";
  
   return (
-    <div className={`flex flex-wrap items-center gap-3 px-4 py-3 rounded-xl border mb-5 text-xs ${l ? "bg-slate-50 border-slate-100" : "bg-[#0c1a2e] border-[#1e3a5f]/50"}`}>
-      <span className={`flex items-center gap-1.5 font-bold px-2.5 py-1 rounded border ${statusCls}`}>
+    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border mb-3 text-xs ${l ? "bg-slate-50 border-slate-100" : "bg-[#0c1a2e] border-[#1e3a5f]/50"}`}>
+      {/* Status dot + label */}
+      <span className={`flex items-center gap-1 font-bold px-1.5 py-0.5 rounded border text-[10px] shrink-0 ${statusCls}`}>
         <span className={`w-1.5 h-1.5 rounded-full ${isOpen ? "bg-emerald-500 animate-pulse" : isPreOpen ? "bg-amber-400 animate-pulse" : "bg-gray-400"}`}/>
         {status}
       </span>
-      <span className={`${tx.t2(l)}`}>NSE/BSE · {openAt} – {closeAt} IST · Mon–Fri</span>
-      <span className={`${tx.t3(l)} hidden sm:inline`}>Settlement: T+1 · Live ticks: {connected ? "✓ Connected" : "○ Disconnected"}</span>
-      <span className={`ml-auto tabular-nums font-mono ${tx.t3(l)}`}>
-        {now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })} IST
+      {/* Hours — always visible, truncated */}
+      <span className={`text-[10px] truncate ${tx.t2(l)}`}>NSE/BSE · {openAt}–{closeAt}</span>
+      {/* Clock — pushed to right */}
+      <span className={`ml-auto tabular-nums font-mono text-[10px] shrink-0 ${tx.t3(l)}`}>
+        {now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })} IST
       </span>
     </div>
   );
@@ -3160,53 +3186,53 @@ export default function DomesticView() {
 
         {/* Top bar */}
         <div className={`sticky top-0 z-20 ${tx.topbar(l)}`}>
-          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-2 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <button className="lg:hidden p-1.5 rounded-lg border transition-colors"
-                style={{ borderColor:l?"#e2e8f0":"#1e3a5f", background:l?"#f9fafb":"rgba(12,26,46,0.6)" }}
-                onClick={() => setSidebar(v=>!v)}>
-                {sidebar ? <X className={`w-4 h-4 ${tx.t1(l)}`}/> : <Menu className={`w-4 h-4 ${tx.t1(l)}`}/>}
-              </button>
-              <span className={`text-[9px] font-black px-2 py-1 rounded-md border ${
-                mktOpen&&connected
-                  ? l?"bg-emerald-50 border-emerald-200 text-emerald-700":"bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                  : l?"bg-slate-50 border-slate-100 text-slate-400":"bg-[#1e3a5f]/40 border-[#1e3a5f]/50 text-slate-500"
-              }`}>{mktOpen?(connected?"● LIVE":"○ CONNECTING…"):"MARKET CLOSED"}</span>
-              <h1 className={`text-sm font-black hidden sm:block ${tx.t1(l)}`}>
-                Indian Markets
-              </h1>
+          <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-2 flex items-center gap-2">
+            {/* Menu button */}
+            <button className="lg:hidden p-1.5 rounded-lg border transition-colors shrink-0"
+              style={{ borderColor:l?"#e2e8f0":"#1e3a5f", background:l?"#f9fafb":"rgba(12,26,46,0.6)" }}
+              onClick={() => setSidebar(v=>!v)}>
+              {sidebar ? <X className={`w-4 h-4 ${tx.t1(l)}`}/> : <Menu className={`w-4 h-4 ${tx.t1(l)}`}/>}
+            </button>
+            {/* Market status badge */}
+            <span className={`text-[9px] font-black px-2 py-1 rounded-md border shrink-0 ${
+              mktOpen&&connected
+                ? l?"bg-emerald-50 border-emerald-200 text-emerald-700":"bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                : l?"bg-slate-50 border-slate-100 text-slate-400":"bg-[#1e3a5f]/40 border-[#1e3a5f]/50 text-slate-500"
+            }`}>{mktOpen?(connected?"● LIVE":"○ CONNECTING…"):"MARKET CLOSED"}</span>
+            {/* Search bar — takes remaining space */}
+            <div className="flex-1 min-w-0">
+              <SearchBar rawTicks={rawTicks} onResult={setSearchResult}/>
             </div>
-            {/* ── Search bar ── */}
-            <SearchBar rawTicks={rawTicks} onResult={setSearchResult}/>
-            <div className="flex items-center gap-2">
+            {/* Right side — clock on sm+, connection on md+ */}
+            <div className="flex items-center gap-1.5 shrink-0">
               {connected && instrCount>0 && (
-                <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md border ${l?"bg-emerald-50 border-emerald-200 text-emerald-700":"bg-emerald-500/10 border-emerald-500/20 text-emerald-400"}`}>
+                <div className={`hidden md:flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md border ${l?"bg-emerald-50 border-emerald-200 text-emerald-700":"bg-emerald-500/10 border-emerald-500/20 text-emerald-400"}`}>
                   <Activity className="w-3 h-3"/>
-                  <span className="hidden sm:inline">{instrCount} instruments</span>
+                  <span>{instrCount}</span>
                 </div>
               )}
               {!connected && (
-                <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md border ${l?"bg-red-50 border-red-200 text-red-600":"bg-red-500/10 border-red-500/20 text-red-400"}`}>
-                  <WifiOff className="w-3 h-3"/><span className="hidden sm:inline">Disconnected</span>
+                <div className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-1 rounded-md border ${l?"bg-red-50 border-red-200 text-red-600":"bg-red-500/10 border-red-500/20 text-red-400"}`}>
+                  <WifiOff className="w-3 h-3"/>
                 </div>
               )}
-              <div className={`flex items-center gap-1 text-[10px] ${tx.t3(l)}`}>
+              <div className={`hidden sm:flex items-center gap-1 text-[10px] ${tx.t3(l)}`}>
                 <Clock className="w-3 h-3"/>
-                <span className="tabular-nums hidden sm:inline">{now.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:true})} IST</span>
+                <span className="tabular-nums">{now.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true})}</span>
               </div>
-              {wsError && <span className="text-[10px] text-red-500 hidden md:inline">⚠ {wsError}</span>}
             </div>
           </div>
         </div>
 
         <div className="max-w-[1600px] mx-auto flex">
-          {/* Sidebar — hidden on mobile by default */}
-          <aside className={`fixed lg:sticky top-[49px] h-[calc(100vh-49px)] w-52 shrink-0 z-10 transition-transform duration-200 overflow-y-auto ${tx.sidebar(l)} ${sidebar?"translate-x-0":"-translate-x-full lg:translate-x-0"}`}>
+          {/* Backdrop */}
+          {sidebar && <div className="fixed inset-0 bg-black/60 z-40 lg:hidden" onClick={() => setSidebar(false)}/>}
+          {/* Sidebar: top-[83px] = TickerBar(34) + TopBar(49). Only covers content area, not full viewport */}
+          <aside className={`fixed lg:sticky top-[83px] h-[calc(100vh-83px)] w-56 shrink-0 z-50 lg:z-auto transition-transform duration-200 overflow-y-auto ${tx.sidebar(l)} ${sidebar?"translate-x-0":"-translate-x-full lg:translate-x-0"}`}>
             <SideNav active={activeNav} onSelect={id => { setActiveNav(id); setSidebar(false); }} ticks={ticks} connected={connected}/>
           </aside>
-          {sidebar && <div className="fixed inset-0 bg-black/50 z-[9] lg:hidden" onClick={() => setSidebar(false)}/>}
 
-          <main className="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 pt-5 pb-12 max-w-5xl">
+          <main className="flex-1 min-w-0 px-3 sm:px-6 lg:px-8 pt-4 pb-12 max-w-5xl">
             {searchResult && (
               <SearchResultCard item={searchResult} onClose={() => setSearchResult(null)} rawTicks={rawTicks}/>
             )}
@@ -3214,12 +3240,14 @@ export default function DomesticView() {
             <MarketStatusWidget connected={connected}/>
 
             {/* Overview: only show prompt when no stock searched */}
-            <div id="overview" className="scroll-mt-24 mb-6">
+            <div id="overview" className="scroll-mt-24 mb-5">
               {!searchResult && (
-                <div className={`flex flex-col items-center justify-center py-10 rounded-2xl border ${tx.card(l)}`}>
-                  <Search className={`w-8 h-8 mb-3 opacity-30 ${tx.t3(l)}`}/>
-                  <p className={`text-sm font-bold mb-1 ${tx.t1(l)}`}>Search a stock or index to view its chart</p>
-                  <p className={`text-xs ${tx.t3(l)}`}>Type in the search bar above — e.g. RELIANCE, TCS, NIFTY 50</p>
+                <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${tx.card(l)}`}>
+                  <Search className={`w-5 h-5 opacity-25 shrink-0 ${tx.t3(l)}`}/>
+                  <div className="min-w-0">
+                    <p className={`text-sm font-bold truncate ${tx.t1(l)}`}>Search a stock or index to view its chart</p>
+                    <p className={`text-[11px] ${tx.t3(l)}`}>e.g. RELIANCE, TCS, NIFTY 50</p>
+                  </div>
                 </div>
               )}
             </div>

@@ -1064,7 +1064,7 @@ const IPOSection = () => {
                     onMouseLeave={e => (e.currentTarget.style.borderColor = isLight ? 'rgba(226,232,240,0.9)' : 'rgba(255,255,255,0.08)')}>
                     {icon}
                     <div className={`text-2xl font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>{counts[s]}</div>
-                    <div className={`text-sm transition-colors ${isLight ? 'text-slate-400 group-hover:text-slate-700' : 'text-slate-400 group-hover:text-white'}`}>{STATUS_CFG[s].label}</div>
+                    <div className={`text-xs transition-colors ${isLight ? 'text-slate-400 group-hover:text-slate-700' : 'text-slate-400 group-hover:text-white'}`}>{STATUS_CFG[s].label}</div>
                   </button>
                 ))}
               </div>

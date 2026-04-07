@@ -350,7 +350,10 @@ const UsdInrCard = ({ cardBg, cardBorder, cardShadow, isLight, liveValue, liveCh
     <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }} className="rounded-2xl relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer md:p-3">
       <div className="md:hidden" style={{ padding: "10px 10px 10px 14px", position: "relative" }}>
         <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: isLight ? "#0A3656" : "#1F5F89", borderRadius: "8px 0 0 8px" }} />
-        <div style={{ fontSize: "8px", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: isLight ? "#0A3656" : "#74A8C9", marginBottom: 5 }}>USD / INR</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
+          <div style={{ fontSize: "8px", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: isLight ? "#0A3656" : "#74A8C9" }}>USD / INR</div>
+          <span style={{ fontSize: "7px", fontWeight: 600, color: "#6366f1", background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: 3, padding: "1px 4px", whiteSpace: "nowrap" }}>via Yahoo Finance</span>
+        </div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 3, marginBottom: 4 }}>
           <span style={{ fontSize: "11px", fontWeight: 700, color: isLight ? "rgba(13,37,64,0.5)" : "rgba(255,255,255,0.4)" }}>₹</span>
           <span style={{ fontSize: "22px", fontWeight: 900, color: isLight ? "#041421" : "#fff", letterSpacing: "-0.03em", lineHeight: 1 }}>{rate.toFixed ? rate.toFixed(2) : rate}</span>
@@ -372,9 +375,12 @@ const UsdInrCard = ({ cardBg, cardBorder, cardShadow, isLight, liveValue, liveCh
         </div>
       </div>
       <div className="hidden md:block">
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <span style={{ width: 7, height: 7, borderRadius: "50%", background: isLight ? "#0A3656" : "#74A8C9", display: "inline-block", boxShadow: isLight ? "0 0 6px rgba(10,54,86,0.45)" : "0 0 6px rgba(116,168,201,0.45)" }} />
-          <span style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: isLight ? "#1f455f" : "#ffffff" }}>USD / INR</span>
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: isLight ? "#0A3656" : "#74A8C9", display: "inline-block", boxShadow: isLight ? "0 0 6px rgba(10,54,86,0.45)" : "0 0 6px rgba(116,168,201,0.45)" }} />
+            <span style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: isLight ? "#1f455f" : "#ffffff" }}>USD / INR</span>
+          </div>
+          <span style={{ fontSize: "8px", fontWeight: 600, color: "#6366f1", background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap" }}>via Yahoo Finance</span>
         </div>
         <div className="flex items-end justify-between mb-2">
           <div>
