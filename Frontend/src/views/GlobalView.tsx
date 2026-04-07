@@ -5,15 +5,31 @@ import Layout from "@/components/Layout";
 import CleanChart from "@/components/CleanChart";
 import TradingViewModal from "@/components/Tradingviewmodal";
 import { useGlobalMarkets } from "@/hooks/useGlobalMarkets";
-import { IndexQuote, BondYield, RegionSummary } from "@/services/globalMarkets/types";
+import { IndexQuote, BondYield, RegionSummary, CandlePoint } from "@/services/globalMarkets/types";
 import {
   TrendingUp, TrendingDown, Activity, Globe, Clock, MapPin,
   RefreshCw, AlertCircle, BarChart3, LineChart, Landmark,
-  Menu, X, ChevronRight,
+  Menu, X, ChevronRight, AlertTriangle,
 } from "lucide-react";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { useTheme } from "@/controllers/Themecontext";
+
+// ── Backend base URL (same as globalMarketsService) ──────────────
+const API_BASE = (import.meta.env.VITE_API_URL as string) || "http://localhost:8000";
+
+// ── Period tab definitions — mirrors Yahoo Finance exactly ────────
+const PERIODS = [
+  { key: "1D",  label: "1D"  },
+  { key: "5D",  label: "5D"  },
+  { key: "1M",  label: "1M"  },
+  { key: "6M",  label: "6M"  },
+  { key: "YTD", label: "YTD" },
+  { key: "1Y",  label: "1Y"  },
+  { key: "5Y",  label: "5Y"  },
+  { key: "MAX", label: "MAX" },
+] as const;
+type Period = typeof PERIODS[number]["key"];
 
 // ── Market Hours ──────────────────────────────────────────────────
 interface MktInfo { name: string; short: string; flag: string; code: string; tz: string; localTime: string; openUTC: number; closeUTC: number; color: string; }
@@ -271,19 +287,66 @@ function MktHoursSection() {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// MARKET SELECTOR — with inline 5-min candle chart
+// MARKET SELECTOR — with period tabs + history fetch + delay badge
 // ══════════════════════════════════════════════════════════════════
 function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym }: {
   sectionId:string; navId:string; title:string; markets:IndexQuote[]; icon?:any;
   onChart:(sym:string, name:string)=>void; autoSym?:string;
 }) {
   const l = useIL();
-  const [sel, setSel] = useState(0);
+  const [sel, setSel]           = useState(0);
+  const [period, setPeriod]     = useState<Period>("1D");
+  // chartCandles: what the chart actually renders. Starts as the candles
+  // that arrived with the global snapshot (already 1D data), then
+  // gets swapped out whenever the user picks a different period tab.
+  const [chartCandles, setChartCandles]   = useState<CandlePoint[]>([]);
+  const [chartLoading, setChartLoading]   = useState(false);
+  const [fetchError,   setFetchError]     = useState(false);
+  // Track the most recent fetch so stale responses are discarded
+  const fetchIdRef = useRef(0);
+
+  // Auto-select market when parent passes a symbol
   useEffect(() => {
     if (!autoSym) return;
-    const i = markets.findIndex(m => m.symbol===autoSym);
-    if (i!==-1) setSel(i);
+    const i = markets.findIndex(m => m.symbol === autoSym);
+    if (i !== -1) setSel(i);
   }, [autoSym, markets]);
+
+  // Seed with whatever the global snapshot already provides (fast first paint)
+  useEffect(() => {
+    setChartCandles(markets[sel]?.candles ?? []);
+  }, [sel, markets]);
+
+  // ── Fetch candles from the history endpoint whenever symbol or period changes
+  const fetchCandles = useCallback(async (symbol: string, p: Period) => {
+    const id = ++fetchIdRef.current;
+    setChartLoading(true);
+    setFetchError(false);
+    try {
+      const res = await fetch(
+        `${API_BASE}/markets/history/${encodeURIComponent(symbol)}?period=${p}`
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      // Discard if a newer fetch has started
+      if (id !== fetchIdRef.current) return;
+      setChartCandles(json.candles ?? []);
+    } catch (e) {
+      if (id !== fetchIdRef.current) return;
+      console.error(`[MktSelector] history fetch failed ${symbol} ${p}:`, e);
+      setFetchError(true);
+      // Keep whatever candles we already have — don't go blank
+    } finally {
+      if (id === fetchIdRef.current) setChartLoading(false);
+    }
+  }, []);
+
+  // Trigger fetch on market switch or period change
+  useEffect(() => {
+    const sym = markets[sel]?.symbol;
+    if (!sym) return;
+    fetchCandles(sym, period);
+  }, [sel, period, markets, fetchCandles]);
 
   if (!markets.length) return (
     <div id={sectionId} className="mb-8 scroll-mt-24">
@@ -295,12 +358,13 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym 
   );
 
   const s = markets[sel];
+  const isPos = s.changePercent >= 0;
 
   return (
     <div id={sectionId} className="mb-8 scroll-mt-24">
       <SecHead id={navId} icon={icon||BarChart3} title={title} sub={`${markets.length} indices`}/>
 
-      {/* Pill buttons */}
+      {/* ── Market pill buttons ─────────────────────────────────── */}
       <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
         {markets.map((m, i) => {
           const pos = m.changePercent >= 0, active = sel===i;
@@ -323,25 +387,94 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym 
         })}
       </div>
 
-      {/* Selected market card — CleanChart renders its own name/price/H/L header */}
+      {/* ── Chart card ──────────────────────────────────────────── */}
       <Card className="overflow-hidden">
-        {/* Candle Chart — CleanChart with backend candles (no CORS) */}
+
+        {/* ── Period tab row + delay badge ────────────────────── */}
+        <div className={`flex items-center justify-between px-4 pt-3 pb-2 border-b ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
+          {/* Period tabs — matches Yahoo Finance */}
+          <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-none">
+            {PERIODS.map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setPeriod(key)}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all shrink-0 ${
+                  period === key
+                    ? isPos
+                      ? "bg-emerald-500/15 text-emerald-500 border border-emerald-500/30"
+                      : "bg-red-500/15 text-red-500 border border-red-500/30"
+                    : l
+                      ? "text-gray-500 hover:bg-gray-100 border border-transparent hover:border-gray-200"
+                      : "text-[#5a7a92] hover:bg-white/[0.05] border border-transparent hover:border-[#1a2d3f]"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* ── 15-min delay badge — always visible, honest ────── */}
+          <div className={`flex items-center gap-1 shrink-0 ml-3 px-2 py-0.5 rounded-md border text-[9px] font-bold uppercase tracking-wide
+            ${l
+              ? "bg-amber-50 border-amber-200 text-amber-700"
+              : "bg-amber-900/10 border-amber-700/30 text-amber-500"
+            }`}>
+            <AlertTriangle className="w-2.5 h-2.5"/>
+            <span>Delayed 15 min</span>
+          </div>
+        </div>
+
+        {/* ── Chart area ────────────────────────────────────────── */}
         <div
           onClick={() => onChart(s.symbol, s.name)}
-          className="cursor-pointer"
+          className="cursor-pointer relative"
           title="Tap to open full TradingView chart"
         >
+          {/* Loading shimmer overlay — shown while fetching new period */}
+          {chartLoading && (
+            <div className={`absolute inset-0 z-10 flex items-center justify-center rounded-b-xl
+              ${l ? "bg-white/70" : "bg-[#07111b]/70"} backdrop-blur-[2px]`}>
+              <div className="flex flex-col items-center gap-2">
+                <RefreshCw className={`w-5 h-5 animate-spin ${l ? "text-[#0A3656]" : "text-[#74A8C9]"}`}/>
+                <span className={`text-[10px] font-bold uppercase tracking-widest ${tx.t3(l)}`}>
+                  Loading {period} chart…
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Fetch error banner — non-blocking, chart still shows stale data */}
+          {fetchError && !chartLoading && (
+            <div className={`mx-4 mt-3 flex items-center gap-2 px-3 py-2 rounded-lg border text-[10px] font-semibold
+              ${l
+                ? "bg-red-50 border-red-200 text-red-700"
+                : "bg-red-900/10 border-red-800/30 text-red-400"
+              }`}>
+              <AlertCircle className="w-3 h-3 shrink-0"/>
+              Could not load {period} data — showing last available chart.
+            </div>
+          )}
+
           <CleanChart
-            symbol={s.symbol} name={s.name} price={s.price}
-            change={s.change} changePercent={s.changePercent}
-            high={s.high} low={s.low}
-            isPositive={s.changePercent >= 0}
-            candles={s.candles ?? []}
+            symbol={s.symbol}
+            name={s.name}
+            price={s.price}
+            change={s.change}
+            changePercent={s.changePercent}
+            high={s.high}
+            low={s.low}
+            isPositive={isPos}
+            candles={chartCandles}
+            period={period}
           />
         </div>
 
-        <div className={`px-5 py-2.5 flex items-center justify-between ${tx.t3(l)} text-[10px]`}>
-          <span>Tap chart to open full view · Period buttons change timeframe</span>
+        {/* ── Footer strip ────────────────────────────────────── */}
+        <div className={`px-5 py-2.5 flex items-center justify-between ${tx.t3(l)} text-[10px] border-t ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
+          <span className="flex items-center gap-1">
+            <Clock className="w-3 h-3"/>
+            Prices delayed 15 min · Yahoo Finance
+          </span>
           <button onClick={() => onChart(s.symbol, s.name)}
             className="flex items-center gap-1 font-bold text-[#0A3656] dark:text-[#74A8C9] hover:underline">
             Open TradingView ↗
@@ -444,6 +577,15 @@ export default function GlobalView() {
               </h1>
             </div>
             <div className="flex items-center gap-2">
+              {/* ── Global delayed data notice in topbar ── */}
+              <span className={`hidden md:flex items-center gap-1 text-[9px] font-bold px-2 py-1 rounded-md border
+                ${l
+                  ? "bg-amber-50 border-amber-200 text-amber-700"
+                  : "bg-amber-900/10 border-amber-700/30 text-amber-500"
+                }`}>
+                <AlertTriangle className="w-2.5 h-2.5"/>
+                Prices delayed 15 min
+              </span>
               {error && <span className={`text-[10px] text-red-500 hidden md:inline`}>⚠ {error}</span>}
               <button onClick={doRefresh} disabled={refreshing||isLoading}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold text-white disabled:opacity-50 bg-[#0A3656] hover:bg-[#072a42] transition-colors">
