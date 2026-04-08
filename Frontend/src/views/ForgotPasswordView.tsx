@@ -24,7 +24,7 @@ const ForgotPasswordView = () => {
     setError(null);
     setLoading(true);
     try {
-      const { data } = await axios.post(`${API_URL}/api/v1/users/forgot-password`, { email });
+      const { data } = await axios.post(`${API_URL}/users/forgot-password`, { email });
       if (data.success) {
         setEmailSent(true);
         showSuccess("Password reset link sent! Check your email.");
