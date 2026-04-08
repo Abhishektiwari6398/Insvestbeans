@@ -562,66 +562,156 @@ function nseApiHeaders(cookies, referer) {
   };
 }
 
-async function fetchNseCorpActions(cookies, fromDate, toDate) {
+// ─────────────────────────────────────────────────────────────────
+// CORPORATE ACTIONS
+//
+// Tier 1: NSE session-based API  (warmup already working ✅)
+//         — fresh session + 1 auto-retry on 401/403
+// Tier 2: BSE public API         (no session needed)
+// Tier 3: Stale cache            (never return empty if we had data before)
+// ─────────────────────────────────────────────────────────────────
+const _corpCache  = { data: null, source: "", ts: 0 };
+const CORP_CACHE_MS = 30 * 60 * 1000; // 30 min
+
+const CORP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+
+// ── Tier 1: NSE session API ───────────────────────────────────────
+async function fetchNseSessionCA(cookies) {
+  const today    = new Date();
+  const pad      = n => String(n).padStart(2, "0");
+  const fmt      = d => `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
+  const toDate   = fmt(today);
+  const fromD    = new Date(today); fromD.setDate(today.getDate() - 30);
+  const fromDate = fmt(fromD);
+
   const r = await axios.get(
     `https://www.nseindia.com/api/corporates-corporateActions?index=equities&from_date=${fromDate}&to_date=${toDate}`,
-    { timeout: 15000, headers: nseApiHeaders(cookies, "https://www.nseindia.com/companies-listing/corporate-filings-actions") }
+    {
+      timeout: 15000,
+      headers: nseApiHeaders(
+        cookies,
+        "https://www.nseindia.com/companies-listing/corporate-filings-actions"
+      ),
+    }
   );
   const raw = r.data;
   return Array.isArray(raw) ? raw : (raw?.data ?? raw?.body ?? []);
 }
 
+// ── Tier 2: BSE public API ────────────────────────────────────────
 async function fetchBseCorpActions() {
-  try {
-    const r = await axios.get(
-      "https://api.bseindia.com/BseIndiaAPI/api/CorporateAction/w?scripcode=&segment=0&strCat=-1&strPrevDate=&strScrip=&strSearch=P&strToDate=&strType=C&report=CORPACTALL",
-      { timeout: 12000, headers: { "User-Agent": NSE_UA, Accept: "application/json", Referer: "https://www.bseindia.com/", Origin: "https://www.bseindia.com" } }
-    );
-    const items = r.data?.Table ?? r.data?.data ?? r.data ?? [];
-    return (Array.isArray(items) ? items : []).slice(0, 100).map(i => ({
-      symbol: i.SCRIP_CD || "", companyName: i.COMP_NAME || "", subject: i.PURPOSE || "",
-      exDate: i.EX_DATE || "", recordDate: i.REC_DATE || "", remarks: i.REMARKS || "", series: i.SERIES || "", source: "BSE",
-    }));
-  } catch (e) { console.error("BSE fallback failed:", e.message); return []; }
+  const r = await axios.get(
+    "https://api.bseindia.com/BseIndiaAPI/api/CorporateAction/w?scripcode=&segment=0&strCat=-1&strPrevDate=&strScrip=&strSearch=P&strToDate=&strType=C&report=CORPACTALL",
+    {
+      timeout: 12000,
+      headers: {
+        "User-Agent": CORP_UA,
+        Accept:       "application/json",
+        Referer:      "https://www.bseindia.com/",
+        Origin:       "https://www.bseindia.com",
+      },
+    }
+  );
+  const items = r.data?.Table ?? r.data?.data ?? r.data ?? [];
+  return (Array.isArray(items) ? items : []).slice(0, 150).map(i => ({
+    symbol:      i.SCRIP_CD  || "",
+    companyName: i.COMP_NAME || "",
+    subject:     i.PURPOSE   || "",
+    exDate:      i.EX_DATE   || "",
+    recordDate:  i.REC_DATE  || "",
+    remarks:     i.REMARKS   || "",
+    series:      i.SERIES    || "",
+    source:      "BSE",
+  }));
 }
 
+// ── GET /api/v1/kite/nse/corporate-actions ────────────────────────
 router.get("/nse/corporate-actions", async (req, res) => {
-  const today = new Date();
-  const pad = n => String(n).padStart(2, "0");
-  const fmtDate = d => `${pad(d.getDate())}-${pad(d.getMonth()+1)}-${d.getFullYear()}`;
-  const toDate = fmtDate(today);
-  const fromD = new Date(today); fromD.setDate(fromD.getDate() - 30);
-  const fromDate = fmtDate(fromD);
+  const forceRefresh = req.query.refresh === "1";
+  const errors = [];
 
+  // Serve fresh cache
+  if (!forceRefresh && _corpCache.data?.length > 0 && Date.now() - _corpCache.ts < CORP_CACHE_MS) {
+    return res.json({
+      status: "success", data: _corpCache.data,
+      source: _corpCache.source, cached: true, count: _corpCache.data.length,
+    });
+  }
+
+  // ── Tier 1: NSE session API (attempt 1 — existing session) ──
   try {
     const cookies = await getNseSession();
-    await new Promise(r => setTimeout(r, 600));
-    try {
-      const data = await fetchNseCorpActions(cookies, req.query.from || fromDate, req.query.to || toDate);
-      return res.json({ status: "success", data, source: "NSE" });
-    } catch (err) {
-      if (err?.response?.status === 403 || err?.response?.status === 401) {
-        console.warn("NSE 403 — retrying with fresh session...");
-        _nseSession = { cookies: "", ts: 0 };
-        await new Promise(r => setTimeout(r, 2000));
-        const fresh = await getNseSession(true);
-        await new Promise(r => setTimeout(r, 1000));
-        try {
-          const data = await fetchNseCorpActions(fresh, req.query.from || fromDate, req.query.to || toDate);
-          return res.json({ status: "success", data, source: "NSE" });
-        } catch (_) { /* fall through to BSE */ }
-      } else { throw err; }
+    await new Promise(r => setTimeout(r, 400));
+    const data = await fetchNseSessionCA(cookies);
+    if (data.length > 0) {
+      _corpCache.data = data; _corpCache.source = "NSE"; _corpCache.ts = Date.now();
+      console.log(`✅ Corporate actions from NSE session: ${data.length} records`);
+      return res.json({ status: "success", data, source: "NSE", count: data.length });
     }
-  } catch (_) {}
+    errors.push("NSE session attempt 1: 0 records");
+  } catch (err) {
+    const status = err?.response?.status;
+    errors.push(`NSE session attempt 1: ${status ?? err.message}`);
+    console.warn(`⚠️  NSE CA attempt 1 [${status ?? err.message}] — retrying with fresh session...`);
 
-  const bseData = await fetchBseCorpActions();
-  if (bseData.length > 0) return res.json({ status: "success", data: bseData, source: "BSE" });
-  return res.status(503).json({ status: "error", message: "NSE/BSE corporate action data unavailable. Visit NSE/BSE directly." });
+    // Auto-retry with a brand-new session on 401 / 403
+    if (status === 401 || status === 403 || !status) {
+      try {
+        _nseSession = { cookies: "", ts: 0 };                     // force refresh
+        await new Promise(r => setTimeout(r, 1500));
+        const fresh = await getNseSession(true);
+        await new Promise(r => setTimeout(r, 800));
+        const data  = await fetchNseSessionCA(fresh);
+        if (data.length > 0) {
+          _corpCache.data = data; _corpCache.source = "NSE"; _corpCache.ts = Date.now();
+          console.log(`✅ Corporate actions from NSE (retry): ${data.length} records`);
+          return res.json({ status: "success", data, source: "NSE", count: data.length });
+        }
+        errors.push("NSE session retry: 0 records");
+      } catch (e2) {
+        errors.push(`NSE session retry: ${e2?.response?.status ?? e2.message}`);
+        console.warn("⚠️  NSE CA retry also failed:", e2.message);
+      }
+    }
+  }
+
+  // ── Tier 2: BSE ──
+  try {
+    const data = await fetchBseCorpActions();
+    if (data.length > 0) {
+      _corpCache.data = data; _corpCache.source = "BSE"; _corpCache.ts = Date.now();
+      console.log(`✅ Corporate actions from BSE fallback: ${data.length} records`);
+      return res.json({ status: "success", data, source: "BSE", count: data.length });
+    }
+    errors.push("BSE: 0 records");
+  } catch (err) {
+    errors.push(`BSE: ${err?.response?.status ?? err.message}`);
+    console.error("❌ BSE CA:", err.message);
+  }
+
+  // ── Tier 3: Stale cache ──
+  if (_corpCache.data?.length > 0) {
+    console.warn("⚠️  Serving stale corporate actions cache");
+    return res.json({
+      status: "success", data: _corpCache.data,
+      source: _corpCache.source, cached: true, stale: true, count: _corpCache.data.length,
+    });
+  }
+
+  console.error("❌ All corporate action tiers failed:", errors);
+  return res.status(503).json({
+    status: "error",
+    message: "All corporate action sources temporarily unavailable",
+    errors,
+    data:  [],
+  });
 });
 
 router.get("/corporate-actions", (req, res) => {
   res.json({ status: "success", data: [], note: "Use /kite/nse/corporate-actions" });
 });
+
+
 
 const YF_HEADERS_LIVE = {
   "User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -1994,5 +2084,6 @@ router.get("/macro", async (req, res) => {
   _macroCache.ts   = Date.now();
   return res.json({ status: "success", data: results });
 });
+
 
 export default router;
