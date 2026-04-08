@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/controllers/Themecontext';
+import { useAuth } from '@/controllers/AuthContext';          // ✅ FIX 1 — import useAuth
 import { Lock, ChevronRight, Star } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -38,262 +39,14 @@ const SvgZap = () => (
     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
   </svg>
 );
-const SvgLayers = () => (
-  <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="12 2 2 7 12 12 22 7 12 2" />
-    <polyline points="2 17 12 22 22 17" />
-    <polyline points="2 12 12 17 22 12" />
-  </svg>
-);
-const SvgShieldCheck = () => (
-  <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+const SvgShield = () => (
+  <svg viewBox="0 0 24 24" fill="none" className="w-3.5 h-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     <polyline points="9 12 11 14 15 10" />
   </svg>
 );
 
-// ── Hero-only pill icons (larger, cleaner) ────────────────────────────────────
-
-const IconResources = () => (
-  <svg viewBox="0 0 28 28" fill="none" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
-    <rect x="4" y="3" width="14" height="18" rx="2.5" stroke="currentColor" strokeWidth="1.7" fill="none"/>
-    <rect x="8" y="6" width="14" height="18" rx="2.5" stroke="currentColor" strokeWidth="1.7" fill="none" opacity="0.4"/>
-    <line x1="7" y1="9" x2="15" y2="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-    <line x1="7" y1="12" x2="15" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-    <line x1="7" y1="15" x2="12" y2="15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-  </svg>
-);
-const IconModules = () => (
-  <svg viewBox="0 0 28 28" fill="none" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
-    <rect x="3" y="3" width="9" height="9" rx="2" stroke="currentColor" strokeWidth="1.7" fill="none"/>
-    <rect x="16" y="3" width="9" height="9" rx="2" stroke="currentColor" strokeWidth="1.7" fill="none"/>
-    <rect x="3" y="16" width="9" height="9" rx="2" stroke="currentColor" strokeWidth="1.7" fill="none"/>
-    <rect x="16" y="16" width="9" height="9" rx="2" stroke="currentColor" strokeWidth="1.7" fill="none" opacity="0.45"/>
-    <circle cx="20.5" cy="20.5" r="2" fill="currentColor" opacity="0.5"/>
-  </svg>
-);
-const IconCert = () => (
-  <svg viewBox="0 0 28 28" fill="none" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="14" cy="11" r="6" stroke="currentColor" strokeWidth="1.7" fill="none"/>
-    <path d="M10 17.5 L8 25 L14 22 L20 25 L18 17.5" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" fill="none"/>
-    <path d="M11.5 11 L13 12.8 L16.5 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-const IconShield = () => (
-  <svg viewBox="0 0 28 28" fill="none" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
-    <path d="M14 3 L24 7 L24 15 C24 20 19 24 14 26 C9 24 4 20 4 15 L4 7 Z" stroke="currentColor" strokeWidth="1.7" fill="none" strokeLinejoin="round"/>
-    <path d="M10 14 L12.5 16.5 L18 11" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-// ── Stat pills config ─────────────────────────────────────────────────────────
-
-const STAT_PILLS = [
-  { Icon: IconResources, value: '120+', label: 'Resources',      accent: '#5194F6', bg: 'rgba(81,148,246,0.10)',  border: 'rgba(81,148,246,0.22)'  },
-  { Icon: IconModules,   value: '8',    label: 'Modules',        accent: '#10B981', bg: 'rgba(16,185,129,0.10)', border: 'rgba(16,185,129,0.22)'  },
-  { Icon: IconCert,      value: '3',    label: 'Certifications', accent: '#D4A843', bg: 'rgba(212,168,67,0.10)', border: 'rgba(212,168,67,0.22)'  },
-  { Icon: IconShield,    value: '100%', label: 'Expert-Vetted',  accent: '#8B5CF6', bg: 'rgba(139,92,246,0.10)', border: 'rgba(139,92,246,0.22)'  },
-];
-
-// ── Hero SVG Illustration ─────────────────────────────────────────────────────
-
-const HeroIllustration = ({ isLight }: { isLight: boolean }) => (
-  <svg
-    viewBox="0 0 480 340"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className="w-full h-full"
-    style={{ maxWidth: 480 }}
-  >
-    <defs>
-      <radialGradient id="glow1" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stopColor="#5194F6" stopOpacity="0.18"/>
-        <stop offset="100%" stopColor="#5194F6" stopOpacity="0"/>
-      </radialGradient>
-      <radialGradient id="glow2" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.15"/>
-        <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0"/>
-      </radialGradient>
-      <radialGradient id="glow3" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stopColor="#10B981" stopOpacity="0.18"/>
-        <stop offset="100%" stopColor="#10B981" stopOpacity="0"/>
-      </radialGradient>
-      <linearGradient id="cardGrad" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor={isLight ? '#ffffff' : '#0e2038'}/>
-        <stop offset="100%" stopColor={isLight ? '#f0f6ff' : '#0a1628'}/>
-      </linearGradient>
-      <linearGradient id="barBlue" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%" stopColor="#5194F6"/>
-        <stop offset="100%" stopColor="#7ab8fa"/>
-      </linearGradient>
-      <linearGradient id="barGreen" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%" stopColor="#10B981"/>
-        <stop offset="100%" stopColor="#34D399"/>
-      </linearGradient>
-      <linearGradient id="barAmber" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%" stopColor="#F59E0B"/>
-        <stop offset="100%" stopColor="#FCD34D"/>
-      </linearGradient>
-      <linearGradient id="chartLine" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%" stopColor="#5194F6"/>
-        <stop offset="60%" stopColor="#8B5CF6"/>
-        <stop offset="100%" stopColor="#10B981"/>
-      </linearGradient>
-      <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
-        <feDropShadow dx="0" dy="4" stdDeviation="8"
-          floodColor={isLight ? '#0a1628' : '#000'} floodOpacity="0.12"/>
-      </filter>
-      <filter id="softShadow" x="-5%" y="-5%" width="110%" height="120%">
-        <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#10B981" floodOpacity="0.35"/>
-      </filter>
-    </defs>
-
-    {/* Ambient glows */}
-    <ellipse cx="120" cy="120" rx="100" ry="90" fill="url(#glow1)" opacity="0.7"/>
-    <ellipse cx="360" cy="200" rx="90" ry="80" fill="url(#glow2)" opacity="0.6"/>
-    <ellipse cx="300" cy="90" rx="70" ry="60" fill="url(#glow3)" opacity="0.5"/>
-
-    {/* ── CARD 1 — Learning Progress ─────────────────────────────────── */}
-    <rect x="20" y="30" width="260" height="175" rx="16" fill="url(#cardGrad)"
-      stroke={isLight ? 'rgba(81,148,246,0.22)' : 'rgba(81,148,246,0.18)'} strokeWidth="1.2" filter="url(#shadow)"/>
-    {/* top accent */}
-    <rect x="20" y="30" width="260" height="4" rx="2" fill="url(#barBlue)"/>
-
-    {/* Card 1 icon */}
-    <rect x="36" y="50" width="28" height="28" rx="8"
-      fill="rgba(81,148,246,0.14)" stroke="rgba(81,148,246,0.28)" strokeWidth="1"/>
-    <rect x="42" y="56" width="9" height="12" rx="1.5" fill="none" stroke="#5194F6" strokeWidth="1.4"/>
-    <rect x="45" y="54" width="9" height="12" rx="1.5" fill="none" stroke="#7ab8fa" strokeWidth="1.2" opacity="0.55"/>
-    <line x1="44" y1="60" x2="49" y2="60" stroke="#5194F6" strokeWidth="1" strokeLinecap="round"/>
-    <line x1="44" y1="63" x2="49" y2="63" stroke="#5194F6" strokeWidth="1" strokeLinecap="round"/>
-
-    <text x="74" y="60" fontFamily="system-ui,sans-serif" fontSize="11" fontWeight="700"
-      fill={isLight ? '#0f172a' : '#ffffff'} letterSpacing="0.3">Learning Progress</text>
-    <text x="74" y="72" fontFamily="system-ui,sans-serif" fontSize="9"
-      fill={isLight ? '#9ca3af' : 'rgba(148,163,184,0.65)'}>3 modules active</text>
-
-    {/* Progress bars */}
-    {([
-      { label: 'Technical Analysis',    pct: 78, grad: 'url(#barBlue)',  y: 100 },
-      { label: 'Fundamental Research',  pct: 52, grad: 'url(#barGreen)', y: 122 },
-      { label: 'Options Strategy',      pct: 31, grad: 'url(#barAmber)', y: 144 },
-    ] as { label: string; pct: number; grad: string; y: number }[]).map(({ label, pct, grad, y }) => (
-      <g key={label}>
-        <text x="36" y={y - 4} fontFamily="system-ui,sans-serif" fontSize="8.5"
-          fill={isLight ? '#6b7280' : 'rgba(148,163,184,0.75)'}>{label}</text>
-        <rect x="36" y={y} width="222" height="6" rx="3"
-          fill={isLight ? 'rgba(226,232,240,0.6)' : 'rgba(255,255,255,0.07)'}/>
-        <rect x="36" y={y} width={222 * pct / 100} height="6" rx="3" fill={grad}/>
-        <text x="264" y={y + 5.5} fontFamily="system-ui,sans-serif" fontSize="8" fontWeight="700"
-          fill={isLight ? '#374151' : 'rgba(255,255,255,0.65)'} textAnchor="end">{pct}%</text>
-      </g>
-    ))}
-
-    {/* Bottom badges */}
-    <rect x="36" y="168" width="88" height="22" rx="11"
-      fill="rgba(16,185,129,0.12)" stroke="rgba(16,185,129,0.28)" strokeWidth="1"/>
-    <circle cx="49" cy="179" r="4" fill="#10B981" opacity="0.85"/>
-    <text x="57" y="183" fontFamily="system-ui,sans-serif" fontSize="8.5" fontWeight="700"
-      fill="#10B981">2 Completed</text>
-
-    <rect x="136" y="168" width="82" height="22" rx="11"
-      fill="rgba(81,148,246,0.10)" stroke="rgba(81,148,246,0.22)" strokeWidth="1"/>
-    <text x="177" y="183" fontFamily="system-ui,sans-serif" fontSize="8.5" fontWeight="600"
-      fill="#5194F6" textAnchor="middle">120+ Resources</text>
-
-    {/* ── CARD 2 — Market Mastery Chart ──────────────────────────────── */}
-    <rect x="198" y="158" width="262" height="158" rx="16" fill="url(#cardGrad)"
-      stroke={isLight ? 'rgba(139,92,246,0.20)' : 'rgba(139,92,246,0.18)'} strokeWidth="1.2" filter="url(#shadow)"/>
-    <rect x="198" y="158" width="262" height="4" rx="2" fill="url(#barAmber)"/>
-
-    {/* Card 2 icon */}
-    <rect x="214" y="177" width="28" height="28" rx="8"
-      fill="rgba(139,92,246,0.14)" stroke="rgba(139,92,246,0.28)" strokeWidth="1"/>
-    <polyline points="220,200 224,194 229,197 234,187 238,190"
-      stroke="#8B5CF6" strokeWidth="1.7" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-    <polyline points="235,187 238,187 238,190"
-      stroke="#8B5CF6" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-
-    <text x="252" y="186" fontFamily="system-ui,sans-serif" fontSize="11" fontWeight="700"
-      fill={isLight ? '#0f172a' : '#ffffff'}>Market Mastery</text>
-    <text x="252" y="198" fontFamily="system-ui,sans-serif" fontSize="9"
-      fill={isLight ? '#9ca3af' : 'rgba(148,163,184,0.65)'}>Skill growth over time</text>
-
-    {/* Chart area */}
-    <rect x="214" y="212" width="230" height="72" rx="10"
-      fill={isLight ? 'rgba(226,232,240,0.20)' : 'rgba(255,255,255,0.03)'}
-      stroke={isLight ? 'rgba(226,232,240,0.55)' : 'rgba(255,255,255,0.06)'} strokeWidth="1"/>
-
-    {/* Grid */}
-    {([226, 238, 250, 262] as number[]).map(y => (
-      <line key={y} x1="222" y1={y} x2="436" y2={y}
-        stroke={isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)'}
-        strokeWidth="0.8" strokeDasharray="4,3"/>
-    ))}
-
-    {/* Area fill */}
-    <path d="M222,277 L250,262 L278,255 L306,246 L334,240 L362,230 L390,220 L418,210 L436,202 L436,278 L222,278 Z"
-      fill="url(#chartLine)" opacity="0.09"/>
-
-    {/* Chart line */}
-    <path d="M222,277 L250,262 L278,255 L306,246 L334,240 L362,230 L390,220 L418,210 L436,202"
-      stroke="url(#chartLine)" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-
-    {/* End dot */}
-    <circle cx="436" cy="202" r="7" fill="rgba(16,185,129,0.18)"/>
-    <circle cx="436" cy="202" r="4" fill="#10B981" filter="url(#softShadow)"/>
-
-    {/* X labels */}
-    {(['Jan','Mar','May','Jul','Sep'] as string[]).map((m, i) => (
-      <text key={m} x={222 + i * 53} y="290" fontFamily="system-ui,sans-serif" fontSize="7.5"
-        fill={isLight ? '#9ca3af' : 'rgba(148,163,184,0.5)'} textAnchor="middle">{m}</text>
-    ))}
-
-    {/* ── FLOATING BADGE — SEBI Aligned ──────────────────────────────── */}
-    <rect x="298" y="12" width="162" height="46" rx="23"
-      fill={isLight ? '#ffffff' : '#0e2038'}
-      stroke="rgba(81,148,246,0.25)" strokeWidth="1.2" filter="url(#shadow)"/>
-    <rect x="314" y="22" width="24" height="24" rx="7"
-      fill="rgba(212,168,67,0.15)" stroke="rgba(212,168,67,0.30)" strokeWidth="1"/>
-    {/* Award cup */}
-    <path d="M320,26 L320,34 L330,34 L330,26 Z" fill="none" stroke="#D4A843" strokeWidth="1.3" strokeLinejoin="round"/>
-    <path d="M317.5,28 C317.5,28 316,28 316,30.5 C316,33 318,33 320,33"
-      fill="none" stroke="#D4A843" strokeWidth="1.2" strokeLinecap="round"/>
-    <path d="M332.5,28 C332.5,28 334,28 334,30.5 C334,33 332,33 330,33"
-      fill="none" stroke="#D4A843" strokeWidth="1.2" strokeLinecap="round"/>
-    <line x1="323" y1="34" x2="327" y2="38" stroke="#D4A843" strokeWidth="1.2" strokeLinecap="round"/>
-    <line x1="321" y1="38" x2="329" y2="38" stroke="#D4A843" strokeWidth="1.2" strokeLinecap="round"/>
-    <text x="346" y="30" fontFamily="system-ui,sans-serif" fontSize="9" fontWeight="800"
-      fill={isLight ? '#0f172a' : '#fff'} letterSpacing="0.2">SEBI Aligned</text>
-    <text x="346" y="43" fontFamily="system-ui,sans-serif" fontSize="8"
-      fill={isLight ? '#9ca3af' : 'rgba(148,163,184,0.7)'}>Expert-vetted content</text>
-
-    {/* ── FLOATING PILL — Free Access ────────────────────────────────── */}
-    <rect x="22" y="224" width="84" height="28" rx="14"
-      fill="rgba(16,185,129,0.12)" stroke="rgba(16,185,129,0.28)" strokeWidth="1"/>
-    <circle cx="38" cy="238" r="5" fill="rgba(16,185,129,0.25)"/>
-    <circle cx="38" cy="238" r="2.5" fill="#10B981"/>
-    <text x="48" y="242" fontFamily="system-ui,sans-serif" fontSize="9" fontWeight="700"
-      fill="#10B981">Free Access</text>
-
-    {/* ── FLOATING PILL — Expert Vetted ──────────────────────────────── */}
-    <rect x="22" y="262" width="112" height="28" rx="14"
-      fill="rgba(139,92,246,0.12)" stroke="rgba(139,92,246,0.26)" strokeWidth="1"/>
-    <text x="78" y="280" fontFamily="system-ui,sans-serif" fontSize="9" fontWeight="700"
-      fill="#8B5CF6" textAnchor="middle">100% Expert-Vetted</text>
-
-    {/* Decorative dots */}
-    {([
-      [172, 40], [182, 56], [166, 62],
-      [452, 138], [462, 154], [446, 160],
-    ] as [number, number][]).map(([cx, cy], i) => (
-      <circle key={i} cx={cx} cy={cy} r="2.2"
-        fill={i < 3 ? 'rgba(81,148,246,0.32)' : 'rgba(139,92,246,0.32)'}/>
-    ))}
-  </svg>
-);
-
-// ── Course Data ───────────────────────────────────────────────────────────────
+// ── Course Data ────────────────────────────────────────────────────────────────
 
 const financialItems = [
   {
@@ -368,7 +121,7 @@ const levelStyle: Record<string, { bg: string; text: string }> = {
   'All Levels': { bg: 'rgba(148,163,184,0.12)', text: '#94A3B8' },
 };
 
-// ── Sidebar nav ───────────────────────────────────────────────────────────────
+// ── Sidebar nav ────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS = [
   { key: 'financial',     label: 'Financial',     SvgIcon: SvgTrending, color: '#3B82F6', isParent: true  },
@@ -413,9 +166,15 @@ function ItemRow({ title, meta, level, accentRaw, isLight }: {
 }
 
 // ── LearnCard ─────────────────────────────────────────────────────────────────
+// ✅ FIX 2 — isAdmin aur isSubscriber props add kiye
+// Agar admin ya subscriber hai aur card isPaid hai → "Start Learning" dikhao, "Unlock" nahi
 
-function LearnCard({ id, SvgIcon, title, tag, description, isPaid, items, accent, accentRaw, iconColor, detailId, isLight, onStartLearning, onUnlock }: any) {
+function LearnCard({ id, SvgIcon, title, tag, description, isPaid, items, accent, accentRaw, iconColor, detailId, isLight, isAdmin, isSubscriber, onStartLearning, onUnlock }: any) {
   const isFinancial = tag === 'Financial';
+
+  // ✅ KEY LOGIC: Admin ya subscriber ke liye paid card bhi "open" treat hoga
+  const isUnlocked = !isPaid || isAdmin || isSubscriber;
+
   return (
     <div
       id={id}
@@ -444,7 +203,24 @@ function LearnCard({ id, SvgIcon, title, tag, description, isPaid, items, accent
                 : { background: 'rgba(139,92,246,0.12)', color: '#A78BFA' }}>
               {tag}
             </span>
-            {isPaid ? (
+
+            {/* ✅ FIX 2 — Badge logic:
+                Admin     → purple "Admin Access" badge
+                Subscriber + paid → green "Unlocked" badge
+                Normal paid → blue "Premium" badge
+                Free → green "Free" badge
+            */}
+            {isAdmin && isPaid ? (
+              <span className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
+                style={{ background: 'rgba(168,85,247,0.12)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.25)' }}>
+                <SvgShield /> Admin
+              </span>
+            ) : isSubscriber && isPaid ? (
+              <span className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
+                style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.25)' }}>
+                ✓ Unlocked
+              </span>
+            ) : isPaid ? (
               <span className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
                 style={{ background: 'rgba(81,148,246,0.12)', color: '#5194F6', border: '1px solid rgba(81,148,246,0.25)' }}>
                 <Lock className="w-2.5 h-2.5" /> Premium
@@ -470,18 +246,22 @@ function LearnCard({ id, SvgIcon, title, tag, description, isPaid, items, accent
           ))}
         </div>
 
-        {isPaid ? (
+        {/* ✅ FIX 2 — Button:
+            isUnlocked (admin/subscriber/free) → "Start Learning"
+            locked (normal user, paid) → "Unlock Access"
+        */}
+        {isUnlocked ? (
           <button
-            onClick={() => onUnlock(detailId)}
+            onClick={() => onStartLearning(detailId)}
             className={`w-full py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r ${accent} hover:opacity-90 transition-all flex items-center justify-center gap-2 group/btn`}>
-            <Lock className="w-3.5 h-3.5" /> Unlock Access
+            {isAdmin ? '🛡️ Open as Admin' : 'Start Learning'}
             <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform" />
           </button>
         ) : (
           <button
-            onClick={() => onStartLearning(detailId)}
+            onClick={() => onUnlock(detailId)}
             className={`w-full py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r ${accent} hover:opacity-90 transition-all flex items-center justify-center gap-2 group/btn`}>
-            Start Learning
+            <Lock className="w-3.5 h-3.5" /> Unlock Access
             <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform" />
           </button>
         )}
@@ -490,15 +270,19 @@ function LearnCard({ id, SvgIcon, title, tag, description, isPaid, items, accent
   );
 }
 
-// ── EducationView ─────────────────────────────────────────────────────────────
+// ── EducationView ──────────────────────────────────────────────────────────────
 
 const EducationView = () => {
-  const { theme } = useTheme();
-  const navigate = useNavigate();
-  const isLight = theme === 'light';
+  const { theme }  = useTheme();
+  const navigate   = useNavigate();
+  const { user, isAdmin } = useAuth();  // ✅ FIX — isAdmin directly from AuthContext
+  const isLight    = theme === 'light';
+
+  
+  const isSubscriber = isAdmin || (user?.hasSubscription && user?.subscription?.status === 'active');
 
   const [searchParams] = useSearchParams();
-  const sectionParam = searchParams.get('section');
+  const sectionParam   = searchParams.get('section');
 
   const [activeTab, setActiveTab] = useState<'financial' | 'nonfinancial'>(
     sectionParam === 'nonfinancial' ? 'nonfinancial' : 'financial'
@@ -528,9 +312,7 @@ const EducationView = () => {
   const handleStartLearning = (detailId: string) => navigate(`/education/${detailId}`);
   const handleUnlock        = (detailId: string) => navigate(`/pricing`);
 
-  const pageBg = isLight
-    ? 'linear-gradient(160deg,#f5f4f0 0%,#f8fbff 45%,#f5f4f0 100%)'
-    : 'linear-gradient(160deg,#0c1a2e 0%,#0e2038 45%,#0b1825 100%)';
+  const pageBg        = isLight ? 'linear-gradient(160deg,#f5f4f0 0%,#f8fbff 45%,#f5f4f0 100%)' : 'linear-gradient(160deg,#0c1a2e 0%,#0e2038 45%,#0b1825 100%)';
   const sidebarBg     = isLight ? 'rgba(255,255,255,0.85)' : 'rgba(10,22,40,0.85)';
   const sidebarBorder = isLight ? 'rgba(226,232,240,0.9)' : 'rgba(255,255,255,0.07)';
 
@@ -538,9 +320,7 @@ const EducationView = () => {
     <Layout>
       <div className="min-h-screen" style={{ background: pageBg }}>
 
-        {/* ══════════════════════════════════════════════════════════════
-            HERO — redesigned: SVG illustration replaces stat card grid
-        ══════════════════════════════════════════════════════════════ */}
+        {/* ── HERO ─────────────────────────────────────────────────────────── */}
         <section
           className="relative overflow-hidden pt-12 pb-10 md:pt-16 md:pb-14"
           style={{
@@ -550,7 +330,6 @@ const EducationView = () => {
             borderBottom: isLight ? '1px solid rgba(226,232,240,0.8)' : '1px solid rgba(255,255,255,0.06)',
           }}
         >
-          {/* Ambient blobs */}
           <div className="absolute top-0 left-1/3 w-96 h-96 rounded-full blur-[120px] pointer-events-none opacity-50"
             style={{ background: 'radial-gradient(circle,rgba(81,148,246,0.13) 0%,transparent 70%)' }} />
           <div className="absolute bottom-0 right-10 w-72 h-72 rounded-full blur-[100px] pointer-events-none opacity-40"
@@ -558,43 +337,28 @@ const EducationView = () => {
 
           <div className="container mx-auto px-6 relative z-10">
             <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-8 xl:gap-12">
-
-              {/* ── LEFT: text + tab pills + stat pills ──────────────── */}
               <div className="flex flex-col max-w-2xl">
 
-                {/* Badge */}
-                <div
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-5 self-start"
-                  style={{ background: 'rgba(81,148,246,0.10)', border: '1px solid rgba(81,148,246,0.20)' }}
-                >
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-5 self-start"
+                  style={{ background: 'rgba(81,148,246,0.10)', border: '1px solid rgba(81,148,246,0.20)' }}>
                   <SvgZap />
                   <span className="text-xs font-semibold text-[#5194F6]">InvestBeans Learning Hub</span>
                 </div>
 
-                {/* Heading */}
-                <h1
-                  className="text-4xl md:text-5xl font-bold leading-tight mb-4"
-                  style={{ color: isLight ? '#0f172a' : '#fff' }}
-                >
+                <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-4"
+                  style={{ color: isLight ? '#0f172a' : '#fff' }}>
                   Learn to Invest{' '}
-                  <span style={{
-                    background: 'linear-gradient(135deg,#5194F6,#7ab8fa)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                  }}>
+                  <span style={{ background: 'linear-gradient(135deg,#5194F6,#7ab8fa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                     Smarter
                   </span>
                 </h1>
 
-                <p
-                  className="text-base md:text-lg leading-relaxed mb-6 max-w-lg"
-                  style={{ color: isLight ? '#6b7280' : 'rgba(148,163,184,0.9)' }}
-                >
+                <p className="text-base md:text-lg leading-relaxed mb-6 max-w-lg"
+                  style={{ color: isLight ? '#6b7280' : 'rgba(148,163,184,0.9)' }}>
                   Structured courses on financial markets, technical analysis, and investor
                   psychology — all in one place.
                 </p>
 
-                {/* Tab pills */}
                 <div className="flex flex-wrap gap-2 mb-7">
                   {[
                     { label: '📈 Financial',     tab: 'financial'    as const },
@@ -621,46 +385,12 @@ const EducationView = () => {
                   ))}
                 </div>
 
-                {/* Stat pills row */}
-                {/* <div className="flex flex-wrap gap-2">
-                  {STAT_PILLS.map(({ Icon, value, label, accent, bg, border }) => (
-                    <div
-                      key={label}
-                      className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-200 hover:-translate-y-0.5"
-                      style={{ background: bg, border: `1px solid ${border}` }}
-                    >
-                      <div
-                        className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ color: accent }}
-                      >
-                        <Icon />
-                      </div>
-                      <div>
-                        <p className="text-sm font-black leading-none"
-                          style={{ color: isLight ? '#0f172a' : '#fff' }}>
-                          {value}
-                        </p>
-                        <p className="text-[10px] font-semibold leading-none mt-0.5"
-                          style={{ color: accent }}>
-                          {label}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div> */}
-
               </div>
-
-              {/* ── RIGHT: SVG Illustration (desktop only) ───────────── */}
-              <div className="hidden xl:flex items-center justify-center flex-shrink-0 w-[460px]">
-                <HeroIllustration isLight={isLight} />
-              </div>
-
             </div>
           </div>
         </section>
 
-        {/* ── MOBILE TAB BAR ───────────────────────────────────────────── */}
+        {/* ── MOBILE TAB BAR ───────────────────────────────────────────────── */}
         <div className="lg:hidden sticky top-[68px] z-30 backdrop-blur-md overflow-x-auto scrollbar-hide" style={{
           background: isLight ? 'rgba(245,244,240,0.96)' : 'rgba(10,22,40,0.94)',
           borderBottom: isLight ? '1px solid rgba(226,232,240,0.8)' : '1px solid rgba(255,255,255,0.07)',
@@ -688,11 +418,11 @@ const EducationView = () => {
           </div>
         </div>
 
-        {/* ── BODY ─────────────────────────────────────────────────────── */}
+        {/* ── BODY ──────────────────────────────────────────────────────────── */}
         <div className="container mx-auto px-4 lg:px-6 py-8">
           <div className="flex gap-7">
 
-            {/* ── SIDEBAR ─────────────────────────────────────────────── */}
+            {/* ── SIDEBAR ───────────────────────────────────────────────────── */}
             <aside className="hidden lg:flex flex-col gap-1 w-52 flex-shrink-0 sticky top-24 self-start"
               style={{
                 background: sidebarBg,
@@ -723,11 +453,7 @@ const EducationView = () => {
                     </span>
                     <span className={`text-sm transition-all ${nav.isParent ? 'font-bold' : 'font-medium'}`}
                       style={{
-                        color: isActive
-                          ? nav.color
-                          : nav.isParent
-                            ? (isLight ? '#0f172a' : '#e2e8f0')
-                            : (isLight ? 'rgba(13,37,64,0.60)' : 'rgba(148,163,184,0.8)'),
+                        color: isActive ? nav.color : nav.isParent ? (isLight ? '#0f172a' : '#e2e8f0') : (isLight ? 'rgba(13,37,64,0.60)' : 'rgba(148,163,184,0.8)'),
                         fontSize: nav.isParent ? 13 : 12,
                       }}>
                       {nav.label}
@@ -737,18 +463,33 @@ const EducationView = () => {
                 );
               })}
 
-              {/* Sidebar CTA */}
+              {/* ✅ FIX 3 — Sidebar CTA: Admin ke liye "Unlock Premium" button hide */}
               <div className="mt-4 pt-4" style={{ borderTop: isLight ? '1px solid rgba(226,232,240,0.8)' : '1px solid rgba(255,255,255,0.07)' }}>
-                <button
-                  onClick={() => navigate('/plans/foundation/checkout')}
-                  className="w-full py-2.5 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
-                  style={{ background: 'linear-gradient(135deg,#5194F6,#3a7de0)' }}>
-                  🔓 Unlock Premium
-                </button>
+                {isAdmin ? (
+                  // Admin ke liye — sirf ek info badge, koi button nahi
+                  <div className="w-full py-2.5 rounded-xl text-xs font-bold text-center"
+                    style={{ background: 'rgba(168,85,247,0.10)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.25)' }}>
+                    🛡️ Admin Access
+                  </div>
+                ) : isSubscriber ? (
+                  // Subscriber ke liye — green "Subscribed" badge
+                  <div className="w-full py-2.5 rounded-xl text-xs font-bold text-center"
+                    style={{ background: 'rgba(34,197,94,0.10)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.25)' }}>
+                    ✓ Premium Active
+                  </div>
+                ) : (
+                  // Normal user — Unlock button dikhao
+                  <button
+                    onClick={() => navigate('/plans/foundation/checkout')}
+                    className="w-full py-2.5 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
+                    style={{ background: 'linear-gradient(135deg,#5194F6,#3a7de0)' }}>
+                    🔓 Unlock Premium
+                  </button>
+                )}
               </div>
             </aside>
 
-            {/* ── MAIN CONTENT ─────────────────────────────────────────── */}
+            {/* ── MAIN CONTENT ─────────────────────────────────────────────── */}
             <div className="flex-1 min-w-0">
 
               {/* Section header */}
@@ -773,7 +514,7 @@ const EducationView = () => {
                 </div>
               </div>
 
-              {/* Cards grid */}
+              {/* Cards grid — ✅ FIX 2: isAdmin & isSubscriber pass karo LearnCard ko */}
               <div className={`grid grid-cols-1 ${
                 activeTab === 'financial' ? 'md:grid-cols-2 lg:grid-cols-3' : 'md:grid-cols-2'
               } gap-5`}>
@@ -782,13 +523,15 @@ const EducationView = () => {
                     key={item.id}
                     {...item}
                     isLight={isLight}
+                    isAdmin={isAdmin}               // ✅ pass karo
+                    isSubscriber={isSubscriber}     // ✅ pass karo
                     onStartLearning={handleStartLearning}
                     onUnlock={handleUnlock}
                   />
                 ))}
               </div>
 
-              {/* CTA Banner */}
+              {/* ✅ FIX 4 — Bottom CTA Banner: Admin/Subscriber ke liye "Unlock" button hide */}
               <div className="relative rounded-2xl overflow-hidden p-8 md:p-10 text-center mt-12" style={{
                 background: isLight ? 'linear-gradient(135deg,#edf5fe,#dce8f7)' : '#101528',
                 border: isLight ? '1px solid rgba(13,37,64,0.10)' : '1px solid rgba(81,148,246,0.20)',
@@ -816,16 +559,20 @@ const EducationView = () => {
                       Browse Free Resources
                       <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                     </button>
-                    <button
-                      onClick={() => navigate('/plans/foundation/checkout')}
-                      className="inline-flex items-center gap-2 px-7 py-3 rounded-xl font-bold text-sm transition-all hover:-translate-y-0.5"
-                      style={{
-                        background: isLight ? 'rgba(13,37,64,0.06)' : 'rgba(255,255,255,0.07)',
-                        border: isLight ? '1px solid rgba(13,37,64,0.12)' : '1px solid rgba(255,255,255,0.12)',
-                        color: isLight ? '#0f172a' : '#fff',
-                      }}>
-                      🔓 Unlock Premium
-                    </button>
+
+                    {/* ✅ FIX 4 — Admin/Subscriber ke liye "Unlock Premium" button hide */}
+                    {!isAdmin && !isSubscriber && (
+                      <button
+                        onClick={() => navigate('/plans/foundation/checkout')}
+                        className="inline-flex items-center gap-2 px-7 py-3 rounded-xl font-bold text-sm transition-all hover:-translate-y-0.5"
+                        style={{
+                          background: isLight ? 'rgba(13,37,64,0.06)' : 'rgba(255,255,255,0.07)',
+                          border: isLight ? '1px solid rgba(13,37,64,0.12)' : '1px solid rgba(255,255,255,0.12)',
+                          color: isLight ? '#0f172a' : '#fff',
+                        }}>
+                        🔓 Unlock Premium
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

@@ -115,7 +115,10 @@ const SensexNiftyCard = ({ cardBg, cardBorder, cardShadow, isLight, sensex, nift
       <div className="md:hidden">
         <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: isLight ? "#0A3656" : "#1F5F89", borderRadius: "8px 0 0 8px" }} />
         <div style={{ padding: "10px 10px 10px 14px" }}>
-          <div style={{ fontSize: "8px", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: isLight ? "#0A3656" : "#74A8C9", marginBottom: 8 }}>SENSEX · NIFTY 50</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: "8px", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: isLight ? "#0A3656" : "#74A8C9" }}>SENSEX · NIFTY 50</span>
+            <span style={{ fontSize: "7px", fontWeight: 600, color: "#0ea5e9", background: "rgba(14,165,233,0.1)", border: "1px solid rgba(14,165,233,0.25)", borderRadius: 3, padding: "1px 4px", whiteSpace: "nowrap" }}>via Kite</span>
+          </div>
           {[
             { label: "SENSEX", val: fmtVal(sensex?.price), chg: fmtChg(sensex?.chg), pos: sensexPos },
             { label: "NIFTY 50", val: fmtVal(nifty?.price), chg: fmtChg(nifty?.chg), pos: niftyPos },
@@ -138,9 +141,12 @@ const SensexNiftyCard = ({ cardBg, cardBorder, cardShadow, isLight, sensex, nift
         </div>
       </div>
       <div className="hidden md:block">
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <span style={{ width: 7, height: 7, borderRadius: "50%", background: isLight ? "#0A3656" : "#74A8C9", display: "inline-block", boxShadow: isLight ? "0 0 6px rgba(10,54,86,0.45)" : "0 0 6px rgba(116,168,201,0.45)" }} />
-          <span style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: isLight ? "#1f455f" : "#ffffff" }}>SENSEX vs NIFTY 50</span>
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: isLight ? "#0A3656" : "#74A8C9", display: "inline-block", boxShadow: isLight ? "0 0 6px rgba(10,54,86,0.45)" : "0 0 6px rgba(116,168,201,0.45)" }} />
+            <span style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: isLight ? "#1f455f" : "#ffffff" }}>SENSEX vs NIFTY 50</span>
+          </div>
+          <span style={{ fontSize: "8px", fontWeight: 600, color: "#0ea5e9", background: "rgba(14,165,233,0.1)", border: "1px solid rgba(14,165,233,0.25)", borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap" }}>via Kite</span>
         </div>
         <div className="space-y-1.5 mb-2">
           {[
@@ -188,7 +194,10 @@ const FiiDiiCard = ({ cardBg, cardBorder, cardShadow, isLight, fiiNet, diiNet, f
     <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }} className="rounded-2xl relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer md:p-3">
       <div className="md:hidden" style={{ padding: "10px 10px 10px 14px", position: "relative" }}>
         <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: isLight ? "#0A3656" : "#1F5F89", borderRadius: "8px 0 0 8px" }} />
-        <div style={{ fontSize: "8px", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: isLight ? "#0A3656" : "#74A8C9", marginBottom: 8 }}>FII · DII FLOW</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <span style={{ fontSize: "8px", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: isLight ? "#0A3656" : "#74A8C9" }}>FII · DII FLOW</span>
+          <span style={{ fontSize: "7px", fontWeight: 600, color: "#f59e0b", background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 3, padding: "1px 4px", whiteSpace: "nowrap" }}>via NSE</span>
+        </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 8 }}>
           <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, padding: "5px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
@@ -220,9 +229,12 @@ const FiiDiiCard = ({ cardBg, cardBorder, cardShadow, isLight, fiiNet, diiNet, f
         )}
       </div>
       <div className="hidden md:block">
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <span style={{ width: 7, height: 7, borderRadius: "50%", background: isLight ? "#0A3656" : "#74A8C9", display: "inline-block", boxShadow: isLight ? "0 0 6px rgba(10,54,86,0.45)" : "0 0 6px rgba(116,168,201,0.45)" }} />
-          <span style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: isLight ? "#1f455f" : "#ffffff" }}>FII vs DII</span>
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: isLight ? "#0A3656" : "#74A8C9", display: "inline-block", boxShadow: isLight ? "0 0 6px rgba(10,54,86,0.45)" : "0 0 6px rgba(116,168,201,0.45)" }} />
+            <span style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: isLight ? "#1f455f" : "#ffffff" }}>FII vs DII</span>
+          </div>
+          <span style={{ fontSize: "8px", fontWeight: 600, color: "#f59e0b", background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap" }}>via NSE</span>
         </div>
         <div className="flex justify-between items-end mb-2">
           <div><div className={`text-[11px] font-semibold mb-1 ${isLight ? "text-navy/50" : "text-white/40"}`}>FII</div><div className="text-base md:text-lg font-bold text-red-400">{loading ? "···" : fiiLabel}</div></div>
@@ -253,7 +265,10 @@ const IndiaVixCard = ({ cardBg, cardBorder, cardShadow, isLight, vixData }) => {
     <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }} className="rounded-2xl relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer md:p-3">
       <div className="md:hidden" style={{ padding: "10px 10px 10px 14px", position: "relative" }}>
         <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: fearColor, borderRadius: "8px 0 0 8px" }} />
-        <div style={{ fontSize: "8px", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: isLight ? "#0A3656" : "#74A8C9", marginBottom: 6 }}>INDIA VIX</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+          <span style={{ fontSize: "8px", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: isLight ? "#0A3656" : "#74A8C9" }}>INDIA VIX</span>
+          <span style={{ fontSize: "7px", fontWeight: 600, color: "#0ea5e9", background: "rgba(14,165,233,0.1)", border: "1px solid rgba(14,165,233,0.25)", borderRadius: 3, padding: "1px 4px", whiteSpace: "nowrap" }}>via Kite</span>
+        </div>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 8, gap: 4 }}>
           <span style={{ fontSize: "26px", fontWeight: 900, color: isLight ? "#041421" : "#fff", letterSpacing: "-0.04em", lineHeight: 1, flexShrink: 0 }}>{vix.toFixed ? vix.toFixed(2) : vix}</span>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, minWidth: 0 }}>
@@ -272,9 +287,12 @@ const IndiaVixCard = ({ cardBg, cardBorder, cardShadow, isLight, vixData }) => {
         </div>
       </div>
       <div className="hidden md:block">
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <span style={{ width: 7, height: 7, borderRadius: "50%", background: isLight ? "#0A3656" : "#74A8C9", display: "inline-block", boxShadow: isLight ? "0 0 6px rgba(10,54,86,0.45)" : "0 0 6px rgba(116,168,201,0.45)" }} />
-          <span style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: isLight ? "#1f455f" : "#ffffff" }}>INDIA VIX</span>
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: isLight ? "#0A3656" : "#74A8C9", display: "inline-block", boxShadow: isLight ? "0 0 6px rgba(10,54,86,0.45)" : "0 0 6px rgba(116,168,201,0.45)" }} />
+            <span style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: isLight ? "#1f455f" : "#ffffff" }}>INDIA VIX</span>
+          </div>
+          <span style={{ fontSize: "8px", fontWeight: 600, color: "#0ea5e9", background: "rgba(14,165,233,0.1)", border: "1px solid rgba(14,165,233,0.25)", borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap" }}>via Kite</span>
         </div>
         <div className="flex items-end justify-between mb-1.5">
           <span className={`text-lg md:text-xl font-extrabold tracking-tight ${isLight ? "text-navy" : "text-white"}`}>{vix.toFixed ? vix.toFixed(2) : vix}</span>
@@ -310,7 +328,10 @@ const GiftNiftyCard = ({ cardBg, cardBorder, cardShadow, isLight, liveGiftNifty,
       <div className="md:hidden" style={{ position: "relative" }}>
         <div style={{ height: 3, background: isLight ? "#0A3656" : "#1F5F89", borderRadius: "8px 8px 0 0" }} />
         <div style={{ padding: "8px 10px 0 10px" }}>
-          <div style={{ fontSize: "8px", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: isLight ? "#0A3656" : "#74A8C9", marginBottom: 4 }}>GIFT NIFTY</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+            <span style={{ fontSize: "8px", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: isLight ? "#0A3656" : "#74A8C9" }}>GIFT NIFTY</span>
+            <span style={{ fontSize: "7px", fontWeight: 600, color: "#0ea5e9", background: "rgba(14,165,233,0.1)", border: "1px solid rgba(14,165,233,0.25)", borderRadius: 3, padding: "1px 4px", whiteSpace: "nowrap" }}>via Kite</span>
+          </div>
           <div style={{ fontSize: "20px", fontWeight: 900, color: isLight ? "#041421" : "#fff", letterSpacing: "-0.03em", lineHeight: 1 }}>{displayPrice}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4, marginBottom: 2, overflow: "hidden", minWidth: 0 }}>
             <span style={{ fontSize: "9px", fontWeight: 700, color: pos ? "#4ade80" : "#f87171", flexShrink: 0 }}>{displayChange}</span>
@@ -320,9 +341,12 @@ const GiftNiftyCard = ({ cardBg, cardBorder, cardShadow, isLight, liveGiftNifty,
         <Sparkline positive={pos} color={isLight ? "#0A3656" : "#1F5F89"} />
       </div>
       <div className="hidden md:block">
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <span style={{ width: 7, height: 7, borderRadius: "50%", background: isLight ? "#0A3656" : "#74A8C9", display: "inline-block", boxShadow: isLight ? "0 0 6px rgba(10,54,86,0.45)" : "0 0 6px rgba(116,168,201,0.45)" }} />
-          <span style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: isLight ? "#1f455f" : "#ffffff" }}>GIFT NIFTY</span>
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: isLight ? "#0A3656" : "#74A8C9", display: "inline-block", boxShadow: isLight ? "0 0 6px rgba(10,54,86,0.45)" : "0 0 6px rgba(116,168,201,0.45)" }} />
+            <span style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: isLight ? "#1f455f" : "#ffffff" }}>GIFT NIFTY</span>
+          </div>
+          <span style={{ fontSize: "8px", fontWeight: 600, color: "#0ea5e9", background: "rgba(14,165,233,0.1)", border: "1px solid rgba(14,165,233,0.25)", borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap" }}>via Kite</span>
         </div>
         <div className="flex items-end justify-between mb-1">
           <div>
@@ -351,7 +375,7 @@ const UsdInrCard = ({ cardBg, cardBorder, cardShadow, isLight, liveValue, liveCh
       <div className="md:hidden" style={{ padding: "10px 10px 10px 14px", position: "relative" }}>
         <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: isLight ? "#0A3656" : "#1F5F89", borderRadius: "8px 0 0 8px" }} />
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
-          <div style={{ fontSize: "8px", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: isLight ? "#0A3656" : "#74A8C9" }}>USD / INR</div>
+          <span style={{ fontSize: "8px", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: isLight ? "#0A3656" : "#74A8C9" }}>USD / INR</span>
           <span style={{ fontSize: "7px", fontWeight: 600, color: "#6366f1", background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: 3, padding: "1px 4px", whiteSpace: "nowrap" }}>via Yahoo Finance</span>
         </div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 3, marginBottom: 4 }}>
@@ -421,7 +445,14 @@ const GoldSilverCard = ({ cardBg, cardBorder, cardShadow, isLight, liveGold, liv
     <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }} className="rounded-2xl relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer md:p-3">
       <div className="md:hidden" style={{ padding: "10px", position: "relative" }}>
         <div style={{ position: "absolute", top: 0, right: 0, width: 40, height: 40, background: isLight ? "rgba(37,99,235,0.06)" : "rgba(59,130,246,0.08)", borderRadius: "0 8px 0 40px" }} />
-        <div style={{ fontSize: "8px", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: isLight ? "#0A3656" : "#74A8C9", marginBottom: 7 }}>GOLD · SILVER</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
+          <span style={{ fontSize: "8px", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: isLight ? "#0A3656" : "#74A8C9" }}>GOLD · SILVER</span>
+          {(goldSource || silverSource) && (
+            <span style={{ fontSize: "7px", fontWeight: 600, color: srcColor(goldSource || silverSource), background: `${srcColor(goldSource || silverSource)}18`, border: `1px solid ${srcColor(goldSource || silverSource)}30`, borderRadius: 3, padding: "1px 4px", whiteSpace: "nowrap" }}>
+              {srcLabel(goldSource || silverSource)}
+            </span>
+          )}
+        </div>
         {[
           { Icon: GoldBrickIcon, label: "Gold", price: fmtPrice(gold), chg: fmtChg(goldChg, goldPos), pos: goldPos, bar: "linear-gradient(90deg,#C9A84C,#f5d78e)", barW: "72%" },
           { Icon: SilverBrickIcon, label: "Silver", price: fmtPrice(silver), chg: fmtChg(silverChg, silverPos), pos: silverPos, bar: "linear-gradient(90deg,#94a3b8,#cbd5e1)", barW: "58%" },

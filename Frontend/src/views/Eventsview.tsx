@@ -1200,9 +1200,6 @@ const EventsView: React.FC = () => {
           {/* ── MAIN FEED ──────────────────────────────────────── */}
           <div style={{ flex: 1, minWidth: 0, padding: "18px 20px", overflowY: "auto" }}>
 
-            {/* Insight banner */}
-            <InsightTerminalBox isLight={isLight} tk={tk} />
-
             {/* Error banner */}
             {error && section === "events" && !loading && (
               <div style={{

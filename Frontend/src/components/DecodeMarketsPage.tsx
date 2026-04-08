@@ -43,14 +43,38 @@ const tabConfig: Record<ActiveTab, { badge: { color: string; bg: string; border:
   },
 };
 
+// Tab labels shown in the switcher
+const TABS: { key: ActiveTab; label: string }[] = [
+  { key: "domestic", label: "Domestic" },
+  { key: "global", label: "Global" },
+  { key: "commodities", label: "Commodities" },
+];
+
 const DecodeMarketsPage = () => {
   const { tab: tabParam } = useParams<{ tab: string }>();
-  const activeTab: ActiveTab = (tabParam as ActiveTab) || "domestic";
-
   const { isAdmin } = useAuth();
   const { theme } = useTheme();
   const isLight = theme === "light";
   const navigate = useNavigate();
+
+  // activeTab is driven by URL param, but we also keep local state so switching
+  // tabs updates the URL (and hence the data) without a full page reload.
+  const [activeTab, setActiveTab] = useState<ActiveTab>(
+    (tabParam as ActiveTab) || "domestic"
+  );
+
+  // Sync if user navigates via browser back/forward
+  useEffect(() => {
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam as ActiveTab);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabParam]);
+
+  const handleTabChange = (newTab: ActiveTab) => {
+    setActiveTab(newTab);
+    navigate(`/insights/${newTab}`, { replace: true });
+  };
 
   const [insights, setInsights] = useState<InsightData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,6 +135,12 @@ const DecodeMarketsPage = () => {
   };
   const handleFormSuccess = () => { fetchInsights(); setEditingInsight(null); };
 
+  // Styling helpers (mirrors HomeView palette)
+  const GOLD = "#0A3656";
+  const tabContainerBg = isLight ? "rgba(252,253,254,0.96)" : "rgba(6,27,43,0.72)";
+  const tabContainerBorder = isLight ? "1px solid rgba(4,20,33,0.10)" : "1px solid rgba(124,166,194,0.25)";
+  const tabInactiveColor = isLight ? "#35566f" : "#8db2cc";
+
   return (
     <div className={`min-h-screen ${isLight ? "bg-[#f0f7fe]" : "bg-[#101528]"}`}>
 
@@ -159,7 +189,7 @@ const DecodeMarketsPage = () => {
         </div>
 
         {/* ── Page header ─────────────────────────────────────────────────── */}
-        <div className="text-center mb-8 sm:mb-12">
+        <div className="text-center mb-6 sm:mb-8">
           <div
             className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full mb-4 sm:mb-5"
             style={{ background: "rgba(81,148,246,0.1)", border: "1px solid rgba(81,148,246,0.2)" }}
@@ -175,20 +205,43 @@ const DecodeMarketsPage = () => {
             </span>
           </h1>
 
-          {/* Tab pill */}
-          <div className="flex flex-col items-center gap-2 mt-4">
+          {/* ── Tab Switcher (same style as HomeView) ── */}
+          <div className="flex justify-center mt-5">
             <div
-              className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium"
-              style={{ color: tab.badge.color, background: tab.badge.bg, border: `1px solid ${tab.badge.border}` }}
+              className="flex gap-1 p-1 rounded-xl"
+              style={{ background: tabContainerBg, border: tabContainerBorder }}
             >
-              <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              {tab.label}
+              {TABS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => handleTabChange(key)}
+                  className="px-4 sm:px-5 py-2 rounded-lg text-sm font-medium transition-all capitalize"
+                  style={
+                    activeTab === key
+                      ? { background: GOLD, color: "#ffffff" }
+                      : { color: tabInactiveColor }
+                  }
+                >
+                  {label}
+                </button>
+              ))}
             </div>
-            <h2 className={`text-xl sm:text-2xl font-bold mt-1 ${isLight ? "text-navy" : "text-white"}`}>
-              {tab.heading}
-            </h2>
-            <p className="text-slate-400 text-xs sm:text-sm">{tab.sub}</p>
           </div>
+        </div>
+
+        {/* ── Active tab sub-header pill ───────────────────────────────────── */}
+        <div className="flex flex-col items-center gap-1.5 mb-5 sm:mb-6">
+          <div
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium"
+            style={{ color: tab.badge.color, background: tab.badge.bg, border: `1px solid ${tab.badge.border}` }}
+          >
+            <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            {tab.label}
+          </div>
+          <h2 className={`text-xl sm:text-2xl font-bold mt-1 ${isLight ? "text-navy" : "text-white"}`}>
+            {tab.heading}
+          </h2>
+          <p className="text-slate-400 text-xs sm:text-sm">{tab.sub}</p>
         </div>
 
         {/* Results count */}

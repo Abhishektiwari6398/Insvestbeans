@@ -3,7 +3,8 @@
  * Route: /education/:categoryId
  *
  * Book-reader layout: sticky Table of Contents sidebar + chapter content area.
- * Premium modules are gated with <RequireSubscription>.
+ * ✅ PDF modules → overview + download card (no chapter-by-chapter list)
+ * ✅ Admin bypass → isAdmin check, no subscription gate
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -13,7 +14,7 @@ import { useTheme } from '@/controllers/Themecontext';
 import { useAuth } from '@/controllers/AuthContext';
 import RequireSubscription from '@/components/RequireSubscription';
 
-// ── SVG Icons ─────────────────────────────────────────────────────────────────
+// ── SVG Icons ──────────────────────────────────────────────────────────────────
 
 const SvgBack = () => (
   <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -56,7 +57,7 @@ const SvgChevronRight = () => (
   </svg>
 );
 const SvgDownload = () => (
-  <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+  <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
   </svg>
 );
@@ -72,8 +73,30 @@ const SvgListChecks = () => (
     <polyline points="3 6 4 7 6 5" /><polyline points="3 12 4 13 6 11" /><polyline points="3 18 4 19 6 17" />
   </svg>
 );
+const SvgFileText = () => (
+  <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
+    <polyline points="10 9 9 9 8 9" />
+  </svg>
+);
+const SvgShield = () => (
+  <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <polyline points="9 12 11 14 15 10" />
+  </svg>
+);
 
-// ── Full Content Dataset ───────────────────────────────────────────────────────
+// ── Full Content Dataset ────────────────────────────────────────────────────────
+// 
+// PDF modules ke liye structure:
+//   pdfUrl        → actual PDF file ka URL (download hoga)
+//   previewTopics → 6–10 bullet points jo overview card mein dikhenge
+//   highlights    → 3 key selling-point badges
+//
+// Video modules ke liye structure same as before (chapters[])
 
 const CATEGORY_DATA: Record<string, any> = {
   'financial-ebooks': {
@@ -81,7 +104,7 @@ const CATEGORY_DATA: Record<string, any> = {
     accent: '#3B82F6', accentGrad: 'linear-gradient(135deg,#3B82F6,#4F46E5)',
     contentType: 'ebook',
     description: 'Curated financial guides written by market experts. From equity basics to advanced portfolio theory — available as downloadable PDFs.',
-    stats: { rating: '4.9', reviews: '312', duration: '480 pages total', modules: 3 },
+    stats: { rating: '4.9', reviews: '312', duration: '400 pages total', modules: 3 },
     instructor: { name: 'InvestBeans Research Team', role: 'CFA & SEBI-Registered Analysts', avatar: '📊' },
     whatYouLearn: [
       'Understand how equity markets and Sensex/Nifty work',
@@ -93,42 +116,69 @@ const CATEGORY_DATA: Record<string, any> = {
     ],
     modules: [
       {
-        title: 'Book I — Fundamentals of Equity Investing', subtitle: 'Your first step into the markets',
-        pages: 120, level: 'Beginner', isPaid: false,
+        title: 'Book I — Fundamentals of Equity Investing',
+        subtitle: 'Your first step into the markets',
+        pages: 120,
+        level: 'Beginner',
+        isPaid: false,
         description: "A complete beginner's guide to stock markets, Demat accounts, how IPOs work, and the basics of equity valuation. No prior knowledge needed.",
-        chapters: [
-          { title: 'What is the Stock Market?',                  ref: 'pp. 1–18',   free: true  },
-          { title: 'Opening a Demat & Trading Account',          ref: 'pp. 19–32',  free: true  },
-          { title: 'Understanding Sensex & Nifty 50',            ref: 'pp. 33–52',  free: true  },
-          { title: 'How to Read a Stock Quote',                   ref: 'pp. 53–74',  free: false },
-          { title: 'Equity Valuation Basics (P/E, P/B, EV/EBITDA)', ref: 'pp. 75–98', free: false },
-          { title: 'Investing vs. Trading — What\'s Right for You', ref: 'pp. 99–120', free: false },
+        // ✅ PDF download link (apna actual link yahan dalna)
+        pdfUrl: 'https://your-storage.com/pdfs/book1-equity-fundamentals.pdf',
+        // ✅ Preview topics — ye overview card mein dikhenge
+        previewTopics: [
+          'What is the Stock Market and how it works',
+          'How to open a Demat & Trading Account step-by-step',
+          'Understanding Sensex & Nifty 50 — India\'s benchmark indices',
+          'How to read a stock quote and order book',
+          'Equity valuation basics — P/E, P/B, EV/EBITDA explained simply',
+          'Difference between Investing and Trading — which suits you?',
+          'IPOs — how they work and whether to apply',
+          'Common beginner mistakes and how to avoid them',
         ],
+        // ✅ 3 highlight badges shown on the card
+        highlights: ['120 Pages', 'Free Download', 'Beginner Friendly'],
       },
       {
-        title: 'Book II — Advanced Portfolio Management', subtitle: 'Build wealth that compounds',
-        pages: 200, level: 'Advanced', isPaid: true,
+        title: 'Book II — Advanced Portfolio Management',
+        subtitle: 'Build wealth that compounds',
+        pages: 200,
+        level: 'Advanced',
+        isPaid: true,
         description: 'Deep-dive into Modern Portfolio Theory, asset allocation strategies, rebalancing, and building a wealth compounding machine that works across market cycles.',
-        chapters: [
-          { title: 'Modern Portfolio Theory Explained',          ref: 'pp. 1–28',    free: false },
-          { title: 'Asset Allocation: Equity vs Debt vs Gold',   ref: 'pp. 29–60',   free: false },
-          { title: 'Systematic Investment Planning (SIP)',        ref: 'pp. 61–88',   free: false },
-          { title: 'Portfolio Rebalancing Strategies',           ref: 'pp. 89–120',  free: false },
-          { title: 'Tax Harvesting & LTCG Optimization',         ref: 'pp. 121–158', free: false },
-          { title: 'Building a ₹1 Crore Portfolio from Scratch', ref: 'pp. 159–200', free: false },
+        pdfUrl: 'https://your-storage.com/pdfs/book2-portfolio-management.pdf',
+        previewTopics: [
+          'Modern Portfolio Theory (MPT) — how to reduce risk without reducing returns',
+          'Asset Allocation — right mix of Equity, Debt, Gold, and REITs',
+          'Systematic Investment Planning (SIP) — automation and timing strategies',
+          'Portfolio Rebalancing — when and how to rebalance efficiently',
+          'Tax Harvesting and LTCG optimization strategies',
+          'Building a ₹1 Crore portfolio from ₹5,000/month',
+          'Global diversification for Indian investors',
+          'Factor investing — Value, Momentum, Quality explained',
+          'How to evaluate Mutual Funds vs Direct Stocks',
+          'Case study: Real portfolio built from scratch to ₹50L',
         ],
+        highlights: ['200 Pages', 'Advanced Level', 'Includes Case Studies'],
       },
       {
-        title: 'Book III — Global Markets Decoded', subtitle: 'Think beyond Nifty',
-        pages: 160, level: 'Intermediate', isPaid: true,
+        title: 'Book III — Global Markets Decoded',
+        subtitle: 'Think beyond Nifty',
+        pages: 160,
+        level: 'Intermediate',
+        isPaid: true,
         description: "Understand how US Fed rate decisions, China's growth, and global commodity prices ripple through Indian equity and currency markets.",
-        chapters: [
-          { title: 'US Federal Reserve & Indian Markets',      ref: 'pp. 1–30',    free: false },
-          { title: 'Dollar-Rupee Dynamics Explained',          ref: 'pp. 31–58',   free: false },
-          { title: 'Crude Oil Prices & India\'s Economy',      ref: 'pp. 59–90',   free: false },
-          { title: 'FII/DII Flow Analysis & What It Signals',  ref: 'pp. 91–120',  free: false },
-          { title: 'China Risk & Emerging Market Rotation',    ref: 'pp. 121–160', free: false },
+        pdfUrl: 'https://your-storage.com/pdfs/book3-global-markets.pdf',
+        previewTopics: [
+          'US Federal Reserve decisions and their impact on Indian markets',
+          'Dollar-Rupee dynamics — what moves the exchange rate',
+          'Crude oil prices and India\'s economy — the hidden link',
+          'FII and DII fund flows — how to track and interpret them',
+          'China risk and emerging market rotation strategies',
+          'US recession signals and their effect on Nifty',
+          'Gold as a safe haven — when and how much to hold',
+          'Global interest rate cycles and Indian bond markets',
         ],
+        highlights: ['160 Pages', 'Intermediate Level', 'Global Perspective'],
       },
     ],
   },
@@ -150,37 +200,43 @@ const CATEGORY_DATA: Record<string, any> = {
     ],
     modules: [
       {
-        title: 'Session 1 — How to Read a Balance Sheet', subtitle: 'Decode any listed company in 18 minutes',
+        title: 'Session 1 — How to Read a Balance Sheet',
+        subtitle: 'Decode any listed company in 18 minutes',
         pages: '18 min', level: 'Beginner', isPaid: false,
         description: 'Demystify the three financial statements — balance sheet, P&L, and cash flow — and learn to spot healthy vs. stressed companies at a glance.',
+        videoUrl: 'https://www.youtube.com/embed/YOUR_VIDEO_ID_1',
         chapters: [
           { title: 'What is a Balance Sheet?',            ref: '0:00–3:20',  free: true },
           { title: 'Assets, Liabilities & Equity',        ref: '3:20–8:45',  free: true },
           { title: 'Reading the P&L Statement',           ref: '8:45–14:00', free: true },
-          { title: 'Cash Flow Analysis — The Truth Test', ref: '14:00–18:00',free: true },
+          { title: 'Cash Flow Analysis — The Truth Test', ref: '14:00–18:00', free: true },
         ],
       },
       {
-        title: 'Session 2 — Technical Analysis Masterclass', subtitle: 'Charts, patterns, and momentum',
+        title: 'Session 2 — Technical Analysis Masterclass',
+        subtitle: 'Charts, patterns, and momentum',
         pages: '45 min', level: 'Intermediate', isPaid: false,
         description: 'A comprehensive session on chart patterns, moving averages, and momentum indicators used by active traders on Zerodha and Angel One.',
+        videoUrl: 'https://www.youtube.com/embed/YOUR_VIDEO_ID_2',
         chapters: [
-          { title: 'Introduction to Candlestick Charts',       ref: '0:00–8:00',  free: true },
-          { title: 'Support & Resistance — The Foundation',    ref: '8:00–18:30', free: true },
-          { title: 'Moving Averages (SMA, EMA)',               ref: '18:30–28:00',free: true },
-          { title: 'RSI, MACD & Momentum Indicators',         ref: '28:00–38:00',free: true },
-          { title: 'Live Trade Walkthrough on NSE Chart',      ref: '38:00–45:00',free: true },
+          { title: 'Introduction to Candlestick Charts',    ref: '0:00–8:00',   free: true },
+          { title: 'Support & Resistance — The Foundation', ref: '8:00–18:30',  free: true },
+          { title: 'Moving Averages (SMA, EMA)',            ref: '18:30–28:00', free: true },
+          { title: 'RSI, MACD & Momentum Indicators',      ref: '28:00–38:00', free: true },
+          { title: 'Live Trade Walkthrough on NSE Chart',   ref: '38:00–45:00', free: true },
         ],
       },
       {
-        title: 'Session 3 — Options Trading Explained', subtitle: 'Calls, puts, and strategies',
+        title: 'Session 3 — Options Trading Explained',
+        subtitle: 'Calls, puts, and strategies',
         pages: '32 min', level: 'Advanced', isPaid: false,
         description: 'Everything you need to understand Call and Put options, Option Chain reading on NSE, and basic strategies like Covered Call and Bull Spread.',
+        videoUrl: 'https://www.youtube.com/embed/YOUR_VIDEO_ID_3',
         chapters: [
-          { title: 'What are Options? Call vs Put Decoded',  ref: '0:00–7:00',  free: true },
-          { title: 'Reading the NSE Option Chain',           ref: '7:00–15:00', free: true },
-          { title: 'Greeks: Delta, Theta, IV Explained',     ref: '15:00–24:00',free: true },
-          { title: 'Covered Call & Bull Spread in Practice', ref: '24:00–32:00',free: true },
+          { title: 'What are Options? Call vs Put Decoded',  ref: '0:00–7:00',   free: true },
+          { title: 'Reading the NSE Option Chain',           ref: '7:00–15:00',  free: true },
+          { title: 'Greeks: Delta, Theta, IV Explained',     ref: '15:00–24:00', free: true },
+          { title: 'Covered Call & Bull Spread in Practice', ref: '24:00–32:00', free: true },
         ],
       },
     ],
@@ -207,12 +263,12 @@ const CATEGORY_DATA: Record<string, any> = {
         pages: '6 weeks', level: 'Intermediate', isPaid: true,
         description: 'Master equity research — fundamental analysis, DCF valuation, and portfolio construction — in a structured 6-week program with a final exam.',
         chapters: [
-          { title: 'Week 1: Financial Statement Analysis',        ref: 'Week 1', free: false },
-          { title: 'Week 2: Valuation Methods (DCF, P/E, P/B)',  ref: 'Week 2', free: false },
-          { title: 'Week 3: Sector & Industry Analysis',         ref: 'Week 3', free: false },
-          { title: 'Week 4: Building an Investment Thesis',      ref: 'Week 4', free: false },
-          { title: 'Week 5: Portfolio Construction',             ref: 'Week 5', free: false },
-          { title: 'Week 6: Final Assessment + Certificate',     ref: 'Week 6', free: false },
+          { title: 'Week 1: Financial Statement Analysis',       ref: 'Week 1', free: false },
+          { title: 'Week 2: Valuation Methods (DCF, P/E, P/B)', ref: 'Week 2', free: false },
+          { title: 'Week 3: Sector & Industry Analysis',        ref: 'Week 3', free: false },
+          { title: 'Week 4: Building an Investment Thesis',     ref: 'Week 4', free: false },
+          { title: 'Week 5: Portfolio Construction',            ref: 'Week 5', free: false },
+          { title: 'Week 6: Final Assessment + Certificate',    ref: 'Week 6', free: false },
         ],
       },
       {
@@ -220,10 +276,10 @@ const CATEGORY_DATA: Record<string, any> = {
         pages: '8 weeks', level: 'Advanced', isPaid: true,
         description: 'For traders who want to master F&O — futures pricing, multi-leg options strategies, risk management, and the live markets assessment.',
         chapters: [
-          { title: 'Weeks 1–2: Futures Pricing & Hedging',   ref: 'Week 1–2', free: false },
-          { title: 'Weeks 3–4: Options Strategy Toolkit',    ref: 'Week 3–4', free: false },
+          { title: 'Weeks 1–2: Futures Pricing & Hedging',    ref: 'Week 1–2', free: false },
+          { title: 'Weeks 3–4: Options Strategy Toolkit',     ref: 'Week 3–4', free: false },
           { title: 'Weeks 5–6: Greeks & Volatility Surfaces', ref: 'Week 5–6', free: false },
-          { title: 'Weeks 7–8: Live Markets Exam',           ref: 'Week 7–8', free: false },
+          { title: 'Weeks 7–8: Live Markets Exam',            ref: 'Week 7–8', free: false },
         ],
       },
       {
@@ -231,7 +287,7 @@ const CATEGORY_DATA: Record<string, any> = {
         pages: '3 weeks', level: 'Beginner', isPaid: true,
         description: 'The essential personal finance certificate — budgeting, insurance, mutual funds, and tax planning, simplified into a 3-week structured program.',
         chapters: [
-          { title: 'Week 1: Budgeting & Emergency Funds',  ref: 'Week 1', free: false },
+          { title: 'Week 1: Budgeting & Emergency Funds', ref: 'Week 1', free: false },
           { title: 'Week 2: Mutual Funds & SIP Strategy',  ref: 'Week 2', free: false },
           { title: 'Week 3: Insurance & Tax Planning',     ref: 'Week 3', free: false },
         ],
@@ -256,29 +312,44 @@ const CATEGORY_DATA: Record<string, any> = {
     ],
     modules: [
       {
-        title: 'Book I — The Psychology of Money', subtitle: 'Why behavior beats intelligence',
-        pages: 95, level: 'All Levels', isPaid: true,
-        description: "Inspired by Morgan Housel's principles — how behavior, not intelligence, ultimately determines who builds lasting wealth and who doesn't.",
-        chapters: [
-          { title: 'Chapter 1: No One is Crazy',           ref: 'pp. 1–12',  free: false },
-          { title: 'Chapter 2: Luck, Risk & Their Roles',  ref: 'pp. 13–24', free: false },
-          { title: 'Chapter 3: The Power of Compounding',  ref: 'pp. 25–44', free: false },
-          { title: 'Chapter 4: Wealth vs. Rich',           ref: 'pp. 45–62', free: false },
-          { title: 'Chapter 5: Save Without a Reason',     ref: 'pp. 63–80', free: false },
-          { title: 'Chapter 6: Room for Error',            ref: 'pp. 81–95', free: false },
+        title: 'Book I — The Psychology of Money',
+        subtitle: 'Why behavior beats intelligence',
+        pages: 95,
+        level: 'All Levels',
+        isPaid: true,
+        description: "How behavior, not intelligence, ultimately determines who builds lasting wealth and who doesn't. Inspired by behavioral finance principles.",
+        pdfUrl: 'https://your-storage.com/pdfs/nonfinancial-book1-psychology-money.pdf',
+        previewTopics: [
+          'Why smart people make poor financial decisions',
+          'The role of luck and risk in building wealth',
+          'Power of compounding — why patience is the real skill',
+          'Difference between being wealthy and being rich',
+          'Why you should save without a specific reason',
+          'Building room for error in your financial plan',
+          'How your childhood shapes your money behavior',
+          'The seductive pull of pessimism and how to fight it',
         ],
+        highlights: ['95 Pages', 'All Levels', 'Behavioral Finance'],
       },
       {
-        title: 'Book II — Thinking in Bets', subtitle: 'Probabilistic thinking for investors',
-        pages: 140, level: 'Intermediate', isPaid: true,
-        description: "How poker champion Annie Duke's probabilistic thinking framework applies directly to investment decision-making and trade management.",
-        chapters: [
-          { title: 'Chapter 1: Life is Poker, Not Chess',   ref: 'pp. 1–20',    free: false },
-          { title: 'Chapter 2: The Resulting Bias Trap',    ref: 'pp. 21–50',   free: false },
-          { title: 'Chapter 3: Wanna Bet? (Making Offers)', ref: 'pp. 51–80',   free: false },
-          { title: 'Chapter 4: Truth-Seeking Groups',       ref: 'pp. 81–110',  free: false },
-          { title: 'Chapter 5: Temporal Discounting',       ref: 'pp. 111–140', free: false },
+        title: 'Book II — Thinking in Bets',
+        subtitle: 'Probabilistic thinking for investors',
+        pages: 140,
+        level: 'Intermediate',
+        isPaid: true,
+        description: "How probabilistic thinking from poker applies directly to investment decision-making and trade management.",
+        pdfUrl: 'https://your-storage.com/pdfs/nonfinancial-book2-thinking-bets.pdf',
+        previewTopics: [
+          'Why life is poker, not chess — embracing uncertainty',
+          'The resulting bias trap — judging decisions by outcomes',
+          'How to make better decisions under incomplete information',
+          'Truth-seeking groups — why good investors need peer feedback',
+          'Temporal discounting — short-term vs long-term tradeoffs',
+          'How to separate luck from skill in your trading results',
+          'The power of pre-mortems before every major decision',
+          'Building a decision journal to improve over time',
         ],
+        highlights: ['140 Pages', 'Intermediate', 'Decision Making'],
       },
     ],
   },
@@ -300,30 +371,34 @@ const CATEGORY_DATA: Record<string, any> = {
     ],
     modules: [
       {
-        title: 'Session 1 — Building an Investor Mindset', subtitle: 'Think long-term in a short-term world',
+        title: 'Session 1 — Building an Investor Mindset',
+        subtitle: 'Think long-term in a short-term world',
         pages: '22 min', level: 'Beginner', isPaid: false,
-        description: 'How to think long-term in a short-term world — the psychological foundation every investor needs before putting a single rupee to work.',
+        description: 'The psychological foundation every investor needs before putting a single rupee to work.',
+        videoUrl: 'https://www.youtube.com/embed/YOUR_VIDEO_ID_4',
         chapters: [
-          { title: 'Why Most Retail Investors Lose Money',       ref: '0:00–5:30',  free: true },
-          { title: 'The Long-Term Compounding Mindset',          ref: '5:30–13:00', free: true },
-          { title: 'Daily Habits of Successful Investors',       ref: '13:00–22:00',free: true },
+          { title: 'Why Most Retail Investors Lose Money',  ref: '0:00–5:30',  free: true },
+          { title: 'The Long-Term Compounding Mindset',     ref: '5:30–13:00', free: true },
+          { title: 'Daily Habits of Successful Investors',  ref: '13:00–22:00', free: true },
         ],
       },
       {
-        title: 'Session 2 — Managing Risk Psychologically', subtitle: 'Stay process-focused, not outcome-focused',
+        title: 'Session 2 — Managing Risk Psychologically',
+        subtitle: 'Stay process-focused, not outcome-focused',
         pages: '30 min', level: 'Intermediate', isPaid: false,
-        description: 'Separate your identity from your trades, handle losses without panic, and stay process-focused — not distracted by short-term outcomes.',
+        description: 'Separate your identity from your trades, handle losses without panic, and stay process-focused.',
+        videoUrl: 'https://www.youtube.com/embed/YOUR_VIDEO_ID_5',
         chapters: [
-          { title: 'Loss Aversion & Why We Hold Losers',     ref: '0:00–8:00',  free: true },
+          { title: 'Loss Aversion & Why We Hold Losers',       ref: '0:00–8:00',  free: true },
           { title: 'Building Emotional Resilience for Trading', ref: '8:00–18:00', free: true },
-          { title: 'The Pre-Mortem Technique for Every Trade', ref: '18:00–30:00',free: true },
+          { title: 'The Pre-Mortem Technique for Every Trade',  ref: '18:00–30:00', free: true },
         ],
       },
     ],
   },
 };
 
-// ── Level styles ──────────────────────────────────────────────────────────────
+// ── Level styles ───────────────────────────────────────────────────────────────
 
 const levelStyle: Record<string, { bg: string; text: string }> = {
   Beginner:     { bg: 'rgba(16,185,129,0.12)',  text: '#34D399' },
@@ -332,29 +407,30 @@ const levelStyle: Record<string, { bg: string; text: string }> = {
   'All Levels': { bg: 'rgba(148,163,184,0.12)', text: '#94A3B8' },
 };
 
-// ── EducationDetailView ───────────────────────────────────────────────────────
+// ── EducationDetailView ────────────────────────────────────────────────────────
 
 const EducationDetailView = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
   const { theme }      = useTheme();
-  const { user }       = useAuth();
+  const { user, isAdmin } = useAuth();
   const navigate       = useNavigate();
   const isLight        = theme === 'light';
 
   const [activeModuleIdx, setActiveModuleIdx] = useState(0);
   const moduleRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  const data        = CATEGORY_DATA[categoryId || ''];
-  const isSubscriber = user?.hasSubscription && user?.subscription?.status === 'active';
+  const data = CATEGORY_DATA[categoryId || ''];
 
-  // Scroll to module when ToC entry clicked
+  // ✅ ADMIN BYPASS — Admin ko subscription gate nahi dikhega
+  
+  const isSubscriber = isAdmin || (user?.hasSubscription && user?.subscription?.status === 'active');
+
   const handleTocClick = (idx: number) => {
     setActiveModuleIdx(idx);
     const el = moduleRefs.current[idx];
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  // Observe which module is in view
   useEffect(() => {
     if (!data) return;
     const observer = new IntersectionObserver(
@@ -389,7 +465,6 @@ const EducationDetailView = () => {
     );
   }
 
-  // Theme tokens
   const pageBg      = isLight ? 'linear-gradient(160deg,#f5f4f0 0%,#f8fbff 45%,#f5f4f0 100%)' : 'linear-gradient(160deg,#0c1a2e 0%,#0e2038 45%,#0b1825 100%)';
   const cardBg      = isLight ? '#ffffff' : 'rgba(255,255,255,0.04)';
   const tocBg       = isLight ? 'rgba(255,255,255,0.88)' : 'rgba(10,22,40,0.88)';
@@ -398,23 +473,25 @@ const EducationDetailView = () => {
   const textMuted   = isLight ? '#6b7280' : 'rgba(148,163,184,0.9)';
   const textFaint   = isLight ? '#9ca3af' : 'rgba(148,163,184,0.55)';
 
-  const contentTypeIcon = data.contentType === 'video' ? <SvgPlay /> : data.contentType === 'certification' ? <span className="text-sm">🎓</span> : <SvgBook />;
+  const contentTypeIcon = data.contentType === 'video'
+    ? <SvgPlay />
+    : data.contentType === 'certification'
+      ? <span className="text-sm">🎓</span>
+      : <SvgBook />;
 
   return (
     <Layout>
       <div className="min-h-screen" style={{ background: pageBg }}>
 
-        {/* ── HERO HEADER ─────────────────────────────────────────────── */}
+        {/* ── HERO HEADER ─────────────────────────────────────────────────── */}
         <div className="relative overflow-hidden py-10 md:py-14" style={{
           background: isLight ? 'linear-gradient(135deg,#f8fbff 0%,#eef4fd 100%)' : 'linear-gradient(135deg,#0a1628 0%,#0c1a2e 100%)',
           borderBottom: isLight ? '1px solid rgba(226,232,240,0.8)' : '1px solid rgba(255,255,255,0.06)',
         }}>
-          {/* accent blob */}
           <div className="absolute top-0 right-0 w-96 h-96 rounded-full blur-[120px] pointer-events-none opacity-40"
             style={{ background: `${data.accent}22` }} />
 
           <div className="container mx-auto px-6 relative z-10">
-            {/* Back */}
             <button onClick={() => navigate('/education')}
               className="inline-flex items-center gap-1.5 text-sm font-medium mb-6 transition-all hover:opacity-70"
               style={{ color: data.accent }}>
@@ -424,12 +501,18 @@ const EducationDetailView = () => {
             <div className="flex flex-col lg:flex-row gap-8">
               {/* Left: meta */}
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-4">
+                <div className="flex items-center gap-2 mb-4 flex-wrap">
                   <span className="text-[11px] font-bold px-2.5 py-1 rounded-full"
                     style={{ background: `${data.accent}18`, color: data.accent, border: `1px solid ${data.accent}30` }}>
                     {data.tag}
                   </span>
-                  {data.isPaid ? (
+                  {/* ✅ Admin badge */}
+                  {isAdmin ? (
+                    <span className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                      style={{ background: 'rgba(168,85,247,0.15)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.3)' }}>
+                      <SvgShield /> Admin Access
+                    </span>
+                  ) : data.isPaid ? (
                     <span className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full"
                       style={{ background: 'rgba(81,148,246,0.12)', color: '#5194F6', border: '1px solid rgba(81,148,246,0.25)' }}>
                       <SvgLock /> Premium
@@ -449,7 +532,6 @@ const EducationDetailView = () => {
                   {data.description}
                 </p>
 
-                {/* Meta row */}
                 <div className="flex flex-wrap gap-4 mb-5">
                   <span className="flex items-center gap-1.5 text-sm" style={{ color: textMuted }}>
                     <span className="text-yellow-400"><SvgStar /></span>
@@ -466,7 +548,6 @@ const EducationDetailView = () => {
                   </span>
                 </div>
 
-                {/* Instructor */}
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full flex items-center justify-center text-lg flex-shrink-0"
                     style={{ background: `${data.accent}20`, border: `1px solid ${data.accent}30` }}>
@@ -479,7 +560,7 @@ const EducationDetailView = () => {
                 </div>
               </div>
 
-              {/* Right: CTA card (sticky) */}
+              {/* Right: CTA card */}
               <div className="lg:w-68 xl:w-72 flex-shrink-0">
                 <div className="rounded-2xl overflow-hidden sticky top-24" style={{
                   background: cardBg, border: `1px solid ${border}`,
@@ -487,7 +568,17 @@ const EducationDetailView = () => {
                 }}>
                   <div className="h-1.5 w-full" style={{ background: data.accentGrad }} />
                   <div className="p-5">
-                    {data.isPaid ? (
+                    {/* ✅ Admin ke liye special card */}
+                    {isAdmin ? (
+                      <>
+                        <p className="text-lg font-black mb-0.5" style={{ color: '#a855f7' }}>Admin Access 🛡️</p>
+                        <p className="text-xs mb-4" style={{ color: textMuted }}>Full access — no subscription required</p>
+                        <div className="w-full py-2.5 rounded-xl text-sm font-bold text-center"
+                          style={{ background: 'rgba(168,85,247,0.12)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.3)' }}>
+                          ✓ All Content Unlocked
+                        </div>
+                      </>
+                    ) : data.isPaid ? (
                       <>
                         <p className="text-2xl font-black mb-0.5" style={{ color: textPrimary }}>
                           ₹111 <span className="text-sm font-normal ml-0.5" style={{ color: textMuted }}>/month</span>
@@ -523,7 +614,7 @@ const EducationDetailView = () => {
                       </>
                     )}
                     <div className="mt-4 space-y-2">
-                      {['Lifetime access after unlock','PDF/video download','Certificate on completion','Mobile & desktop'].map(f => (
+                      {['Lifetime access after unlock', 'PDF/video download', 'Certificate on completion', 'Mobile & desktop'].map(f => (
                         <div key={f} className="flex items-center gap-2 text-xs" style={{ color: textMuted }}>
                           <span style={{ color: data.accent }}><SvgCheck /></span> {f}
                         </div>
@@ -536,16 +627,15 @@ const EducationDetailView = () => {
           </div>
         </div>
 
-        {/* ── BOOK READER LAYOUT ──────────────────────────────────────── */}
+        {/* ── BOOK READER LAYOUT ────────────────────────────────────────────── */}
         <div className="container mx-auto px-4 lg:px-6 py-10">
           <div className="flex gap-7 items-start">
 
-            {/* ── TABLE OF CONTENTS (sticky sidebar) ──────────────────── */}
+            {/* ── SIDEBAR TOC ──────────────────────────────────────────────── */}
             <aside className="hidden lg:block w-64 flex-shrink-0 sticky top-24 self-start" style={{
               background: tocBg, border: `1px solid ${border}`,
               borderRadius: 18, backdropFilter: 'blur(16px)', overflow: 'hidden',
             }}>
-              {/* ToC header */}
               <div className="px-4 py-3 flex items-center gap-2" style={{
                 borderBottom: `1px solid ${border}`,
                 background: isLight ? `${data.accent}08` : `${data.accent}12`,
@@ -556,15 +646,13 @@ const EducationDetailView = () => {
                 </p>
               </div>
 
-              {/* Module list */}
               <div className="py-2 max-h-[calc(100vh-180px)] overflow-y-auto">
                 {data.modules.map((mod: any, i: number) => {
                   const isActive = activeModuleIdx === i;
-                  const ls = levelStyle[mod.level] ?? levelStyle['All Levels'];
-                  const locked = mod.isPaid && !isSubscriber;
+                  const ls       = levelStyle[mod.level] ?? levelStyle['All Levels'];
+                  const locked   = mod.isPaid && !isSubscriber;
                   return (
                     <div key={i}>
-                      {/* Module heading */}
                       <button
                         onClick={() => handleTocClick(i)}
                         className="w-full px-4 py-2.5 flex items-center gap-2.5 text-left transition-all group"
@@ -594,11 +682,10 @@ const EducationDetailView = () => {
                 })}
               </div>
 
-              {/* ToC footer */}
               {data.isPaid && !isSubscriber && (
                 <div className="p-3" style={{ borderTop: `1px solid ${border}` }}>
                   <button
-                    onClick={() => navigate("/pricing")}
+                    onClick={() => navigate('/pricing')}
                     className="w-full py-2 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
                     style={{ background: data.accentGrad }}>
                     🔓 Unlock All Content
@@ -607,7 +694,7 @@ const EducationDetailView = () => {
               )}
             </aside>
 
-            {/* ── BOOK CONTENT AREA ───────────────────────────────────── */}
+            {/* ── MAIN CONTENT AREA ────────────────────────────────────────── */}
             <div className="flex-1 min-w-0 max-w-3xl">
 
               {/* What you'll learn */}
@@ -634,19 +721,17 @@ const EducationDetailView = () => {
                 </div>
               </div>
 
-              {/* ── MODULE CARDS (book chapters) ──────────────────────── */}
+              {/* ── MODULE CARDS ─────────────────────────────────────────────── */}
               <div className="space-y-8 mb-10">
                 {data.modules.map((mod: any, i: number) => {
-                  const ls    = levelStyle[mod.level] ?? levelStyle['All Levels'];
+                  const ls     = levelStyle[mod.level] ?? levelStyle['All Levels'];
                   const locked = mod.isPaid && !isSubscriber;
+                  const isPdf  = data.contentType === 'ebook' && mod.pdfUrl;
 
                   return (
-                    <div
-                      key={i}
-                      ref={el => { moduleRefs.current[i] = el; }}
-                      style={{ scrollMarginTop: 100 }}>
+                    <div key={i} ref={el => { moduleRefs.current[i] = el; }} style={{ scrollMarginTop: 100 }}>
 
-                      {/* Book divider line with module number */}
+                      {/* Divider line */}
                       <div className="flex items-center gap-3 mb-5">
                         <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-black text-white"
                           style={{ background: data.accentGrad }}>
@@ -655,28 +740,38 @@ const EducationDetailView = () => {
                         <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg,${data.accent}40,transparent)` }} />
                       </div>
 
-                      {/*
-                        Premium module → wrap with RequireSubscription (blur mode)
-                        Free module    → show normally
-                      */}
                       {locked ? (
                         <RequireSubscription
                           mode="blur"
                           title={`${mod.title.split('—')[0].trim()} — Premium`}
                           description="Subscribe to unlock this module and all premium content."
                           ctaText="Unlock Access"
-                          ctaHref={`/pricing`}
+                          ctaHref="/pricing"
                           className="rounded-2xl">
-
-                          {/* Module card (will be blurred for non-subscribers) */}
-                          <ModuleCard
-                            mod={mod} idx={i} data={data} isLight={isLight}
-                            cardBg={cardBg} border={border} ls={ls}
-                            textPrimary={textPrimary} textMuted={textMuted} textFaint={textFaint}
-                            locked={locked} isSubscriber={isSubscriber}
-                            categoryId={categoryId} navigate={navigate}
-                          />
+                          {isPdf ? (
+                            <PdfOverviewCard
+                              mod={mod} data={data} isLight={isLight} ls={ls}
+                              cardBg={cardBg} border={border}
+                              textPrimary={textPrimary} textMuted={textMuted} textFaint={textFaint}
+                              locked={locked} isSubscriber={isSubscriber}
+                            />
+                          ) : (
+                            <ModuleCard
+                              mod={mod} idx={i} data={data} isLight={isLight}
+                              cardBg={cardBg} border={border} ls={ls}
+                              textPrimary={textPrimary} textMuted={textMuted} textFaint={textFaint}
+                              locked={locked} isSubscriber={isSubscriber}
+                              categoryId={categoryId} navigate={navigate}
+                            />
+                          )}
                         </RequireSubscription>
+                      ) : isPdf ? (
+                        <PdfOverviewCard
+                          mod={mod} data={data} isLight={isLight} ls={ls}
+                          cardBg={cardBg} border={border}
+                          textPrimary={textPrimary} textMuted={textMuted} textFaint={textFaint}
+                          locked={locked} isSubscriber={isSubscriber}
+                        />
                       ) : (
                         <ModuleCard
                           mod={mod} idx={i} data={data} isLight={isLight}
@@ -691,7 +786,7 @@ const EducationDetailView = () => {
                 })}
               </div>
 
-              {/* ── BOTTOM CTA ───────────────────────────────────────── */}
+              {/* Bottom CTA */}
               {data.isPaid && !isSubscriber && (
                 <div className="rounded-2xl p-8 text-center" style={{
                   background: `linear-gradient(135deg,${data.accent}10,${data.accent}05)`,
@@ -708,14 +803,13 @@ const EducationDetailView = () => {
                     Get full access to all {data.modules.length} {data.contentType === 'video' ? 'sessions' : 'books'} with a Foundation Plan.
                   </p>
                   <button
-                    onClick={() => navigate(`/pricing`)}
+                    onClick={() => navigate('/pricing')}
                     className="inline-flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-sm text-white hover:opacity-90 transition-all hover:-translate-y-0.5"
                     style={{ background: data.accentGrad, boxShadow: `0 4px 20px ${data.accent}35` }}>
                     🔓 Unlock Access — ₹111/month
                   </button>
                 </div>
               )}
-
             </div>
           </div>
         </div>
@@ -724,21 +818,144 @@ const EducationDetailView = () => {
   );
 };
 
-// ── ModuleCard — the "book chapter" component ─────────────────────────────────
+// ── PdfOverviewCard ────────────────────────────────────────────────────────────
+// ✅ 400 page PDF ke liye — overview topics + download button
+// Chapter-by-chapter list nahi, sirf key topics aur ek download CTA
+
+function PdfOverviewCard({ mod, data, isLight, ls, cardBg, border, textPrimary, textMuted, textFaint, locked, isSubscriber }: any) {
+  const handleDownload = () => {
+    if (mod.pdfUrl) {
+      // New tab mein open hoga — browser PDF viewer ya download
+      window.open(mod.pdfUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  return (
+    <div className="rounded-2xl overflow-hidden" style={{
+      background: cardBg,
+      border: `1px solid ${border}`,
+      boxShadow: isLight ? '0 2px 20px rgba(0,0,0,0.05)' : 'none',
+    }}>
+      {/* Top accent strip */}
+      <div className="h-0.5 w-full" style={{ background: data.accentGrad }} />
+
+      {/* Header */}
+      <div className="px-6 pt-6 pb-4">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex-1">
+            <h3 className="text-lg font-bold leading-snug mb-1" style={{ color: textPrimary }}>
+              {mod.title}
+            </h3>
+            <p className="text-sm italic" style={{ color: data.accent, opacity: 0.85 }}>
+              {mod.subtitle}
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+              style={{ background: ls.bg, color: ls.text }}>
+              {mod.level}
+            </span>
+            <span className="text-xs flex items-center gap-1" style={{ color: textFaint }}>
+              📄 {typeof mod.pages === 'number' ? `${mod.pages} pages` : mod.pages}
+            </span>
+          </div>
+        </div>
+
+        <p className="text-sm leading-relaxed mb-5" style={{ color: textMuted }}>
+          {mod.description}
+        </p>
+
+        {/* Highlight badges */}
+        {mod.highlights && (
+          <div className="flex flex-wrap gap-2 mb-5">
+            {mod.highlights.map((h: string, i: number) => (
+              <span key={i} className="text-[11px] font-semibold px-3 py-1 rounded-full"
+                style={{ background: `${data.accent}12`, color: data.accent, border: `1px solid ${data.accent}25` }}>
+                {h}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Divider */}
+      <div className="mx-6 mb-0" style={{ height: 1, background: `linear-gradient(90deg,${data.accent}25,transparent)` }} />
+
+      {/* ✅ Overview topics — ye PDF ke andar kya hai */}
+      <div className="px-6 pb-5 pt-4">
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: textFaint }}>
+          What's Inside This PDF
+        </p>
+        <div className="space-y-2">
+          {mod.previewTopics?.map((topic: string, j: number) => (
+            <div key={j} className="flex items-start gap-2.5 text-sm py-1">
+              <span className="mt-0.5 flex-shrink-0 text-base" style={{ color: data.accent }}>
+                <SvgCheck />
+              </span>
+              <span style={{ color: textMuted }}>{topic}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="mx-6" style={{ height: 1, background: `linear-gradient(90deg,${data.accent}15,transparent)` }} />
+
+      {/* ✅ Download CTA */}
+      <div className="px-6 py-5">
+        {locked ? (
+          // Locked — subscriber nahi hai
+          <div className="space-y-3">
+            <button
+              onClick={() => {/* navigate('/pricing') */}}
+              className="w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:opacity-90 hover:-translate-y-0.5 text-white"
+              style={{ background: data.accentGrad, boxShadow: `0 4px 16px ${data.accent}30` }}>
+              <SvgLock /> Unlock to Download PDF
+            </button>
+            <p className="text-[11px] text-center" style={{ color: textFaint }}>
+              Subscribe at ₹111/month to get this + all premium PDFs
+            </p>
+          </div>
+        ) : (
+          // ✅ Unlocked (subscriber ya admin) — download button
+          <div className="space-y-3">
+            <button
+              onClick={handleDownload}
+              className="w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2.5 transition-all hover:opacity-90 hover:-translate-y-0.5"
+              style={{
+                background: isLight ? `${data.accent}12` : `${data.accent}18`,
+                color: data.accent,
+                border: `1.5px solid ${data.accent}35`,
+              }}>
+              <SvgDownload />
+              Download Full PDF — {typeof mod.pages === 'number' ? `${mod.pages} Pages` : mod.pages}
+            </button>
+            <p className="text-[11px] text-center flex items-center justify-center gap-1" style={{ color: textFaint }}>
+              <span>🔒</span> Secure download · PDF format · Lifetime access
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── ModuleCard — Video / Certification chapters ────────────────────────────────
 
 function ModuleCard({ mod, idx, data, isLight, cardBg, border, ls, textPrimary, textMuted, textFaint, locked, isSubscriber, categoryId, navigate }: any) {
   const isVideo = data.contentType === 'video';
+
+  const handleWatch = () => {
+    if (mod.videoUrl) window.open(mod.videoUrl, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <div className="rounded-2xl overflow-hidden" style={{
       background: cardBg, border: `1px solid ${border}`,
       boxShadow: isLight ? '0 2px 20px rgba(0,0,0,0.05)' : 'none',
     }}>
-
-      {/* Module accent strip */}
       <div className="h-0.5 w-full" style={{ background: data.accentGrad }} />
 
-      {/* Module header */}
       <div className="px-6 pt-6 pb-4">
         <div className="flex items-start justify-between gap-4 mb-3">
           <div>
@@ -762,22 +979,18 @@ function ModuleCard({ mod, idx, data, isLight, cardBg, border, ls, textPrimary, 
         </p>
       </div>
 
-      {/* Chapter divider */}
       <div className="mx-6 mb-0" style={{ height: 1, background: `linear-gradient(90deg,${data.accent}25,transparent)` }} />
 
-      {/* Chapter list (book-format table) */}
       <div className="px-6 pb-5 pt-4">
         <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: textFaint }}>
           {isVideo ? 'Segments' : 'Chapters'}
         </p>
         <div className="space-y-0">
-          {mod.chapters.map((ch: any, j: number) => {
+          {mod.chapters?.map((ch: any, j: number) => {
             const chLocked = !ch.free && !isSubscriber && data.isPaid;
             return (
               <div key={j} className="flex items-center gap-3 py-2.5 group transition-all"
                 style={{ borderBottom: j < mod.chapters.length - 1 ? `1px solid ${isLight ? 'rgba(226,232,240,0.6)' : 'rgba(255,255,255,0.05)'}` : 'none' }}>
-
-                {/* Chapter number / icon */}
                 <div className="w-7 h-7 rounded-lg flex-shrink-0 flex items-center justify-center text-[11px] font-black transition-all"
                   style={{
                     background: chLocked ? (isLight ? 'rgba(226,232,240,0.7)' : 'rgba(255,255,255,0.06)') : `${data.accent}18`,
@@ -785,20 +998,15 @@ function ModuleCard({ mod, idx, data, isLight, cardBg, border, ls, textPrimary, 
                   }}>
                   {chLocked ? <SvgLock /> : (isVideo ? <SvgPlay /> : (j + 1))}
                 </div>
-
-                {/* Title */}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate transition-colors"
                     style={{ color: chLocked ? textFaint : textPrimary, opacity: chLocked ? 0.65 : 1 }}>
                     {ch.title}
                   </p>
                 </div>
-
-                {/* Page/time ref */}
-                <span className="text-xs flex-shrink-0 tabular-nums font-mono"
-                  style={{ color: textFaint }}>{ch.ref}</span>
-
-                {/* Badge */}
+                <span className="text-xs flex-shrink-0 tabular-nums font-mono" style={{ color: textFaint }}>
+                  {ch.ref}
+                </span>
                 {ch.free && (
                   <span className="text-[9px] font-black px-2 py-0.5 rounded-full flex-shrink-0"
                     style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399', letterSpacing: '0.04em' }}>
@@ -807,7 +1015,7 @@ function ModuleCard({ mod, idx, data, isLight, cardBg, border, ls, textPrimary, 
                 )}
                 {chLocked && (
                   <button
-                    onClick={() => navigate(`/pricing`)}
+                    onClick={() => navigate('/pricing')}
                     className="text-[9px] font-black px-2 py-0.5 rounded-full flex-shrink-0 transition-all hover:opacity-80"
                     style={{ background: 'rgba(81,148,246,0.12)', color: '#5194F6', border: '1px solid rgba(81,148,246,0.20)', letterSpacing: '0.04em' }}>
                     UNLOCK
@@ -819,20 +1027,31 @@ function ModuleCard({ mod, idx, data, isLight, cardBg, border, ls, textPrimary, 
         </div>
       </div>
 
-      {/* Download / Access CTA for free unlocked modules */}
       {(!mod.isPaid || isSubscriber) && (
         <div className="mx-6 mb-5">
-          <button className="w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all hover:opacity-80"
+          <button
+            onClick={isVideo ? handleWatch : undefined}
+            className="w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all hover:opacity-80"
             style={{
               background: isLight ? `${data.accent}10` : `${data.accent}15`,
-              color: data.accent, border: `1px solid ${data.accent}25`,
+              color: data.accent,
+              border: `1px solid ${data.accent}25`,
             }}>
-            <SvgDownload /> {isVideo ? 'Watch Now' : 'Download PDF'}
+            {isVideo ? <><SvgPlay /> Watch Now</> : <><SvgDownload /> Download PDF</>}
           </button>
         </div>
       )}
     </div>
   );
 }
+
+// ── Missing SvgClock (used in ModuleCard) ─────────────────────────────────────
+// function SvgClock() {
+//   return (
+//     <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+//       <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+//     </svg>
+//   );
+// }
 
 export default EducationDetailView;
