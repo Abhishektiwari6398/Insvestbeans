@@ -51,10 +51,10 @@ function useHoverDropdown(closeDelay = 250) {
 
 // ─── Indian Indices — live via WebSocket ─────────────────────────────────────
 const KITE_TICKER_SYMS = [
-  { key: "NSE:NIFTY 50",   label: "Nifty 50",   flag: "🇮🇳" },
-  { key: "BSE:SENSEX",     label: "Sensex",      flag: "🇮🇳" },
-  { key: "NSE:NIFTY BANK", label: "Nifty Bank",  flag: "🇮🇳" },
-  { key: "NSE:NIFTY AUTO", label: "Nifty Auto",  flag: "🇮🇳" },
+  { key: "NSE:NIFTY 50", label: "Nifty 50", flag: "🇮🇳" },
+  { key: "BSE:SENSEX", label: "Sensex", flag: "🇮🇳" },
+  { key: "NSE:NIFTY BANK", label: "Nifty Bank", flag: "🇮🇳" },
+  { key: "NSE:NIFTY AUTO", label: "Nifty Auto", flag: "🇮🇳" },
 
 ];
 
@@ -65,7 +65,7 @@ interface IndianTick {
 
 function useIndianTicker(): IndianTick[] {
   const _API = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/api\/v1\/?$/, "");
-  const API  = `${_API}/api/v1`;
+  const API = `${_API}/api/v1`;
 
   // Shared WebSocket — same connection as DomesticView
   const { ticks: wsTicks } = useKiteTicks();
@@ -82,21 +82,21 @@ function useIndianTicker(): IndianTick[] {
         KITE_TICKER_SYMS.forEach(sym => {
           const d = raw[sym.key]; if (!d) return;
           const price = d.last_price ?? d.ohlc?.close ?? null;
-          const prev  = d.ohlc?.close ?? null;
-          const chg   = d.change != null ? d.change : price && prev ? ((price - prev) / prev) * 100 : 0;
+          const prev = d.ohlc?.close ?? null;
+          const chg = d.change != null ? d.change : price && prev ? ((price - prev) / prev) * 100 : 0;
           if (price != null) map[sym.key] = { price, change: chg ?? 0 };
         });
         setSeed(map);
       })
-      .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+      .catch(() => { });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return KITE_TICKER_SYMS.map(sym => {
     const ws = wsTicks[sym.key];
     if (ws?.last_price) {
       const prev = ws.ohlc?.close ?? null;
-      const chg  = ws.change != null && ws.change !== 0 ? ws.change
+      const chg = ws.change != null && ws.change !== 0 ? ws.change
         : prev && ws.last_price ? ((ws.last_price - prev) / prev) * 100 : 0;
       return { ...sym, price: ws.last_price.toLocaleString("en-IN", { maximumFractionDigits: 2 }), change: chg };
     }
@@ -132,14 +132,14 @@ function injectTickerCSS() {
   el.id = "mkt-ticker-style";
   el.textContent = TICKER_CSS;
   document.head.appendChild(el);
-  
+
 }
 
 
 function useThrottledMarkets<T extends { symbol?: string; name: string }>(
   live: T[], ms = 400
 ): T[] {
-  const buf    = useRef<T[]>(live);
+  const buf = useRef<T[]>(live);
   const [disp, setDisp] = useState<T[]>(live);
 
 
@@ -151,10 +151,10 @@ function useThrottledMarkets<T extends { symbol?: string; name: string }>(
         const next = buf.current;
         if (prev.length !== next.length) return [...next];
         const changed = next.some((item, i) =>
-          (item as any).value  !== (prev[i] as any).value  ||
+          (item as any).value !== (prev[i] as any).value ||
           (item as any).change !== (prev[i] as any).change
         );
-        return changed ? [...next] : prev; 
+        return changed ? [...next] : prev;
       });
     }, ms);
     return () => clearInterval(id);
@@ -184,7 +184,7 @@ const TickerStrip = React.memo(({
         key={`${market.symbol || market.name}-${market._half}`}
         onClick={() => onNavigate(market.route)}
         title={`View on ${market.route === "/domestic" ? "Domestic" : "Global"} Markets`}
-      
+
         className="flex items-center gap-4 whitespace-nowrap group hover:opacity-75 transition-opacity cursor-pointer"
         style={{ padding: "0 6px", minWidth: "220px", flexShrink: 0 }}
       >
@@ -198,7 +198,7 @@ const TickerStrip = React.memo(({
           >
             {market.name}
           </span>
-       
+
           <span
             className="font-bold text-sm"
             style={{
@@ -213,15 +213,14 @@ const TickerStrip = React.memo(({
         </div>
         {/* FIX 3c: fixed-width on change badge — same principle */}
         <div
-          className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-            market.isPositive
+          className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${market.isPositive
               ? isLight
                 ? "bg-emerald-100 text-emerald-700 border border-emerald-300/60"
                 : "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30"
               : isLight
                 ? "bg-red-100 text-red-700 border border-red-300/60"
                 : "bg-red-500/20 text-red-300 border border-red-400/30"
-          }`}
+            }`}
           style={{ minWidth: "68px", justifyContent: "center" }}
         >
           {market.isPositive ? (
@@ -237,7 +236,7 @@ const TickerStrip = React.memo(({
   </div>
 ));
 
-const MarketTickerInline =React.memo( () => {
+const MarketTickerInline = React.memo(() => {
   const { data } = useGlobalMarkets();
   const { theme } = useTheme();
   const isLight = theme === "light";
@@ -251,30 +250,30 @@ const MarketTickerInline =React.memo( () => {
 
   // ── Global data from existing hook ───────────────────────────────────────
   const globalMarkets = [
-    ...(data?.indices.us     || []),
+    ...(data?.indices.us || []),
     ...(data?.indices.europe || []),
-    ...(data?.indices.asia   || []),
+    ...(data?.indices.asia || []),
   ].map((market) => ({
-    symbol:     market.symbol,
-    name:       market.name,
-    value:      market.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-    change:     `${market.changePercent > 0 ? "+" : ""}${market.changePercent.toFixed(2)}%`,
+    symbol: market.symbol,
+    name: market.name,
+    value: market.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    change: `${market.changePercent > 0 ? "+" : ""}${market.changePercent.toFixed(2)}%`,
     isPositive: market.changePercent >= 0,
-    route:      "/global" as const,
-    flag:       "",
+    route: "/global" as const,
+    flag: "",
   }));
 
   // ── Merge: Indian first, then Global ─────────────────────────────────────
   const indianFormatted = indianItems.map(item => ({
-    symbol:     item.key,
-    name:       item.label,
-    value:      item.price ?? "···",
-    change:     item.change != null
+    symbol: item.key,
+    name: item.label,
+    value: item.price ?? "···",
+    change: item.change != null
       ? `${item.change >= 0 ? "+" : ""}${item.change.toFixed(2)}%`
       : "···",
     isPositive: (item.change ?? 0) >= 0,
-    route:      "/domestic" as const,
-    flag:       item.flag,
+    route: "/domestic" as const,
+    flag: item.flag,
   }));
 
   // Throttled display — absorbs rapid WS ticks, flushes every 400ms.
@@ -307,9 +306,8 @@ const MarketTickerInline =React.memo( () => {
 
 // ─── Shared dropdown pieces ────────────────────────────────────────────────────
 const DropSection = ({ label, theme }: { label: string; theme: "dark" | "light" }) => (
-  <p className={`text-[10px] font-bold uppercase tracking-widest px-3 pt-2 pb-0.5 ${
-    theme === "light" ? "text-navy/45" : "text-white/40"
-  }`}>{label}</p>
+  <p className={`text-[10px] font-bold uppercase tracking-widest px-3 pt-2 pb-0.5 ${theme === "light" ? "text-navy/45" : "text-white/40"
+    }`}>{label}</p>
 );
 
 const DropLink = ({
@@ -455,11 +453,14 @@ const NavItem = ({
         <DropdownMenuContent
           align="start"
           sideOffset={5}
-          className={`p-1.5 rounded-xl shadow-lg border backdrop-blur-xl ${
-            theme === "light"
+          onMouseEnter={dd.enter}   
+          onMouseLeave={dd.leave}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+          // onOpenAutoFocus={(e) => e.preventDefault()}
+          className={`p-1.5 rounded-xl shadow-lg border backdrop-blur-xl ${theme === "light"
               ? "bg-white/96 text-navy ring-1 ring-black/[0.07] border-slate-200/80"
               : "bg-[#101528]/98 text-white ring-1 ring-[#1C3656]/70 border-[#1C3656]/50"
-          }`}
+            }`}
         >
           {children}
         </DropdownMenuContent>
@@ -490,23 +491,23 @@ const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Desktop dropdowns — each has its own smooth hover state
-  const about      = useHoverDropdown();
-  const segments   = useHoverDropdown();
+  const about = useHoverDropdown();
+  const segments = useHoverDropdown();
   const commodities = useHoverDropdown();
   const dashboards = useHoverDropdown();
-  const learn      = useHoverDropdown();
-  const events     = useHoverDropdown();
-  const help       = useHoverDropdown();
-  const userMenu   = useHoverDropdown();
+  const learn = useHoverDropdown();
+  const events = useHoverDropdown();
+  const help = useHoverDropdown();
+  const userMenu = useHoverDropdown();
 
   // Mobile accordions
-  const [mobileAboutOpen,      setMobileAboutOpen]      = useState(false);
-  const [mobileSegmentsOpen,   setMobileSegmentsOpen]   = useState(false);
-  const [mobileCommodOpen,     setMobileCommodOpen]     = useState(false);
+  const [mobileAboutOpen, setMobileAboutOpen] = useState(false);
+  const [mobileSegmentsOpen, setMobileSegmentsOpen] = useState(false);
+  const [mobileCommodOpen, setMobileCommodOpen] = useState(false);
   const [mobileDashboardsOpen, setMobileDashboardsOpen] = useState(false);
-  const [mobileLearnOpen,      setMobileLearnOpen]      = useState(false);
-  const [mobileEventsOpen,     setMobileEventsOpen]     = useState(false);
-  const [mobileHelpOpen,       setMobileHelpOpen]       = useState(false);
+  const [mobileLearnOpen, setMobileLearnOpen] = useState(false);
+  const [mobileEventsOpen, setMobileEventsOpen] = useState(false);
+  const [mobileHelpOpen, setMobileHelpOpen] = useState(false);
 
   const closeMobile = () => setIsMobileMenuOpen(false);
 
@@ -551,16 +552,14 @@ const Header = () => {
         />
       </button>
       <div
-        className={`overflow-hidden transition-[max-height,opacity] duration-200 ease-in-out ${
-          isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-        }`}
+        className={`overflow-hidden transition-[max-height,opacity] duration-200 ease-in-out ${isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+          }`}
       >
         <div
-          className={`rounded-md border px-2 py-2 space-y-0.5 mb-1 ${
-            isLight
+          className={`rounded-md border px-2 py-2 space-y-0.5 mb-1 ${isLight
               ? "bg-slate-100 border-slate-200"
               : "bg-[#1C3656]/40 border-[#1C3656]/70"
-          }`}
+            }`}
         >
           {children}
         </div>
@@ -583,9 +582,8 @@ const Header = () => {
 
   const MobileSectionLabel = ({ label }: { label: string }) => (
     <p
-      className={`text-[10px] font-bold uppercase tracking-widest px-3 pt-2 pb-0.5 ${
-        isLight ? "text-navy/40" : "text-white/30"
-      }`}
+      className={`text-[10px] font-bold uppercase tracking-widest px-3 pt-2 pb-0.5 ${isLight ? "text-navy/40" : "text-white/30"
+        }`}
     >
       {label}
     </p>
@@ -628,11 +626,11 @@ const Header = () => {
 
   // ── Commodities tab definitions (matching CommoditiesView tabs) ───────────
   const COMMODITY_TABS = [
-    { id: "domestic",     label: "Domestic Commodities", desc: "MCX · Gold · Silver · Crude · NatGas · Copper", icon: Flame    },
-    { id: "dom-etfs",     label: "Domestic ETFs",        desc: "NSE/BSE · AMFI NAV · Gold & Silver ETFs",      icon: Package  },
-    { id: "global",       label: "Global Commodities",   desc: "CME · COMEX · LME · COT · EIA · OPEC",        icon: Globe    },
-    { id: "global-etfs",  label: "Global ETFs",          desc: "GLD · SLV · USO · DBC · TIP · PDBC",          icon: Activity },
-    { id: "intelligence", label: "Intelligence Layer",   desc: "Regime · Hedge Engine · Allocation",           icon: Lightbulb},
+    { id: "domestic", label: "Domestic Commodities", desc: "MCX · Gold · Silver · Crude · NatGas · Copper", icon: Flame },
+    { id: "dom-etfs", label: "Domestic ETFs", desc: "NSE/BSE · AMFI NAV · Gold & Silver ETFs", icon: Package },
+    { id: "global", label: "Global Commodities", desc: "CME · COMEX · LME · COT · EIA · OPEC", icon: Globe },
+    { id: "global-etfs", label: "Global ETFs", desc: "GLD · SLV · USO · DBC · TIP · PDBC", icon: Activity },
+    { id: "intelligence", label: "Intelligence Layer", desc: "Regime · Hedge Engine · Allocation", icon: Lightbulb },
   ];
 
   return (
@@ -663,11 +661,10 @@ const Header = () => {
                 <img
                   src={isLight ? "/images/investbeans logo-03.png" : "/images/Untitled-6-04.png"}
                   alt="InvestBeans Logo"
-                  className={`h-9 sm:h-9 w-auto max-w-[168px] sm:max-w-[180px] md:max-w-none object-contain relative -top-0.5 transition-all ${
-                    !isLight ? " contrast-[1.5]" : ""
-                  }`}
+                  className={`h-9 sm:h-9 w-auto max-w-[168px] sm:max-w-[180px] md:max-w-none object-contain relative -top-0.5 transition-all ${!isLight ? " contrast-[1.5]" : ""
+                    }`}
                 />
-               
+
               </div>
             </Link>
 
@@ -691,16 +688,16 @@ const Header = () => {
                 <div className="min-w-[200px]">
                   <DropSection label="Equity" theme={theme} />
                   <DropLink to="/domestic" onClick={segments.close} theme={theme}>Domestic</DropLink>
-                  <DropLink to="/global"   onClick={segments.close} theme={theme}>Global</DropLink>
+                  <DropLink to="/global" onClick={segments.close} theme={theme}>Global</DropLink>
                   <DropdownMenuSeparator className="my-1" />
                   <DropSection label="Commodity" theme={theme} />
-                  <DropLink to="/markets?tab=domestic"  onClick={segments.close} theme={theme}>Domestic</DropLink>
-                  <DropLink to="/markets?tab=global"    onClick={segments.close} theme={theme}>Global</DropLink>
-                  <DropLink to="/currency"              onClick={segments.close} theme={theme}>Currency</DropLink>
+                  <DropLink to="/markets?tab=domestic" onClick={segments.close} theme={theme}>Domestic</DropLink>
+                  <DropLink to="/markets?tab=global" onClick={segments.close} theme={theme}>Global</DropLink>
+                  <DropLink to="/currency" onClick={segments.close} theme={theme}>Currency</DropLink>
                 </div>
               </NavItem>
 
-           
+
 
               {/* 4. LEARN */}
               <NavItem label="Learn" dd={learn} theme={theme} href="/education">
@@ -762,24 +759,22 @@ const Header = () => {
             <button
               onClick={toggleTheme}
               aria-label={isLight ? "Switch to dark mode" : "Switch to light mode"}
-              className={`relative flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#0A3656]/40 ${
-                isLight
+              className={`relative flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#0A3656]/40 ${isLight
                   ? "bg-slate-100 hover:bg-slate-200 text-navy shadow-sm border border-slate-300"
                   : "bg-[#1C3656]/60 hover:bg-[#1C3656] text-[#9bc1da] border border-[#1C3656]"
-              }`}
+                }`}
             >
               {isLight ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
             </button>
 
             {isAuthenticated && user ? (
               <li onMouseEnter={userMenu.enter} onMouseLeave={userMenu.leave} className="list-none">
-                <DropdownMenu open={userMenu.open} onOpenChange={userMenu.setOpen}>
+                <DropdownMenu open={userMenu.open} onOpenChange={userMenu.setOpen} modal={false}>
                   <DropdownMenuTrigger asChild>
                     <button
                       onClick={userMenu.toggle}
-                      className={`relative flex items-center gap-3 p-1.5 rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-[#0A3656]/40 ${
-                        isLight ? "hover:bg-navy/8" : "hover:bg-[#1C3656]/60"
-                      }`}
+                      className={`relative flex items-center gap-3 p-1.5 rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-[#0A3656]/40 ${isLight ? "hover:bg-navy/8" : "hover:bg-[#1C3656]/60"
+                        }`}
                     >
                       {isAdmin && (
                         <span style={{
@@ -872,7 +867,7 @@ const Header = () => {
               <>
                 <div className="hidden md:block">
                   <li onMouseEnter={userMenu.enter} onMouseLeave={userMenu.leave} className="list-none">
-                    <DropdownMenu open={userMenu.open} onOpenChange={userMenu.setOpen}>
+                    <DropdownMenu open={userMenu.open} onOpenChange={userMenu.setOpen} modal={false}>
                       <DropdownMenuTrigger asChild>
                         <button onClick={userMenu.toggle} className={userBtnCls}>
                           <User className={`w-5 h-5 ${userIconCls}`} />
@@ -940,7 +935,7 @@ const Header = () => {
                   <MobileLink to="/currency">Currency</MobileLink>
                 </MobileAccordion>
 
-              
+
                 <MobileAccordion label="Learn" isOpen={mobileLearnOpen} toggle={() => setMobileLearnOpen(s => !s)}>
                   <MobileLink to="/education?section=financial">Financial</MobileLink>
                   <MobileLink to="/education?section=nonfinancial">Non-Financial</MobileLink>
@@ -983,7 +978,7 @@ const Header = () => {
                     onClick={closeMobile}
                   >Help</Link>
                 </li>
-{/*                      
+                {/*                      
                 <MobileAccordion label="Help" isOpen={mobileHelpOpen} toggle={() => setMobileHelpOpen(s => !s)}>
                   <MobileLink to="/help-center">FAQs</MobileLink>
                   <MobileLink to="/help-center">Contact Us</MobileLink>
@@ -993,11 +988,10 @@ const Header = () => {
                   <li className="pt-3">
                     <Button
                       onClick={() => { handleSignOut(); closeMobile(); }}
-                      className={`w-full font-semibold transition-all shadow-sm ${
-                        isLight
+                      className={`w-full font-semibold transition-all shadow-sm ${isLight
                           ? "bg-navy text-white hover:bg-navy/80"
                           : "bg-[#1C3656] text-[#9bc1da] border border-[#0A3656]/30 hover:bg-[#0A3656] hover:text-white"
-                      }`}
+                        }`}
                     >
                       Log out
                     </Button>
