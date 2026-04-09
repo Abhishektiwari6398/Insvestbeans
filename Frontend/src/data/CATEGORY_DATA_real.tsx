@@ -904,6 +904,11 @@ const CATEGORY_DATA: Record<string, any> = {
   
     // ══════════════════════════════════════════════════════════════════════════
     // 3. FINANCIAL CERTIFICATIONS
+    //    Each module = one program. Each program has a `pdfs` array containing
+    //    the actual NISM workbooks students need.
+    //    isFreePreview: true  → visible to everyone (2 per program)
+    //    isFreePreview: false → subscribers + admin only
+    //    mod.isPaid: false    → card always renders (PDF-level gating inside)
     // ══════════════════════════════════════════════════════════════════════════
     'financial-certifications': {
         title: 'Financial Certifications',
@@ -913,32 +918,32 @@ const CATEGORY_DATA: Record<string, any> = {
         accentGrad: 'linear-gradient(135deg,#D4A843,#F59E0B)',
         contentType: 'certification',
         description:
-          'Structured NISM-aligned certification programs with official workbooks included. Complete the program, pass the assessment, earn your InvestBeans certificate.',
+          'Structured NISM-aligned certification programs with official workbooks included. Complete the program, pass the NISM assessment, and earn your InvestBeans certificate.',
         stats: { rating: '4.9', reviews: '198', duration: '3–8 weeks', modules: 3 },
         instructor: { name: 'InvestBeans Faculty', role: 'NISM Certified Educators', avatar: '🎓' },
         whatYouLearn: [
-          'Complete NISM syllabus with official workbooks',
+          'Complete NISM syllabus with official workbooks included',
           'Attempt mock tests with real exam-pattern questions',
-          'Get InvestBeans certificate upon completion',
-          'Understand SEBI regulations practically',
-          'Download official NISM PDFs included in each program',
-          'Career-ready knowledge for finance roles',
+          'Get InvestBeans certificate upon program completion',
+          'Understand SEBI regulations with practical case studies',
+          'Download official NISM PDFs directly from the program',
+          'Career-ready knowledge for finance and compliance roles',
         ],
         modules: [
-          // ── Certificate 1 — MF Expert ────────────────────────────────────────────
+
+          // ── Certificate I — Mutual Fund Expert (NISM V-A + V-B) ─────────────────
           {
             title: 'Certificate I — Mutual Fund Expert',
             subtitle: 'NISM V-A + V-B combo program',
             pages: '4 weeks',
             level: 'Beginner',
-            isPaid: true,
+            isPaid: false,          // card always renders; PDF-level gating below
             description:
-              'Complete 4-week program covering NISM V-A Mutual Fund Distributor and V-B Foundation with official workbooks, mock tests, and InvestBeans certificate.',
-            // ✅ PDF included with this certification
-            pdfUrl: 'financial/NISM Series V-A Mutual Fund Distributors Certification Examination_November 2025_Final_04-Dec-2025 4 09.pdf',
+              'Complete 4-week program covering NISM V-A Mutual Fund Distributor and V-B Foundation — official workbooks, 200+ mock questions, and InvestBeans certificate.',
+            highlights: ['4 Weeks Program', '6 NISM Workbooks', 'Certificate Included'],
             previewTopics: [
               'NISM V-A MFD — complete syllabus coverage',
-              'NISM V-B MFF — foundation certification',
+              'NISM V-B MFF — Mutual Fund Foundation',
               'NAV calculation, scheme types, SIP strategies',
               'AMFI regulations and distributor obligations',
               'KYC, investor onboarding, and grievance handling',
@@ -946,73 +951,216 @@ const CATEGORY_DATA: Record<string, any> = {
               'Mock tests — 200+ practice questions',
               'InvestBeans certificate upon completion',
             ],
-            highlights: ['4 Weeks Program', '2 NISM Workbooks', 'Certificate Included'],
             chapters: [
               { title: 'Week 1: MF Structure, Regulations & Scheme Types', ref: 'Week 1', free: false },
               { title: 'Week 2: NAV, SIP, SWP, STP & Taxation',           ref: 'Week 2', free: false },
               { title: 'Week 3: Investor Services & KYC',                  ref: 'Week 3', free: false },
               { title: 'Week 4: Mock Tests + Final Assessment',            ref: 'Week 4', free: false },
             ],
+            // ── Included NISM Workbooks ──────────────────────────────────────────
+            pdfs: [
+              {
+                title: 'NISM V-A — MFD Workbook (Nov 2025)',
+                subtitle: 'Latest English edition — exam ready',
+                level: 'Beginner',
+                isFreePreview: true,   // ← visible to all (free sample)
+                pdfUrl: 'financial/NISM Series V-A Mutual Fund Distributors Certification Examination_November 2025_Final_04-Dec-2025 4 09.pdf',
+              },
+              {
+                title: 'NISM V-A — MFD Workbook Hindi (Dec 2025)',
+                subtitle: 'Latest Hindi edition',
+                level: 'Beginner',
+                isFreePreview: true,   // ← visible to all (free sample)
+                pdfUrl: 'financial/NISM Series V-A MFD Workbook HINDI - Version December 2025.pdf',
+              },
+              {
+                title: 'NISM V-A — MFD Workbook (Aug 2025)',
+                subtitle: 'Previous English edition — reference',
+                level: 'Beginner',
+                isFreePreview: false,  // ← subscribers only
+                pdfUrl: 'financial/NISM Series V-A Mutual Fund Distributors Certification Examination_August 2025 Final - 15092025.pdf',
+              },
+              {
+                title: 'NISM V-A — MFD Workbook Hindi (Sep 2025)',
+                subtitle: 'Previous Hindi edition — reference',
+                level: 'Beginner',
+                isFreePreview: false,
+                pdfUrl: 'financial/NISM Series V-A MFD Workbook HINDI - September 2025.pdf',
+              },
+              {
+                title: 'NISM V-B — MFF Workbook (Nov 2025)',
+                subtitle: 'MF Foundation — latest edition',
+                level: 'Beginner',
+                isFreePreview: false,
+                pdfUrl: 'financial/NISM SERIES V-B MFF Workbook version-November- 2025 .pdf',
+              },
+              {
+                title: 'NISM V-B — MFF Workbook (Aug 2025)',
+                subtitle: 'MF Foundation — previous edition',
+                level: 'Beginner',
+                isFreePreview: false,
+                pdfUrl: 'financial/NISM SERIES V-B MFF Workbook August 2025_.pdf',
+              },
+            ],
           },
-       
-          // ── Certificate 2 — Equity & Derivatives Pro ─────────────────────────────
+
+          // ── Certificate II — Equity & Derivatives Pro (NISM VIII + XV) ──────────
           {
             title: 'Certificate II — Equity & Derivatives Pro',
             subtitle: 'NISM VIII + XV combo program',
             pages: '6 weeks',
             level: 'Advanced',
-            isPaid: true,
+            isPaid: false,
             description:
-              '6-week intensive covering equity derivatives (NISM VIII) and research analysis (NISM XV) with official workbooks and live mock tests.',
-            // ✅ PDF included with this certification
-            pdfUrl: 'financial/NISM-Series-VIII Equity Derivatives Certification Examination_December 2025_v1.pdf',
+              '6-week intensive covering NISM VIII Equity Derivatives and NISM XV Research Analyst — official workbooks, 300+ mock questions, and InvestBeans certificate.',
+            highlights: ['6 Weeks Program', '6 NISM Workbooks', 'Advanced Level'],
             previewTopics: [
               'NISM VIII — Equity Derivatives complete syllabus',
               'Futures pricing, hedging, and cost of carry',
               'Options — Greeks, payoff diagrams, strategies',
               'NISM XV — Research Analyst certification',
               'Fundamental analysis and DCF valuation',
-              'Technical analysis and report writing',
+              'Technical analysis and research report writing',
               'Mock tests — 300+ practice questions',
               'InvestBeans certificate upon completion',
             ],
-            highlights: ['6 Weeks Program', '2 NISM Workbooks', 'Advanced Level'],
             chapters: [
               { title: 'Weeks 1–2: Futures and Options Fundamentals', ref: 'Week 1–2', free: false },
               { title: 'Weeks 3–4: Research Analysis Methods',        ref: 'Week 3–4', free: false },
               { title: 'Week 5: Strategy & Risk Management',          ref: 'Week 5',   free: false },
               { title: 'Week 6: Final Exam + Certificate',            ref: 'Week 6',   free: false },
             ],
+            pdfs: [
+              {
+                title: 'NISM XII — Securities Markets Foundation (Dec 2025)',
+                subtitle: 'Market structure foundation — start here',
+                level: 'Beginner',
+                isFreePreview: true,
+                pdfUrl: 'financial/NISM-Series-XII Securities Markets FoundationCertification Examination_December-2025.pdf',
+              },
+              {
+                title: 'NISM XII — Securities Markets Foundation (Sep 2025)',
+                subtitle: 'Foundation reference edition',
+                level: 'Beginner',
+                isFreePreview: true,
+                pdfUrl: 'financial/NISM-Series-XII Securities Markets FoundationCertification Examination_September-2025.pdf',
+              },
+              {
+                title: 'NISM VIII — Equity Derivatives (Dec 2025)',
+                subtitle: 'Core F&O certification workbook',
+                level: 'Advanced',
+                isFreePreview: false,
+                pdfUrl: 'financial/NISM-Series-VIII Equity Derivatives Certification Examination_December 2025_v1.pdf',
+              },
+              {
+                title: 'NISM XV — Research Analyst (Feb 2026)',
+                subtitle: 'Latest RA certification workbook',
+                level: 'Advanced',
+                isFreePreview: false,
+                pdfUrl: 'financial/NISM-Series-XV-ResearchAnalyst-Workbook - February 2026.pdf',
+              },
+              {
+                title: 'NISM XV — Research Analyst (Dec 2025)',
+                subtitle: 'Previous RA edition — reference',
+                level: 'Advanced',
+                isFreePreview: false,
+                pdfUrl: 'financial/NISM-Series-XV-ResearchAnalyst-Workbook -17122025 New.pdf',
+              },
+              {
+                title: 'NISM XVB — Research Analyst Renewal',
+                subtitle: 'RA renewal examination content',
+                level: 'Advanced',
+                isFreePreview: false,
+                pdfUrl: 'financial/NISM XVB - Research Analyst Renewal.pdf',
+              },
+            ],
           },
-       
-          // ── Certificate 3 — Compliance & AML Specialist ──────────────────────────
+
+          // ── Certificate III — Compliance & AML Specialist (NISM III-A + XXIV) ───
           {
             title: 'Certificate III — Compliance & AML Specialist',
             subtitle: 'NISM III-A + XXIV combo program',
             pages: '3 weeks',
             level: 'Intermediate',
-            isPaid: true,
+            isPaid: false,
             description:
-              'Compliance-focused 3-week program covering NISM III-A Securities Compliance and NISM XXIV AML/KYC with official workbooks and case studies.',
-            // ✅ PDF included with this certification
-            pdfUrl: 'financial/NISM Series XXIV AML and CFT Provisions in Securities Markets Certification Examination Workbook - November 2025.pdf',
+              '3-week compliance-focused program covering NISM III-A Securities Compliance, NISM XXIV AML/CFT, and NISM III-C Fund Compliance with official workbooks and case studies.',
+            highlights: ['3 Weeks Program', '8 NISM Workbooks', 'Compliance Focus'],
             previewTopics: [
               'NISM III-A — Securities Intermediaries Compliance',
               'SEBI compliance framework for brokers and DPs',
               'NISM XXIV — AML/CFT Provisions in Securities Markets',
               'PMLA 2002 key provisions and amendments',
-              'KYC, CDD, EDD procedures',
-              'STR and CTR filing obligations',
+              'KYC, CDD, EDD procedures and STR/CTR filing',
+              'NISM IFSCA-01 — AML/CFT in IFSC',
               'Mock tests — 150+ practice questions',
               'InvestBeans certificate upon completion',
             ],
-            highlights: ['3 Weeks Program', '2 NISM Workbooks', 'Compliance Focus'],
             chapters: [
               { title: 'Week 1: SEBI Compliance Framework (NISM III-A)', ref: 'Week 1', free: false },
               { title: 'Week 2: AML/KYC and PMLA (NISM XXIV)',           ref: 'Week 2', free: false },
               { title: 'Week 3: Mock Tests + Certificate',                ref: 'Week 3', free: false },
             ],
+            pdfs: [
+              {
+                title: 'NISM IFSCA-01 — AML & CFT in IFSC (Dec 2025)',
+                subtitle: 'IFSC AML regulations — latest edition',
+                level: 'Intermediate',
+                isFreePreview: true,
+                pdfUrl: 'financial/1. NISM-IFSCA-01 Certification Course on AML and CFT in the IFSC - December 2025.pdf',
+              },
+              {
+                title: 'NISM IFSCA-01 — AML & CFT in IFSC (Old Edition)',
+                subtitle: 'Previous IFSC edition — reference',
+                level: 'Intermediate',
+                isFreePreview: true,
+                pdfUrl: 'financial/1. NISM-IFSCA-01 Certification Examination on Anti Money Laundering and Counter Terrorist Fi Old.pdf',
+              },
+              {
+                title: 'NISM XXIV — AML & CFT Securities Markets (Nov 2025)',
+                subtitle: 'Latest AML certification workbook',
+                level: 'Intermediate',
+                isFreePreview: false,
+                pdfUrl: 'financial/NISM Series XXIV AML and CFT Provisions in Securities Markets Certification Examination Workbook - November 2025.pdf',
+              },
+              {
+                title: 'NISM XXIV — AML & CFT Securities Markets (May 2025)',
+                subtitle: 'Previous AML edition — reference',
+                level: 'Intermediate',
+                isFreePreview: false,
+                pdfUrl: 'financial/NISM Series XXIV AML and CFT Provisions in Securities Markets Certification Examination Workbook -May 2025.pdf',
+              },
+              {
+                title: 'NISM III-A — Securities Compliance Non-Fund (Dec 2025)',
+                subtitle: 'Latest compliance workbook',
+                level: 'Advanced',
+                isFreePreview: false,
+                pdfUrl: 'financial/NISM-Series-III-A Securities Intermediaries Compliance (Non-Fund) December 2025.pdf',
+              },
+              {
+                title: 'NISM III-A — Securities Compliance Non-Fund (Jun 2025)',
+                subtitle: 'Previous compliance edition — reference',
+                level: 'Advanced',
+                isFreePreview: false,
+                pdfUrl: 'financial/NISM Series III-A Securities Intermediaries Compliance Non-Fund_Final vJune 2025.pdf',
+              },
+              {
+                title: 'NISM III-C — Fund Compliance (Jan 2026)',
+                subtitle: 'Latest AMC compliance workbook',
+                level: 'Advanced',
+                isFreePreview: false,
+                pdfUrl: 'financial/NISM-Series III-C-Fund Compliance Certification Exam_Workbook (January 2026).pdf',
+              },
+              {
+                title: 'NISM III-C — Fund Compliance (Old Edition)',
+                subtitle: 'Reference compliance workbook',
+                level: 'Advanced',
+                isFreePreview: false,
+                pdfUrl: 'financial/NISM-Series III-C-Fund Compliance Certification Exam_Workbook Old.pdf',
+              },
+            ],
           },
+
         ],
       },
        

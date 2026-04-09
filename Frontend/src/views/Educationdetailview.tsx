@@ -388,6 +388,253 @@ function ModuleCard({
 }
 
 // ══════════════════════════════════════════════════════════════════════════
+// CERT MODULE CARD — Certification program with multi-PDF download list
+// Shows program header, weekly study plan, and all included NISM workbooks.
+// isFreePreview: true  → always downloadable (free sample for non-subscribers)
+// isFreePreview: false → subscribers + admin only; others see locked placeholder
+// ══════════════════════════════════════════════════════════════════════════
+
+function CertModuleCard({
+  mod, data, isLight, cardBg, border,
+  textPrimary, textMuted, textFaint,
+  hasAccess, isAdmin: adminFlag, isSubscriber: subFlag,
+  onUnlock,
+}: any) {
+  const ls = levelStyleMap[mod.level] ?? levelStyleMap['Beginner'];
+
+  const handlePdfOpen = (pdfUrl: string) => {
+    const publicUrl = `https://vhutfmztepdlgkqejpvh.supabase.co/storage/v1/object/public/Investbeans/${pdfUrl}`;
+    window.open(publicUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const freePdfs   = (mod.pdfs || []).filter((p: any) => p.isFreePreview);
+  const premiumPdfs = (mod.pdfs || []).filter((p: any) => !p.isFreePreview);
+
+  return (
+    <div
+      className="rounded-2xl overflow-hidden"
+      style={{
+        background: cardBg,
+        border: `1px solid ${border}`,
+        boxShadow: isLight ? '0 2px 20px rgba(0,0,0,0.05)' : 'none',
+      }}
+    >
+      {/* Accent top bar */}
+      <div className="h-0.5 w-full" style={{ background: data.accentGrad }} />
+
+      {/* ── Program header ──────────────────────────────────────────── */}
+      <div className="px-6 pt-6 pb-4">
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
+              style={{ background: `${data.accent}15`, border: `1px solid ${data.accent}25` }}
+            >
+              🎓
+            </div>
+            <div>
+              <h3 className="text-lg font-bold leading-snug" style={{ color: textPrimary }}>
+                {mod.title}
+              </h3>
+              <p className="text-sm italic" style={{ color: data.accent, opacity: 0.85 }}>
+                {mod.subtitle}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+            <span
+              className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+              style={{ background: ls.bg, color: ls.text }}
+            >
+              {mod.level}
+            </span>
+            <span
+              className="text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1"
+              style={{ background: `${data.accent}12`, color: data.accent, border: `1px solid ${data.accent}25` }}
+            >
+              📅 {mod.pages}
+            </span>
+            {adminFlag ? (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                style={{ background: 'rgba(168,85,247,0.12)', color: '#a855f7' }}>🛡️ ADMIN</span>
+            ) : subFlag ? (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e' }}>✓ UNLOCKED</span>
+            ) : (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                style={{ background: 'rgba(81,148,246,0.12)', color: '#5194F6' }}>🔒 PREMIUM</span>
+            )}
+          </div>
+        </div>
+
+        <p className="text-sm leading-relaxed mb-4" style={{ color: textMuted }}>
+          {mod.description}
+        </p>
+
+        {/* Highlights */}
+        {mod.highlights && (
+          <div className="flex flex-wrap gap-2">
+            {mod.highlights.map((h: string, j: number) => (
+              <span key={j} className="text-[11px] px-2.5 py-1 rounded-full"
+                style={{
+                  background: isLight ? `${data.accent}08` : `${data.accent}12`,
+                  color: data.accent,
+                  border: `1px solid ${data.accent}20`,
+                }}>
+                {h}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mx-6" style={{ height: 1, background: `linear-gradient(90deg,${data.accent}20,transparent)` }} />
+
+      {/* ── Weekly study plan ─────────────────────────────────────── */}
+      {mod.chapters && mod.chapters.length > 0 && (
+        <div className="px-6 py-4">
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: textFaint }}>
+            Study Plan
+          </p>
+          <div className="space-y-2">
+            {mod.chapters.map((ch: any, j: number) => (
+              <div key={j} className="flex items-center gap-3">
+                <span
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-md flex-shrink-0"
+                  style={{ background: `${data.accent}15`, color: data.accent }}
+                >
+                  {ch.ref}
+                </span>
+                <span className="text-xs" style={{ color: textMuted }}>{ch.title}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mx-6" style={{ height: 1, background: `linear-gradient(90deg,${data.accent}20,transparent)` }} />
+
+      {/* ── Included NISM Workbooks ───────────────────────────────── */}
+      <div className="px-6 py-5">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: textFaint }}>
+            Included NISM Workbooks
+          </p>
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+            style={{ background: `${data.accent}10`, color: data.accent }}>
+            {(mod.pdfs || []).length} PDFs
+          </span>
+        </div>
+
+        <div className="space-y-2.5">
+          {/* Free preview PDFs — always visible */}
+          {freePdfs.map((pdf: any, j: number) => (
+            <div key={`free-${j}`}
+              className="flex items-center justify-between gap-3 p-3 rounded-xl"
+              style={{
+                background: isLight ? 'rgba(16,185,129,0.04)' : 'rgba(16,185,129,0.07)',
+                border: '1px solid rgba(16,185,129,0.18)',
+              }}>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399' }}>
+                  <SvgFileText />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold truncate" style={{ color: textPrimary }}>{pdf.title}</p>
+                  <p className="text-[10px] truncate" style={{ color: textMuted }}>{pdf.subtitle}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                  style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399' }}>FREE</span>
+                <button
+                  onClick={() => handlePdfOpen(pdf.pdfUrl)}
+                  className="flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all hover:opacity-80 text-white flex-shrink-0"
+                  style={{ background: 'rgba(16,185,129,0.85)' }}>
+                  <SvgDownload /> PDF
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {/* Premium PDFs — subscribers & admin see download; others see lock */}
+          {premiumPdfs.map((pdf: any, j: number) => {
+            const pdfLocked = !hasAccess;
+            if (pdfLocked) {
+              return (
+                <div key={`locked-${j}`}
+                  className="flex items-center justify-between gap-3 p-3 rounded-xl"
+                  style={{
+                    background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.03)',
+                    border: isLight ? '1px solid rgba(0,0,0,0.07)' : '1px solid rgba(255,255,255,0.07)',
+                    opacity: 0.85,
+                  }}>
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: 'rgba(148,163,184,0.12)', color: 'rgba(148,163,184,0.5)' }}>
+                      <SvgLock />
+                    </div>
+                    {/* Blurred placeholder — no real title in DOM */}
+                    <div className="space-y-1.5 min-w-0">
+                      <div className="h-3 rounded"
+                        style={{ width: `${110 + (j * 17) % 70}px`, background: isLight ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.07)' }} />
+                      <div className="h-2.5 rounded"
+                        style={{ width: `${70 + (j * 11) % 50}px`, background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)' }} />
+                    </div>
+                  </div>
+                  <button
+                    onClick={onUnlock}
+                    className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-all hover:opacity-80 flex-shrink-0"
+                    style={{ background: 'rgba(81,148,246,0.10)', color: '#5194F6', border: '1px solid rgba(81,148,246,0.25)' }}>
+                    <SvgLockSm /> Unlock
+                  </button>
+                </div>
+              );
+            }
+            return (
+              <div key={`pdf-${j}`}
+                className="flex items-center justify-between gap-3 p-3 rounded-xl"
+                style={{
+                  background: isLight ? `${data.accent}05` : `${data.accent}08`,
+                  border: `1px solid ${data.accent}20`,
+                }}>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: `${data.accent}15`, color: data.accent }}>
+                    <SvgFileText />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold truncate" style={{ color: textPrimary }}>{pdf.title}</p>
+                    <p className="text-[10px] truncate" style={{ color: textMuted }}>{pdf.subtitle}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handlePdfOpen(pdf.pdfUrl)}
+                  className="flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all hover:opacity-80 text-white flex-shrink-0"
+                  style={{ background: data.accentGrad }}>
+                  <SvgDownload /> PDF
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Upgrade CTA — only for non-subscribers with locked PDFs */}
+        {!hasAccess && premiumPdfs.length > 0 && (
+          <button
+            onClick={onUnlock}
+            className="w-full mt-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2.5 transition-all hover:opacity-90 hover:-translate-y-0.5 text-white"
+            style={{ background: data.accentGrad, boxShadow: `0 4px 16px ${data.accent}30` }}>
+            <SvgCrown /> Unlock All {premiumPdfs.length} Premium PDFs
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ══════════════════════════════════════════════════════════════════════════
 
@@ -399,8 +646,12 @@ const EducationDetailView: React.FC = () => {
   const { isSubscriber, loading: subLoading } = useSubscription();   // ← Real sub check
   const isLight                 = theme === 'light';
 
-  // hasAccess = admin OR active subscriber
-  const hasAccess = isAdmin || isSubscriber;
+  // financial-ebooks and financial-tutorials: fully open (accessible to all)
+  // financial-certifications: subscription-gated for individual PDFs
+  const isFullyOpenFinancial =
+    categoryId === 'financial-ebooks' || categoryId === 'financial-tutorials';
+  // hasAccess = admin OR active subscriber OR a fully-open financial category
+  const hasAccess = isAdmin || isSubscriber || isFullyOpenFinancial;
 
   const data = CATEGORY_DATA[categoryId || ''];
 
@@ -454,6 +705,7 @@ const EducationDetailView: React.FC = () => {
   }
 
   const isEbook = data.contentType === 'ebook';
+  const isCert  = data.contentType === 'certification';
   const ls = levelStyleMap[data.modules?.[0]?.level] ?? levelStyleMap['Beginner'];
 
   // Subscription loading state — skeleton dikhao
@@ -499,7 +751,7 @@ const EducationDetailView: React.FC = () => {
                     {data.tag}
                   </span>
                   <span className="text-xs" style={{ color: textFaint }}>
-                    {data.stats.modules} {isEbook ? 'PDFs' : 'Sessions'}
+                    {data.stats.modules} {isCert ? 'Programs' : isEbook ? 'PDFs' : 'Sessions'}
                   </span>
                   {/* Subscription status badge */}
                   {isAdmin ? (
@@ -588,8 +840,8 @@ const EducationDetailView: React.FC = () => {
             <div className="flex-1 flex flex-col gap-6">
               {data.modules.map((mod: any, i: number) => {
                 // ── Access check per module ────────────────────────────────
-                // mod.isPaid === false → always accessible (free module)
-                // mod.isPaid === true  → needs hasAccess
+                // mod.isPaid === false → always accessible (cert modules are set to false)
+                // mod.isPaid === true  → needs hasAccess (ebooks/tutorials)
                 const modLocked = data.isPaid && mod.isPaid && !hasAccess;
 
                 return (
@@ -607,6 +859,17 @@ const EducationDetailView: React.FC = () => {
                         textFaint={textFaint}
                         onUnlock={handleUnlock}
                       />
+                    ) : isCert ? (
+                      // ── CERTIFICATION: multi-PDF program card ────────────────────────
+                      <CertModuleCard
+                        mod={mod} data={data}
+                        isLight={isLight} cardBg={cardBg} border={border}
+                        textPrimary={textPrimary} textMuted={textMuted} textFaint={textFaint}
+                        hasAccess={hasAccess}
+                        isAdmin={isAdmin}
+                        isSubscriber={isSubscriber}
+                        onUnlock={handleUnlock}
+                      />
                     ) : isEbook ? (
                       // ── UNLOCKED EBOOK ────────────────────────────────────────────────
                       <PdfModuleCard
@@ -618,7 +881,7 @@ const EducationDetailView: React.FC = () => {
                         onUnlock={handleUnlock}
                       />
                     ) : (
-                      // ── UNLOCKED VIDEO / CERT ─────────────────────────────────────────
+                      // ── UNLOCKED VIDEO ────────────────────────────────────────────────
                       <ModuleCard
                         mod={mod} idx={i} data={data}
                         isLight={isLight} cardBg={cardBg} border={border}
