@@ -9,7 +9,7 @@ export const ADMIN_EMAILS = [
     // Add more admin emails as needed
 ].filter(Boolean); // Remove undefined values
 
-export const verifyAdmin = asyncHandler(async (req, res, next) => {
+export const  verifyAdmin= asyncHandler(async (req, res, next) => {
     if (!req.user) {
         throw new ApiError(401, "Authentication required");
     }

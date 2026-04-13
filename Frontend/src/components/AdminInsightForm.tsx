@@ -224,7 +224,9 @@ const AdminInsightForm = ({ isOpen, onClose, onSuccess, editingInsight }: AdminI
   const cancelBorder   = isLight ? "1px solid rgba(13,37,64,0.12)" : "1px solid rgba(81,148,246,0.22)";
   const cancelColor    = isLight ? "rgba(13,37,64,0.65)" : "rgba(203,213,225,1)";
   const charColor      = isLight ? "rgba(13,37,64,0.35)" : "rgba(100,116,139,1)";
-  const optBg          = "#101528";
+  // const optBg          = "#101528";
+  const optBg          = isLight ? "#ffffff" : "#101528";
+  const optColor       = isLight ? "#0d1b2a" : "#ffffff";
 
   const scoreColor = insight.impactScore >= 8 ? "#ef4444"
     : insight.impactScore >= 6 ? "#f59e0b"
@@ -384,7 +386,7 @@ const AdminInsightForm = ({ isOpen, onClose, onSuccess, editingInsight }: AdminI
                     placeholder="Author name" className={inputClass} style={{ ...inputStyle, height: 38 }} />
                 </div>
                 <div>
-                  <Label className="text-xs mb-1 block" style={{ color: labelOptColor }}>URL (optional)</Label>
+                  <Label className="text-xs mb-1 block" style={{ color: labelOptColor }}>URL <span className="text-[#5194F6]">*</span> </Label>
                   <input type="url" value={meta.creditUrl} onChange={e => setM("creditUrl", e.target.value)}
                     placeholder="https://example.com" className={inputClass} style={{ ...inputStyle, height: 38 }} />
                 </div>
@@ -392,7 +394,7 @@ const AdminInsightForm = ({ isOpen, onClose, onSuccess, editingInsight }: AdminI
             </div>
 
             {/* Category / Market / Sentiment */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <Label className="text-xs font-semibold mb-1.5 block" style={{ color: labelColor }}>
                   Category <span className="text-[#5194F6]">*</span>
@@ -422,7 +424,39 @@ const AdminInsightForm = ({ isOpen, onClose, onSuccess, editingInsight }: AdminI
                   <option value="neutral"  style={{ background: optBg }}>Neutral</option>
                 </select>
               </div>
+            </div> */}.
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <Label className="text-xs font-semibold mb-1.5 block" style={{ color: labelColor }}>
+                  Category <span className="text-[#5194F6]">*</span>
+                </Label>
+                <input value={meta.category} onChange={e => setM("category", e.target.value)}
+                  placeholder="e.g. Technology" required className={inputClass} style={{ ...inputStyle, height: 42 }} />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold mb-1.5 block" style={{ color: labelColor }}>
+                  Market Type <span className="text-[#5194F6]">*</span>
+                </Label>
+                <select value={meta.marketType} onChange={e => setM("marketType", e.target.value)}
+                  className={inputClass} style={{ ...inputStyle, height: 42, color: optColor }}>
+                  <option value="domestic"    style={{ background: optBg, color: optColor }}>Domestic</option>
+                  <option value="global"      style={{ background: optBg, color: optColor }}>Global</option>
+                  <option value="commodities" style={{ background: optBg, color: optColor }}>Commodities</option>
+                </select>
+              </div>
+              <div>
+                <Label className="text-xs font-semibold mb-1.5 block" style={{ color: labelColor }}>
+                  Sentiment <span className="text-[#5194F6]">*</span>
+                </Label>
+                <select value={meta.sentiment} onChange={e => setM("sentiment", e.target.value)}
+                  className={inputClass} style={{ ...inputStyle, height: 42, color: optColor }}>
+                  <option value="positive" style={{ background: optBg, color: optColor }}>Positive</option>
+                  <option value="negative" style={{ background: optBg, color: optColor }}>Negative</option>
+                  <option value="neutral"  style={{ background: optBg, color: optColor }}>Neutral</option>
+                </select>
+              </div>
             </div>
+ 
 
             {/* Footer */}
             <div className="flex gap-3 pt-3 sticky bottom-0 -mx-5 px-5 pb-4"

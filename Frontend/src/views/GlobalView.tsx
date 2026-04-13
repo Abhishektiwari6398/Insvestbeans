@@ -59,10 +59,10 @@ function localNow(m: MktInfo): string {
 const NAV_SECTIONS = [
   { id:"section-hours",   label:"Market Hours",   icon: Globe     },
   { id:"section-us",      label:"US Markets",      icon: BarChart3 },
+  { id:"section-bonds",   label:"Bonds & VIX",     icon: Landmark  },
   { id:"section-europe",  label:"Europe",          icon: LineChart },
   { id:"section-asia",    label:"Asia Pacific",    icon: Activity  },
-  { id:"section-bonds",   label:"Bonds & VIX",     icon: Landmark  },
-  { id:"section-regions", label:"Regional",        icon: MapPin    },
+  { id:"section-events",  label:"Events Calendar", icon: MapPin    },
 ];
 
 function jumpTo(id: string) {
@@ -141,25 +141,20 @@ function SideNav({ active, onSelect, usMarkets, euMarkets, asMarkets, refreshing
 
   // Collapsible state for each market group
   const [openGroups, setOpenGroups] = useState<Record<string,boolean>>({ "🇺🇸 US": false, "🇪🇺 Europe": false, "🌏 Asia": false });
-  const toggleGroup = (label:string) => setOpenGroups(p => ({ ...p, [label]: !p[label] }));
+ 
 
-  // Collect all markets for mini-display
-  const allMarkets = [
-    { label:"🇺🇸 US",    items: usMarkets  },
-    { label:"🇪🇺 Europe",items: euMarkets  },
-    { label:"🌏 Asia",   items: asMarkets  },
-  ];
+
 
   return (
-    <div className="flex flex-col h-full py-1.5">
+    <div className="flex flex-col h-full py-1.5 ">
       {/* Live badge */}
-      <div className={`mx-3 mb-1.5 rounded-lg border px-3 py-1.5 ${l?"bg-gray-50 border-gray-100":"bg-[#0a1826] border-[#1a2d3f]"}`}>
+      {/* <div className={`mx-3 mb-1.5 rounded-lg border px-3 py-1.5 ${l?"bg-gray-50 border-gray-100":"bg-[#0a1826] border-[#1a2d3f]"}`}>
         <div className="flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-[#0A3656] dark:bg-[#74A8C9] animate-pulse"/>
           <span className={`text-[9px] font-black uppercase tracking-widest ${l?"text-gray-600":"text-[#c0d8ea]"}`}>Global Markets</span>
           {lastUpdated && <span className={`text-[9px] ml-auto ${l?"text-gray-400":"text-[#7a9ab5]"}`}>{ago(lastUpdated)}</span>}
         </div>
-      </div>
+      </div> */}
 
       <nav className="space-y-px px-2 mt-3">
         {NAV_SECTIONS.map(s => (
@@ -177,41 +172,7 @@ function SideNav({ active, onSelect, usMarkets, euMarkets, asMarkets, refreshing
         ))}
       </nav>
 
-      {/* Quick market list — collapsible dropdowns */}
-      <div className={`border-t mx-2 mt-1 pt-1 ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
-        {allMarkets.filter(g=>g.items.length>0).map(g => (
-          <div key={g.label} className="mb-0.5">
-            {/* Dropdown header button */}
-            <button
-              onClick={() => toggleGroup(g.label)}
-              className={`w-full flex items-center justify-between px-2 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                openGroups[g.label]
-                  ? l?"bg-gray-100 text-gray-800":"bg-white/[0.06] text-[#c0d8ea]"
-                  : l?"text-gray-600 hover:bg-gray-50 hover:text-gray-800":"text-[#7a9ab5] hover:bg-white/[0.03] hover:text-[#c0d8ea]"
-              }`}>
-              <span>{g.label}</span>
-              <span className={`transition-transform duration-200 ${openGroups[g.label]?"rotate-180":""}`}>
-                <ChevronRight className="w-3 h-3 rotate-90"/>
-              </span>
-            </button>
-            {/* Dropdown items */}
-            {openGroups[g.label] && (
-              <div className={`mt-0.5 mb-1 rounded-md overflow-hidden border ${l?"border-gray-100 bg-gray-50":"border-[#1a2d3f] bg-[#060e16]"}`}>
-                {g.items.slice(0,5).map(m => {
-                  const pos = m.changePercent >= 0;
-                  return (
-                    <div key={m.symbol} className={`flex items-center justify-between px-2.5 py-1.5 text-[10px] border-b last:border-0 ${l?"border-gray-100 hover:bg-gray-100":"border-[#111e28] hover:bg-white/[0.03]"} cursor-pointer`}
-                      onClick={() => { onSelect("section-"+g.label.split(" ").pop()!.toLowerCase().replace("us","us")); }}>
-                      <span className={`font-medium truncate mr-2 max-w-[90px] ${tx.t2(l)}`}>{m.name.length > 13 ? m.name.slice(0,13)+"…" : m.name}</span>
-                      <span className={`font-bold shrink-0 tabular-nums ${pos?"text-emerald-500":"text-red-500"}`}>{pos?"+":""}{m.changePercent.toFixed(2)}%</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+     
 
       <div className={`shrink-0 border-t px-3 py-3 ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
         <button onClick={onRefresh} disabled={refreshing}
@@ -247,14 +208,25 @@ function MktHoursSection() {
                   : isPre ? l?"bg-amber-50/50":"bg-amber-900/10" : ""
                 } ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
 
-                {/* White country code badge */}
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-1.5 font-black text-[13px] tracking-wider
-                  ${isOpen ? "bg-emerald-500/20 text-white border border-emerald-500/30"
-                  : isPre  ? "bg-amber-500/20 text-white border border-amber-500/30"
-                  : l      ? "bg-gray-100 text-gray-600 border border-gray-200"
-                           : "bg-white/10 text-white border border-white/15"}`}>
-                
-                  <span className="text-base leading-none">{m.flag}</span>
+                {/* Flag badge — uses flagcdn.com image so it renders on ALL browsers/OS including Windows Chrome */}
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-1.5 overflow-hidden border
+                  ${isOpen ? "border-emerald-500/40 ring-1 ring-emerald-500/20"
+                  : isPre  ? "border-amber-500/40 ring-1 ring-amber-500/20"
+                  : l      ? "border-gray-200"
+                           : "border-white/15"}`}>
+                  <img
+                    src={`https://flagcdn.com/w40/${m.code.toLowerCase()}.png`}
+                    srcSet={`https://flagcdn.com/w80/${m.code.toLowerCase()}.png 2x`}
+                    alt={m.short}
+                    width={40}
+                    height={30}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    onError={(e) => {
+                      // Fallback to emoji text if CDN image fails
+                      const t = e.currentTarget.parentElement;
+                      if (t) t.innerHTML = `<span class="market-flag">${m.flag}</span>`;
+                    }}
+                  />
                 </div>
 
                 {/* City name */}
@@ -289,9 +261,11 @@ function MktHoursSection() {
 // ══════════════════════════════════════════════════════════════════
 // MARKET SELECTOR — with period tabs + history fetch + delay badge
 // ══════════════════════════════════════════════════════════════════
-function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym }: {
+function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym, tzOffset = 0, regionSummary }: {
   sectionId:string; navId:string; title:string; markets:IndexQuote[]; icon?:any;
   onChart:(sym:string, name:string)=>void; autoSym?:string;
+  tzOffset?: number;
+  regionSummary?: React.ReactNode;
 }) {
   const l = useIL();
   const [sel, setSel]           = useState(0);
@@ -466,6 +440,7 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym 
             isPositive={isPos}
             candles={chartCandles}
             period={period}
+            tzOffset={tzOffset}
           />
         </div>
 
@@ -481,6 +456,9 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym 
           </button>
         </div>
       </Card>
+
+      {/* ── Regional Summary (Fix 5: show per-region performance here) ── */}
+      {regionSummary && <div className="mt-4">{regionSummary}</div>}
     </div>
   );
 }
@@ -557,6 +535,17 @@ export default function GlobalView() {
         html{scroll-behavior:smooth}
         .scrollbar-none::-webkit-scrollbar{display:none}
         .scrollbar-none{-ms-overflow-style:none;scrollbar-width:none}
+        .market-flag {
+          font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Android Emoji", "EmojiSymbols", sans-serif;
+          font-style: normal;
+          font-weight: normal;
+          display: inline-block;
+          font-size: 22px;
+          line-height: 1;
+          /* Force color emoji rendering — prevents monochrome fallback */
+          -webkit-text-stroke: 0;
+          text-rendering: optimizeLegibility;
+        }
       `}</style>
       <div className={`min-h-screen ${tx.bg(l)}`}>
 
@@ -573,7 +562,7 @@ export default function GlobalView() {
                 l?"bg-[#0A3656]/10 border-[#0A3656]/30 text-[#0A3656]":"bg-[#74A8C9]/10 border-[#74A8C9]/25 text-[#74A8C9]"
               }`}>● LIVE</span>
               <h1 className={`text-sm font-black hidden sm:block ${tx.t1(l)}`}>
-                Global Markets <span className={`font-normal ml-1 text-xs ${tx.t2(l)}`}>Dashboard</span>
+                Global Markets 
               </h1>
             </div>
             <div className="flex items-center gap-2">
@@ -622,124 +611,184 @@ export default function GlobalView() {
 
             <MktHoursSection/>
 
-            {/* US Markets */}
+            {/* US Markets + Bonds & VIX (Fix 4: bonds move here) */}
             {isLoading ? <div className={`h-96 rounded-xl animate-pulse mb-8 ${l?"bg-gray-100":"bg-[#1a2d3f]/40"}`}/> :
               <MktSelector sectionId="section-us" navId="section-us-h" title="United States Markets"
-                markets={usM} icon={BarChart3} onChart={openChart} autoSym={tickerSym??undefined}/>
+                markets={usM} icon={BarChart3} onChart={openChart} autoSym={tickerSym??undefined}
+                tzOffset={-5}
+                regionSummary={
+                  <div>
+                    {/* Fix 5: US Regional Summary */}
+                    {regs.filter(r=>r.name==="United States").map((r:RegionSummary) => {
+                      const p = r.avgChange>=0;
+                      return (
+                        <Card key={r.name} className="overflow-hidden mb-4">
+                          <div className="h-0.5" style={{ background: p?"linear-gradient(to right,#0A3656,transparent)":"linear-gradient(to right,#dc2626,transparent)" }}/>
+                          <div className="p-4">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <span className="text-2xl">{r.flag}</span>
+                                <div>
+                                  <p className={`font-extrabold text-sm ${tx.t1(l)}`}>{r.name} — Regional Summary</p>
+                                  <p className={`text-[11px] mt-0.5 ${tx.t3(l)}`}>{r.countries.join(", ")}</p>
+                                </div>
+                              </div>
+                              <span className={`text-base font-black ${p?"text-emerald-500":"text-red-500"}`}>{p?"+":""}{r.avgChange.toFixed(2)}%</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border ${l?"bg-emerald-50 border-emerald-100":"bg-emerald-900/10 border-emerald-800/20"}`}>
+                                <span className={`text-xs ${tx.t3(l)}`}>Best</span>
+                                <span className={`text-xs font-bold ${l?"text-emerald-700":"text-emerald-400"}`}>{r.best.name} ({r.best.change.toFixed(2)}%)</span>
+                              </div>
+                              <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border ${l?"bg-red-50 border-red-100":"bg-red-900/10 border-red-800/20"}`}>
+                                <span className={`text-xs ${tx.t3(l)}`}>Worst</span>
+                                <span className={`text-xs font-bold ${l?"text-red-700":"text-red-400"}`}>{r.worst.name} ({r.worst.change.toFixed(2)}%)</span>
+                              </div>
+                            </div>
+                          </div>
+                        </Card>
+                      );
+                    })}
+                    {/* Fix 4: Bonds & VIX under US section */}
+                    <div id="section-bonds" className="scroll-mt-24">
+                      <SecHead id="section-bonds-h" icon={Landmark} title="Bonds & Volatility"/>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <Card className="overflow-hidden">
+                          <div className={`px-4 py-3 border-b ${l?"bg-gray-50 border-gray-100":"bg-[#081017] border-[#1a2d3f]"}`}>
+                            <p className={`text-[10px] font-black uppercase tracking-widest ${tx.t3(l)}`}>Treasury Yields</p>
+                          </div>
+                          {isLoading ? <div className="p-4 space-y-2"><Skel h="h-10"/><Skel h="h-10"/><Skel h="h-10"/></div> :
+                           bnds.length>0 ? (
+                            <div className={`divide-y ${l?"divide-gray-50":"divide-[#111e28]"}`}>
+                              {bnds.map((b:BondYield, i:number) => {
+                                const p = b.change>=0;
+                                return (
+                                  <div key={i} className={`flex items-center justify-between px-4 py-3 ${tx.row(l)}`}>
+                                    <div>
+                                      <p className={`font-bold text-sm ${tx.t1(l)}`}>{b.name}</p>
+                                      <p className={`text-[11px] font-semibold mt-0.5 ${p?"text-emerald-500":"text-red-500"}`}>{p?"+":""}{b.change.toFixed(3)}%</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className={`text-xl font-black ${tx.t1(l)}`}>{b.yield.toFixed(3)}%</span>
+                                      {p ? <TrendingUp className="w-4 h-4 text-emerald-500"/> : <TrendingDown className="w-4 h-4 text-red-500"/>}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : <p className={`p-8 text-center text-sm ${tx.t2(l)}`}>Unavailable</p>}
+                        </Card>
+                        <Card>
+                          <div className={`px-4 py-3 border-b ${l?"bg-gray-50 border-gray-100":"bg-[#081017] border-[#1a2d3f]"}`}>
+                            <p className={`text-[10px] font-black uppercase tracking-widest ${tx.t3(l)}`}>CBOE VIX — Volatility Index</p>
+                          </div>
+                          {isLoading ? <div className="p-6"><Skel h="h-32"/></div> :
+                           data?.vix ? (() => {
+                            const v = data.vix;
+                            const vs = VIX_S[v.sentiment] || VIX_S.low;
+                            const p = v.change>=0;
+                            return (
+                              <div className={`m-4 rounded-xl border p-6 flex flex-col items-center gap-2 ${vs.bg}`}>
+                                <p className={`text-[10px] font-bold uppercase tracking-widest ${tx.t3(l)}`}>VIX Index</p>
+                                <div className={`text-5xl font-black ${tx.t1(l)}`}>{v.value.toFixed(2)}</div>
+                                <p className={`font-bold text-sm ${p?"text-emerald-500":"text-red-500"}`}>{p?"+":""}{v.change.toFixed(2)} ({v.changePercent.toFixed(2)}%)</p>
+                                <span className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest border ${vs.bg} ${vs.tc}`}>{v.sentiment.toUpperCase()} VOLATILITY</span>
+                              </div>
+                            );
+                           })() : <p className={`p-8 text-center text-sm ${tx.t2(l)}`}>VIX unavailable</p>}
+                        </Card>
+                      </div>
+                    </div>
+                  </div>
+                }
+              />
             }
 
             {/* Europe */}
             {isLoading ? <div className={`h-96 rounded-xl animate-pulse mb-8 ${l?"bg-gray-100":"bg-[#1a2d3f]/40"}`}/> :
               <MktSelector sectionId="section-europe" navId="section-europe-h" title="European Markets"
-                markets={euM} icon={LineChart} onChart={openChart} autoSym={tickerSym??undefined}/>
+                markets={euM} icon={LineChart} onChart={openChart} autoSym={tickerSym??undefined}
+                tzOffset={1}
+                regionSummary={
+                  regs.filter(r=>r.name==="Europe").map((r:RegionSummary) => {
+                    const p = r.avgChange>=0;
+                    return (
+                      <Card key={r.name} className="overflow-hidden">
+                        <div className="h-0.5" style={{ background: p?"linear-gradient(to right,#0A3656,transparent)":"linear-gradient(to right,#dc2626,transparent)" }}/>
+                        <div className="p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl">{r.flag}</span>
+                              <div>
+                                <p className={`font-extrabold text-sm ${tx.t1(l)}`}>{r.name} — Regional Summary</p>
+                                <p className={`text-[11px] mt-0.5 ${tx.t3(l)}`}>{r.countries.join(", ")}</p>
+                              </div>
+                            </div>
+                            <span className={`text-base font-black ${p?"text-emerald-500":"text-red-500"}`}>{p?"+":""}{r.avgChange.toFixed(2)}%</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border ${l?"bg-emerald-50 border-emerald-100":"bg-emerald-900/10 border-emerald-800/20"}`}>
+                              <span className={`text-xs ${tx.t3(l)}`}>Best</span>
+                              <span className={`text-xs font-bold ${l?"text-emerald-700":"text-emerald-400"}`}>{r.best.name} ({r.best.change.toFixed(2)}%)</span>
+                            </div>
+                            <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border ${l?"bg-red-50 border-red-100":"bg-red-900/10 border-red-800/20"}`}>
+                              <span className={`text-xs ${tx.t3(l)}`}>Worst</span>
+                              <span className={`text-xs font-bold ${l?"text-red-700":"text-red-400"}`}>{r.worst.name} ({r.worst.change.toFixed(2)}%)</span>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })[0] || null
+                }
+              />
             }
 
             {/* Asia */}
             {isLoading ? <div className={`h-96 rounded-xl animate-pulse mb-8 ${l?"bg-gray-100":"bg-[#1a2d3f]/40"}`}/> :
               <MktSelector sectionId="section-asia" navId="section-asia-h" title="Asia Pacific Markets"
-                markets={asM} icon={Globe} onChart={openChart} autoSym={tickerSym??undefined}/>
+                markets={asM} icon={Globe} onChart={openChart} autoSym={tickerSym??undefined}
+                tzOffset={8}
+                regionSummary={
+                  regs.filter(r=>r.name==="Asia").map((r:RegionSummary) => {
+                    const p = r.avgChange>=0;
+                    return (
+                      <Card key={r.name} className="overflow-hidden">
+                        <div className="h-0.5" style={{ background: p?"linear-gradient(to right,#0A3656,transparent)":"linear-gradient(to right,#dc2626,transparent)" }}/>
+                        <div className="p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl">{r.flag}</span>
+                              <div>
+                                <p className={`font-extrabold text-sm ${tx.t1(l)}`}>{r.name} — Regional Summary</p>
+                                <p className={`text-[11px] mt-0.5 ${tx.t3(l)}`}>{r.countries.join(", ")}</p>
+                              </div>
+                            </div>
+                            <span className={`text-base font-black ${p?"text-emerald-500":"text-red-500"}`}>{p?"+":""}{r.avgChange.toFixed(2)}%</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border ${l?"bg-emerald-50 border-emerald-100":"bg-emerald-900/10 border-emerald-800/20"}`}>
+                              <span className={`text-xs ${tx.t3(l)}`}>Best</span>
+                              <span className={`text-xs font-bold ${l?"text-emerald-700":"text-emerald-400"}`}>{r.best.name} ({r.best.change.toFixed(2)}%)</span>
+                            </div>
+                            <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border ${l?"bg-red-50 border-red-100":"bg-red-900/10 border-red-800/20"}`}>
+                              <span className={`text-xs ${tx.t3(l)}`}>Worst</span>
+                              <span className={`text-xs font-bold ${l?"text-red-700":"text-red-400"}`}>{r.worst.name} ({r.worst.change.toFixed(2)}%)</span>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })[0] || null
+                }
+              />
             }
 
-            {/* Bonds + VIX */}
-            <div id="section-bonds" className="mb-8 scroll-mt-24">
-              <SecHead id="section-bonds-h" icon={Landmark} title="Bonds & Volatility"/>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Bonds */}
-                <Card className="overflow-hidden">
-                  <div className={`px-4 py-3 border-b ${l?"bg-gray-50 border-gray-100":"bg-[#081017] border-[#1a2d3f]"}`}>
-                    <p className={`text-[10px] font-black uppercase tracking-widest ${tx.t3(l)}`}>Treasury Yields</p>
-                  </div>
-                  {isLoading ? <div className="p-4 space-y-2"><Skel h="h-10"/><Skel h="h-10"/><Skel h="h-10"/></div> :
-                   bnds.length>0 ? (
-                    <div className={`divide-y ${l?"divide-gray-50":"divide-[#111e28]"}`}>
-                      {bnds.map((b:BondYield, i:number) => {
-                        const p = b.change>=0;
-                        return (
-                          <div key={i} className={`flex items-center justify-between px-4 py-3 ${tx.row(l)}`}>
-                            <div>
-                              <p className={`font-bold text-sm ${tx.t1(l)}`}>{b.name}</p>
-                              <p className={`text-[11px] font-semibold mt-0.5 ${p?"text-emerald-500":"text-red-500"}`}>{p?"+":""}{b.change.toFixed(3)}%</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className={`text-xl font-black ${tx.t1(l)}`}>{b.yield.toFixed(3)}%</span>
-                              {p ? <TrendingUp className="w-4 h-4 text-emerald-500"/> : <TrendingDown className="w-4 h-4 text-red-500"/>}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : <p className={`p-8 text-center text-sm ${tx.t2(l)}`}>Unavailable</p>}
-                </Card>
-
-                {/* VIX */}
-                <Card>
-                  <div className={`px-4 py-3 border-b ${l?"bg-gray-50 border-gray-100":"bg-[#081017] border-[#1a2d3f]"}`}>
-                    <p className={`text-[10px] font-black uppercase tracking-widest ${tx.t3(l)}`}>CBOE VIX — Volatility Index</p>
-                  </div>
-                  {isLoading ? <div className="p-6"><Skel h="h-32"/></div> :
-                   data?.vix ? (() => {
-                    const v = data.vix;
-                    const vs = VIX_S[v.sentiment] || VIX_S.low;
-                    const p = v.change>=0;
-                    return (
-                      <div className={`m-4 rounded-xl border p-6 flex flex-col items-center gap-2 ${vs.bg}`}>
-                        <p className={`text-[10px] font-bold uppercase tracking-widest ${tx.t3(l)}`}>VIX Index</p>
-                        <div className={`text-5xl font-black ${tx.t1(l)}`}>{v.value.toFixed(2)}</div>
-                        <p className={`font-bold text-sm ${p?"text-emerald-500":"text-red-500"}`}>{p?"+":""}{v.change.toFixed(2)} ({v.changePercent.toFixed(2)}%)</p>
-                        <span className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest border ${vs.bg} ${vs.tc}`}>{v.sentiment.toUpperCase()} VOLATILITY</span>
-                      </div>
-                    );
-                   })() : <p className={`p-8 text-center text-sm ${tx.t2(l)}`}>VIX unavailable</p>}
-                </Card>
-              </div>
-            </div>
-
-            {/* Regional */}
-            <div id="section-regions" className="mb-8 scroll-mt-24">
-              <SecHead id="section-regions-h" icon={MapPin} title="Regional Performance"/>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {isLoading ? Array.from({length:3}).map((_,i)=><div key={i} className={`h-44 rounded-xl animate-pulse ${l?"bg-gray-100":"bg-[#1a2d3f]/40"}`}/>) :
-                 regs.map((r:RegionSummary) => {
-                  const p = r.avgChange>=0;
-                  return (
-                    <Card key={r.name} className="overflow-hidden">
-                      <div className="h-0.5" style={{ background: p?"linear-gradient(to right,#0A3656,transparent)":"linear-gradient(to right,#dc2626,transparent)" }}/>
-                      <div className="p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-2xl">{r.flag}</span>
-                            <div>
-                              <p className={`font-extrabold text-sm ${tx.t1(l)}`}>{r.name}</p>
-                              <p className={`text-[11px] mt-0.5 ${tx.t3(l)}`}>{r.countries.join(", ")}</p>
-                            </div>
-                          </div>
-                          <span className={`text-base font-black ${p?"text-emerald-500":"text-red-500"}`}>{p?"+":""}{r.avgChange.toFixed(2)}%</span>
-                        </div>
-                        <div className="space-y-1.5">
-                          <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border ${l?"bg-emerald-50 border-emerald-100":"bg-emerald-900/10 border-emerald-800/20"}`}>
-                            <span className={`text-xs ${tx.t3(l)}`}>Best</span>
-                            <span className={`text-xs font-bold ${l?"text-emerald-700":"text-emerald-400"}`}>{r.best.name} ({r.best.change.toFixed(2)}%)</span>
-                          </div>
-                          <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border ${l?"bg-red-50 border-red-100":"bg-red-900/10 border-red-800/20"}`}>
-                            <span className={`text-xs ${tx.t3(l)}`}>Worst</span>
-                            <span className={`text-xs font-bold ${l?"text-red-700":"text-red-400"}`}>{r.worst.name} ({r.worst.change.toFixed(2)}%)</span>
-                          </div>
-                        </div>
-                        <div className={`flex justify-between text-[11px] mt-3 pt-3 border-t ${l?"text-gray-300 border-gray-100":"text-[#3d5f78] border-[#1a2d3f]"}`}>
-                          <span className="flex items-center gap-1"><MapPin className="w-3 h-3"/>{r.countries.length} markets</span>
-                          <span className="flex items-center gap-1"><Clock className="w-3 h-3"/>Live</span>
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Events */}
+            {/* Events — Fix 6: show next 365 days, no slice limit */}
             {evts.length>0 && (
               <div className="mb-8">
                 <SecHead id="section-events" icon={Activity} title="Global Events Calendar"/>
+                <p className={`text-xs mb-3 ${tx.t2(l)}`}>Showing events for the next 365 days from today</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {evts.map((ev:any, i:number) => {
                     const impCls: Record<string,{bg:string;tc:string}> = {
@@ -749,7 +798,7 @@ export default function GlobalView() {
                     };
                     const s = impCls[ev.impact]||impCls.Low;
                     const d = new Date(ev.date);
-                    const ds = isNaN(d.getTime())?ev.date:d.toLocaleDateString("en-IN",{day:"2-digit",month:"short"});
+                    const ds = isNaN(d.getTime())?ev.date:d.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
                     return (
                       <Card key={i} className="p-3.5">
                         <div className="flex items-center gap-2 flex-wrap mb-2">

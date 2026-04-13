@@ -130,8 +130,8 @@ const createIPO = asyncHandler(async (req, res) => {
     issueSize:          issueSize.trim(),
     minInvestment:      minInvestment.trim(),
     subscriptionStatus: subscriptionStatus?.trim() || "",
-    listingGain:        (listingGain !== undefined && listingGain !== "" && listingGain !== null) ? Number(listingGain) : null,
-    gmp:                (gmp !== undefined && gmp !== "" && gmp !== null) ? Number(gmp) : null,
+    listingGain:        (listingGain !== undefined && listingGain !== "" && listingGain !== null && listingGain !== "0" && Number(listingGain) !== 0) ? Number(listingGain) : null,
+    gmp:                (gmp !== undefined && gmp !== "" && gmp !== null && gmp !== "0" && Number(gmp) !== 0) ? Number(gmp) : null,
     rating:             rating ? Number(rating) : 3,
     rhpLink:            rhpLink?.trim() || "",
     swot:               swotData,
@@ -179,7 +179,7 @@ const updateIPO = asyncHandler(async (req, res) => {
     if (req.body[f] === undefined) return;
     if (["lotSize","rating"].includes(f)) ipo[f] = Number(req.body[f]);
     else if (["listingGain","gmp"].includes(f))
-      ipo[f] = (req.body[f] !== "" && req.body[f] !== null) ? Number(req.body[f]) : null;
+      ipo[f] = (req.body[f] !== "" && req.body[f] !== null && req.body[f] !== "0" && Number(req.body[f]) !== 0) ? Number(req.body[f]) : null;
     else ipo[f] = req.body[f];
   });
 

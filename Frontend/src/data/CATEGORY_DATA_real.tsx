@@ -18,7 +18,7 @@ const CATEGORY_DATA: Record<string, any> = {
       accentGrad: 'linear-gradient(135deg,#3B82F6,#4F46E5)',
       contentType: 'ebook',
       description:
-        'Official NISM certification workbooks — the same study material used by lakhs of finance professionals across India. Download and study at your own pace.',
+        'HD video tutorials covering chart reading, technical analysis, financial learning — taught by certified practicing traders',
       stats: { rating: '4.9', reviews: '312', duration: '40 PDFs', modules: 40 },
       instructor: {
         name: 'NISM & InvestBeans Research Team',

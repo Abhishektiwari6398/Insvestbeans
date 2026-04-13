@@ -1342,8 +1342,13 @@ function HistoricalSection() {
 // ══════════════════════════════════════════════════════════════════
 // CORPORATE ACTIONS — Real NSE data via backend proxy
 // ══════════════════════════════════════════════════════════════════
-const CORP_TYPES = ["All", "Dividend", "Bonus", "Split", "Buyback", "Rights"] as const;
+const CORP_TYPES = ["All", "Dividend", "Bonus", "Split", "Buyback", "Rights", "Announcement"] as const;
 type CorpType = typeof CORP_TYPES[number];
+
+const ANNOUNCEMENT_LINKS = [
+  { label: "NSE Announcements", url: "https://www.nseindia.com/companies-listing/corporate-filings-announcements" },
+  { label: "BSE Announcements", url: "https://www.bseindia.com/corporates/ann.html" },
+];
 
 function CorporateSection() {
   const l = useIL();
@@ -1375,30 +1380,73 @@ function CorporateSection() {
   return (
     <section className="mb-8">
       <SecHead id="corporate" icon={Building2} title="Corporate Actions"
-        sub={source ? `${source} Archives · Dividend · Bonus · Split · Buyback` : "NSE Archives · Dividend · Bonus · Split · Buyback"} />
+        sub={source ? `${source} Archives · Dividend · Bonus · Split · Buyback · Announcements` : "NSE Archives · Dividend · Bonus · Split · Buyback · Announcements"} />
 
       {/* Filter tabs */}
       <div className="flex flex-wrap gap-2 mb-3 items-center">
         {CORP_TYPES.map(t => (
           <button key={t} onClick={() => setFilter(t)}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${filter === t
-                ? "bg-[#5194F6] text-white border-transparent"
+                ? t === "Announcement"
+                  ? "bg-amber-500 text-white border-transparent"
+                  : "bg-[#5194F6] text-white border-transparent"
                 : l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
-              }`}>{t}</button>
+              }`}>
+            {t === "Announcement" ? "📢 Announcement" : t}
+          </button>
         ))}
-        {source && (
+        {source && filter !== "Announcement" && (
           <span className={`text-[10px] font-black px-2 py-0.5 rounded border ${source === "NSE"
               ? l ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-[#5194F6]/10 text-[#5194F6] border-[#5194F6]/25"
               : l ? "bg-orange-50 text-orange-700 border-orange-200" : "bg-orange-900/15 text-orange-400 border-orange-800/30"
             }`}>via {source}</span>
         )}
-        <button onClick={refresh}
-          className={`px-2.5 py-1.5 rounded-lg border flex items-center ml-auto transition-all ${l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"}`}>
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-        </button>
+        {filter !== "Announcement" && (
+          <button onClick={refresh}
+            className={`px-2.5 py-1.5 rounded-lg border flex items-center ml-auto transition-all ${l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"}`}>
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+          </button>
+        )}
       </div>
 
-      {error && (
+      {/* Announcement panel */}
+      {filter === "Announcement" && (
+        <Card className="overflow-hidden">
+          <div className={`px-5 py-4 border-b ${l ? "border-slate-100" : "border-[#1e3a5f]/50"}`}>
+            <p className={`text-sm font-black mb-1 ${tx.t1(l)}`}>Company Announcements</p>
+            <p className={`text-xs ${tx.t3(l)}`}>
+              Real-time corporate announcements are hosted directly on NSE &amp; BSE. Click below to open the official announcement portals.
+            </p>
+          </div>
+          <div className="p-4 grid sm:grid-cols-2 gap-3">
+            <a href="https://www.nseindia.com/companies-listing/corporate-filings-announcements"
+              target="_blank" rel="noreferrer"
+              className={`flex items-center gap-4 px-5 py-4 rounded-xl border transition-all group ${l ? "bg-blue-50 border-blue-200 hover:bg-blue-100" : "bg-[#5194F6]/8 border-[#5194F6]/25 hover:bg-[#5194F6]/15"}`}>
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm shrink-0 ${l ? "bg-blue-600 text-white" : "bg-[#5194F6] text-white"}`}>NSE</div>
+              <div className="min-w-0">
+                <p className={`font-black text-sm ${l ? "text-blue-700" : "text-[#5194F6]"}`}>NSE Announcements</p>
+                <p className={`text-[11px] truncate ${tx.t3(l)}`}>nseindia.com · Corporate Filings</p>
+              </div>
+              <ExternalLink className={`w-4 h-4 ml-auto shrink-0 opacity-40 group-hover:opacity-100 transition-opacity ${l ? "text-blue-600" : "text-[#5194F6]"}`} />
+            </a>
+            <a href="https://www.bseindia.com/corporates/ann.html"
+              target="_blank" rel="noreferrer"
+              className={`flex items-center gap-4 px-5 py-4 rounded-xl border transition-all group ${l ? "bg-orange-50 border-orange-200 hover:bg-orange-100" : "bg-orange-900/10 border-orange-800/30 hover:bg-orange-900/20"}`}>
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm shrink-0 ${l ? "bg-orange-600 text-white" : "bg-orange-500 text-white"}`}>BSE</div>
+              <div className="min-w-0">
+                <p className={`font-black text-sm ${l ? "text-orange-700" : "text-orange-400"}`}>BSE Announcements</p>
+                <p className={`text-[11px] truncate ${tx.t3(l)}`}>bseindia.com · Latest Corporate Announcements</p>
+              </div>
+              <ExternalLink className={`w-4 h-4 ml-auto shrink-0 opacity-40 group-hover:opacity-100 transition-opacity ${l ? "text-orange-600" : "text-orange-400"}`} />
+            </a>
+          </div>
+          <div className={`px-5 py-3 border-t text-[10px] ${l ? "border-slate-100 text-slate-400" : "border-[#1e3a5f]/50 text-slate-500"}`}>
+            Includes: board meetings, financial results, press releases, regulatory filings, and more.
+          </div>
+        </Card>
+      )}
+
+      {filter !== "Announcement" && error && (
         <div className={`mb-3 px-4 py-3 rounded-xl border flex items-start gap-2 text-xs ${l ? "bg-amber-50 border-amber-200 text-amber-700" : "bg-amber-500/10 border-amber-500/20 text-amber-400"}`}>
           <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
           <div>
@@ -1420,7 +1468,7 @@ function CorporateSection() {
         </div>
       )}
 
-      <Card className="overflow-x-auto">
+      {filter !== "Announcement" && <Card className="overflow-x-auto">
         <div className={`grid grid-cols-5 px-4 sm:px-5 py-2 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
           <div className="col-span-2">Symbol / Company</div>
           <div>Action</div>
@@ -1501,7 +1549,7 @@ function CorporateSection() {
             {filtered.length} actions · scroll to see all
           </div>
         )}
-      </Card>
+      </Card>}
     </section>
   );
 }
@@ -1848,7 +1896,7 @@ function GainersLosersSection() {
         className={`grid items-center px-3 py-2.5 text-xs cursor-pointer
         ${rank < rows.length - 1 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""}
         ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}
-        style={{ gridTemplateColumns: "28px 1fr 90px 72px" }}>
+        style={{ gridTemplateColumns: "28px 1fr 80px 72px 62px" }}>
         {/* # */}
         <span className={`text-[10px] font-black text-center ${tx.t3(l)}`}>{rank + 1}</span>
         {/* Symbol */}
@@ -1859,6 +1907,12 @@ function GainersLosersSection() {
         {/* LTP */}
         <div className="text-right">
           <p className={`font-bold tabular-nums ${tx.t1(l)}`}>{ltp > 0 ? `₹${fmt(ltp)}` : "—"}</p>
+        </div>
+        {/* Volume */}
+        <div className="text-right">
+          <p className={`text-[11px] tabular-nums ${vol > 0 ? tx.t2(l) : tx.t3(l)}`}>
+            {vol > 0 ? fmtV(vol) : "—"}
+          </p>
         </div>
         {/* Change% */}
         <div className="text-right">
@@ -1903,10 +1957,11 @@ function GainersLosersSection() {
         )}
 
         <div className={`grid items-center px-3 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}
-          style={{ gridTemplateColumns: "28px 1fr 90px 72px" }}>
+          style={{ gridTemplateColumns: "28px 1fr 80px 72px 62px" }}>
           <span className="text-center">#</span>
           <span>Symbol</span>
           <span className="text-right">LTP</span>
+          <span className="text-right">Volume</span>
           <span className="text-right">Chg%</span>
         </div>
 
@@ -1931,10 +1986,11 @@ function GainersLosersSection() {
           <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${tx.t3(l)}`}>By Traded Value</p>
           <Card className="overflow-hidden">
             <div className={`grid items-center px-3 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}
-              style={{ gridTemplateColumns: "28px 1fr 90px 72px" }}>
+              style={{ gridTemplateColumns: "28px 1fr 80px 72px 62px" }}>
               <span className="text-center">#</span>
               <span>Symbol</span>
               <span className="text-right">LTP</span>
+              <span className="text-right">Volume</span>
               <span className="text-right">Chg%</span>
             </div>
             {byVal.slice(0, 10).map((r: any, i: number) => {
@@ -1942,6 +1998,7 @@ function GainersLosersSection() {
               const name = r.meta?.company_name || r.companyName || r.name || "";
               const ltp = r.last_price ?? r.ltp ?? 0;
               const changePct = r.change_pct ?? r.pChange ?? r.changePercent ?? 0;
+              const vol = r.volume ?? r.totalTradedVolume ?? r.totalTradedValue ?? 0;
               const isPos = (changePct ?? 0) >= 0;
               const nseUrl = `https://www.nseindia.com/get-quotes/equity?symbol=${encodeURIComponent(symbol)}`;
               return (
@@ -1950,7 +2007,7 @@ function GainersLosersSection() {
                   className={`grid items-center px-3 py-2.5 text-xs cursor-pointer
                   ${i < 9 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""}
                   ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}
-                  style={{ gridTemplateColumns: "28px 1fr 90px 72px" }}>
+                  style={{ gridTemplateColumns: "28px 1fr 80px 72px 62px" }}>
                   <span className={`text-[10px] font-black text-center ${tx.t3(l)}`}>{i + 1}</span>
                   <div className="min-w-0 pr-2">
                     <p className={`font-black text-[11px] truncate ${tx.t1(l)}`}>{symbol}</p>
@@ -1958,6 +2015,11 @@ function GainersLosersSection() {
                   </div>
                   <div className="text-right">
                     <p className={`font-bold tabular-nums ${tx.t1(l)}`}>{ltp > 0 ? `₹${fmt(ltp)}` : "—"}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-[11px] tabular-nums ${vol > 0 ? tx.t2(l) : tx.t3(l)}`}>
+                      {vol > 0 ? fmtV(vol) : "—"}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className={`text-[11px] font-bold tabular-nums ${isPos ? "text-emerald-500" : "text-red-500"}`}>
@@ -2166,51 +2228,74 @@ function PcrMaxPainWidget({ ticks }: { ticks: any }) {
 
 
 // ── MACRO INDICATORS ──────────────────────────────────────────────────────────
+// ── Static fallback macro values (updated periodically) ──────────
+const MACRO_FALLBACK = {
+  bond_yield: 6.872,   // NSE G-Sec 10Y yield — update when it changes significantly
+  rbi_rate:   6.25,    // RBI Repo Rate (as of Apr 2025 cut)
+  cpi:        { value: 4.85, year: "2025" },   // CPI YoY % (MOSPI)
+  gdp:        { value: 8.20, year: "FY24" },   // GDP growth (NSO)
+};
+
 function MacroSection() {
   const l = useIL();
   const { data, loading, error, refresh } = useAPI<any>("/kite/macro", []);
 
   const inrUsd = data?.inr_usd ?? null;
-  const rbiRate = data?.rbi_repo_rate ?? null;
-  const cpi = data?.cpi ?? null;
-  const gdp = data?.gdp ?? null;
-  const bondYield = data?.bond_yield_10y ?? null;
+
+  // Prefer live API value, fall back to static constant so it always shows
+  const rbiRate   = data?.rbi_repo_rate   ?? MACRO_FALLBACK.rbi_rate;
+  const bondYield = data?.bond_yield_10y  ?? MACRO_FALLBACK.bond_yield;
+  const cpiVal    = data?.cpi?.value      ?? MACRO_FALLBACK.cpi.value;
+  const cpiYear   = data?.cpi?.year       ?? MACRO_FALLBACK.cpi.year;
+  const gdpVal    = data?.gdp?.value      ?? MACRO_FALLBACK.gdp.value;
+  const gdpYear   = data?.gdp?.year       ?? MACRO_FALLBACK.gdp.year;
+
+  // Track which fields are live vs fallback
+  const isBondLive = data?.bond_yield_10y != null;
+  const isRbiLive  = data?.rbi_repo_rate  != null;
+  const isCpiLive  = data?.cpi?.value     != null;
+  const isGdpLive  = data?.gdp?.value     != null;
 
   const cards = [
     {
       label: "INR / USD",
       val: inrUsd?.rate != null ? `₹${inrUsd.rate.toFixed(4)}` : "—",
       sub: inrUsd?.change_pct != null ? `${inrUsd.change_pct >= 0 ? "+" : ""}${inrUsd.change_pct.toFixed(3)}% today` : null,
-      cls: inrUsd?.change_pct != null && inrUsd.change_pct >= 0 ? "text-red-500" : "text-emerald-500",  // INR weakening = red
+      cls: inrUsd?.change_pct != null && inrUsd.change_pct >= 0 ? "text-red-500" : "text-emerald-500",
       source: "Yahoo Finance",
+      live: inrUsd != null,
     },
     {
       label: "10Y Bond Yield",
-      val: bondYield != null ? `${bondYield.toFixed(3)}%` : "—",
+      val: `${bondYield.toFixed(3)}%`,
       sub: "Government Securities",
       cls: tx.t1(l),
-      source: "NSE G-Sec",
+      source: isBondLive ? "NSE G-Sec" : "NSE · Cached",
+      live: isBondLive,
     },
     {
       label: "RBI Repo Rate",
-      val: rbiRate != null ? `${rbiRate.toFixed(2)}%` : "—",
-      sub: rbiRate != null ? "Current policy rate" : "Set KITE_RBI_REPO_RATE in .env",
+      val: `${rbiRate.toFixed(2)}%`,
+      sub: "Current policy rate",
       cls: tx.t1(l),
-      source: "RBI",
+      source: isRbiLive ? "RBI" : "RBI · Cached",
+      live: isRbiLive,
     },
     {
       label: "CPI Inflation",
-      val: cpi?.value != null ? `${cpi.value.toFixed(2)}%` : "—",
-      sub: cpi?.year != null ? `FY ${cpi.year}` : null,
-      cls: cpi?.value != null && cpi.value > 6 ? "text-red-500" : cpi?.value != null && cpi.value < 4 ? "text-emerald-500" : tx.t1(l),
-      source: "World Bank",
+      val: `${cpiVal.toFixed(2)}%`,
+      sub: `FY ${cpiYear}`,
+      cls: cpiVal > 6 ? "text-red-500" : cpiVal < 4 ? "text-emerald-500" : tx.t1(l),
+      source: isCpiLive ? "MOSPI" : "MOSPI · Cached",
+      live: isCpiLive,
     },
     {
       label: "GDP Growth",
-      val: gdp?.value != null ? `${gdp.value.toFixed(2)}%` : "—",
-      sub: gdp?.year != null ? `FY ${gdp.year}` : null,
-      cls: gdp?.value != null && gdp.value >= 6 ? "text-emerald-500" : tx.t1(l),
-      source: "World Bank",
+      val: `${gdpVal.toFixed(2)}%`,
+      sub: `${gdpYear}`,
+      cls: gdpVal >= 6 ? "text-emerald-500" : tx.t1(l),
+      source: isGdpLive ? "NSO" : "NSO · Cached",
+      live: isGdpLive,
     },
   ];
 
@@ -2226,7 +2311,12 @@ function MacroSection() {
             <Card key={c.label} className="px-3 py-3">
               <div className="flex items-start justify-between gap-1 mb-1">
                 <p className={`text-[9px] font-black uppercase tracking-widest ${tx.t3(l)}`}>{c.label}</p>
-                <span className={`text-[8px] font-bold px-1 py-0.5 rounded border shrink-0 ${l ? "bg-slate-50 text-slate-400 border-slate-100" : "bg-[#0c1a2e] text-slate-500 border-[#1e3a5f]/50"}`}>
+                <span className={`text-[8px] font-bold px-1 py-0.5 rounded border shrink-0 flex items-center gap-0.5 ${
+                  c.live
+                    ? l ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                    : l ? "bg-slate-50 text-slate-400 border-slate-100" : "bg-[#0c1a2e] text-slate-500 border-[#1e3a5f]/50"
+                }`}>
+                  {c.live && <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />}
                   {c.source}
                 </span>
               </div>
@@ -2238,13 +2328,13 @@ function MacroSection() {
 
       {error && !data && (
         <div className={`px-4 py-3 rounded-xl border flex items-center gap-2 text-xs ${l ? "bg-amber-50 border-amber-200 text-amber-700" : "bg-amber-500/10 border-amber-500/20 text-amber-400"}`}>
-          <AlertCircle className="w-3.5 h-3.5 shrink-0" />Some macro data unavailable — using cached values where possible.
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />Live macro fetch failed — showing cached/static values.
           <button onClick={refresh} className="ml-auto underline">Retry</button>
         </div>
       )}
 
       <div className={`mt-1 text-[10px] ${tx.t3(l)}`}>
-        INR/USD: live (Yahoo). Bond yield: NSE G-Sec. CPI/GDP: World Bank annual data. RBI rate: set KITE_RBI_REPO_RATE env var.
+        INR/USD: live (Yahoo). Bond yield & RBI rate: live when available, fallback to last known values. CPI/GDP: MOSPI/NSO annual data.
       </div>
     </section>
   );

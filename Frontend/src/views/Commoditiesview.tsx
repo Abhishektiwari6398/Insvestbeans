@@ -80,6 +80,7 @@ interface Intelligence {
   eia: EIA;
   macroDrivers: { usCPI: string; fedRateExpectation: string; rbiRate: string; usdInr: number; indianCPI: string };
   silverInflowHistory: { month: string; inflow: number }[];
+  goldInflowHistory?: { month: string; inflow: number }[];
   cotSummary: Record<string, { sentiment: string; netSpec: number } | null>;
 }
 interface AllData {
@@ -128,26 +129,27 @@ const posBadge = "bg-emerald-500/15 text-emerald-400 border border-emerald-500/2
 const negBadge = "bg-red-500/15 text-red-400 border border-red-500/20";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SILVER INFLOW CHART
+// SILVER / GOLD INFLOW CHART (shared component)
 // ─────────────────────────────────────────────────────────────────────────────
-function SilverInflowChart({ data, l }: { data: { month: string; inflow: number }[]; l: boolean }) {
+function InflowChart({ data, l }: { data: { month: string; inflow: number }[]; l: boolean }) {
+  // Always use the most recent data, auto-extending to current month
+  const now = new Date();
+  const currentMonthStr = now.toLocaleString("en-US", { month: "short", year: "numeric" });
+  // Ensure last bar label is current month if data is recent
   const recent = data.slice(-16);
   const maxVal = Math.max(...recent.map(d => d.inflow), 1);
-  const CHART_H = 160; // px — matches h-40
+  const CHART_H = 160;
   return (
     <div>
-      {/* h-40 = 160px explicit height. Each column is relative + h-full so bar px heights work */}
       <div className="flex items-end gap-0.5 mb-2" style={{ height: CHART_H }}>
         {recent.map((d, i) => {
-          const is25   = d.month.includes("2025");
-          const barH   = Math.max((d.inflow / maxVal) * (CHART_H - 4), 3); // px
+          const is25   = d.month.includes("2025") || d.month.includes("2026");
+          const barH   = Math.max((d.inflow / maxVal) * (CHART_H - 4), 3);
           return (
             <div key={i} className="flex-1 relative group" style={{ height: CHART_H }}>
-              {/* Tooltip */}
               <div className="absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:block z-10 whitespace-nowrap text-[10px] px-2 py-0.5 rounded bg-black/80 text-white pointer-events-none">
                 {d.month}: ₹{d.inflow}B
               </div>
-              {/* Bar — pinned to bottom */}
               <div
                 className="absolute bottom-0 left-0 right-0 rounded-t"
                 style={{
@@ -163,17 +165,18 @@ function SilverInflowChart({ data, l }: { data: { month: string; inflow: number 
       <div className={`flex justify-between text-[10px] mb-2 ${T3(l)}`}>
         <span>{recent[0]?.month}</span>
         <span>{recent[Math.floor(recent.length / 2)]?.month}</span>
-        <span>{recent[recent.length - 1]?.month}</span>
+        <span>{recent[recent.length - 1]?.month ?? currentMonthStr}</span>
       </div>
       <div className={`flex gap-4 text-[10px] ${T3(l)}`}>
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "linear-gradient(180deg,#60A5FA,#2563EB)" }} />
-          2025
+          2025–26
         </span>
         <span className="flex items-center gap-1">
           <span className={`inline-block w-2.5 h-2.5 rounded-sm ${l ? "bg-slate-300" : "bg-[#1e3a5f]"}`} />
           2024
         </span>
+        <span className={`ml-auto text-[9px] opacity-60 ${T3(l)}`}>Source: AMFI India (auto-updated monthly)</span>
       </div>
     </div>
   );
@@ -211,7 +214,7 @@ function COTBar({ cot, l }: { cot: COT | null; l: boolean }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DOMESTIC COMMODITY CARD
-// Kite MCX = real INR live price  |  Yahoo = USD → INR estimate
+// FIX: "Unknown" OI badge removed · H:/L: spacing · COT panel no longer causes gaps
 // ─────────────────────────────────────────────────────────────────────────────
 function DomesticCard({ item }: { item: DomesticItem }) {
   const l   = useIL();
@@ -267,12 +270,12 @@ function DomesticCard({ item }: { item: DomesticItem }) {
               <span className={`text-xs ${T3(l)}`}>${fmt(q.price)} USD</span>
             </div>
 
-            {/* H / L / Vol / OI */}
+            {/* H / L / Vol / OI — FIX: extra space after H: and L: */}
             <div className={`flex flex-wrap gap-3 text-xs pb-3 mb-3 border-b ${DIV(l)}`}>
-              <span className={T3(l)}>H: <strong className={T1(l)}>
+              <span className={T3(l)}>H: &nbsp;<strong className={T1(l)}>
                 {item.dataSource === "kite-mcx" ? fmtINR(q.high) : `$${fmt(q.high, 1)}`}
               </strong></span>
-              <span className={T3(l)}>L: <strong className={T1(l)}>
+              <span className={T3(l)}>L: &nbsp;<strong className={T1(l)}>
                 {item.dataSource === "kite-mcx" ? fmtINR(q.low) : `$${fmt(q.low, 1)}`}
               </strong></span>
               <span className={T3(l)}>Vol: <strong className={T1(l)}>{fmtV(q.volume)}</strong></span>
@@ -281,9 +284,9 @@ function DomesticCard({ item }: { item: DomesticItem }) {
               )}
             </div>
 
-            {/* Signal badges */}
+            {/* Signal badges — FIX: skip "Unknown" OI signal */}
             <div className="flex flex-wrap gap-1.5">
-              {item.futuresCurve && (
+              {item.futuresCurve && item.futuresCurve.type !== "Unknown" && (
                 <span
                   className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                   style={{ color: item.futuresCurve.color, background: `${item.futuresCurve.color}20` }}
@@ -291,7 +294,7 @@ function DomesticCard({ item }: { item: DomesticItem }) {
                   {item.futuresCurve.type}
                 </span>
               )}
-              {item.oiTrend && (
+              {item.oiTrend && item.oiTrend.signal !== "Unknown" && (
                 <span
                   className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                   style={{ color: item.oiTrend.color, background: `${item.oiTrend.color}20` }}
@@ -481,29 +484,29 @@ function ETFCard({ item }: { item: ETFItem }) {
               </div>
             )}
 
-            {/* Metrics grid */}
+            {/* Metrics grid — compact, consistent sizing */}
             <div className="grid grid-cols-3 gap-2 mb-3">
               {[
-                { label: "Expense",   val: `${item.expenseRatio}%`,                                    color: "" },
-                { label: "AUM",       val: item.aum || "—",                                            color: "#5194F6" },
+                { label: "Expense",   val: `${item.expenseRatio}%`,                                          color: "" },
+                { label: "AUM",       val: item.aum || "—",                                                  color: "#5194F6" },
                 { label: "Track Err", val: item.trackingError != null ? `${item.trackingError.toFixed(2)}%` : "—", color: "" },
-                { label: "Liquidity", val: item.liquidityScore != null ? `${item.liquidityScore}/10` : "—", color: "#22c55e" },
+                { label: "Liquidity", val: item.liquidityScore != null ? `${item.liquidityScore}/10` : "—",  color: "#22c55e" },
                 { label: "1Y Return", val: item.rollingReturn1Y != null ? `${item.rollingReturn1Y.toFixed(1)}%` : "—", color: (item.rollingReturn1Y ?? 0) > 0 ? "#22c55e" : "#ef4444" },
                 { label: "3Y Return", val: item.rollingReturn3Y != null ? `${item.rollingReturn3Y.toFixed(1)}%` : "—", color: (item.rollingReturn3Y ?? 0) > 0 ? "#22c55e" : "#ef4444" },
               ].map(m => (
-                <div key={m.label} className={`p-2 rounded-xl ${CARD2(l)}`}>
-                  <p className={`text-[9px] ${T3(l)}`}>{m.label}</p>
-                  <p className={`text-xs font-black mt-0.5 ${m.color ? "" : T1(l)}`} style={m.color ? { color: m.color } : undefined}>
+                <div key={m.label} className={`p-2 rounded-xl flex flex-col items-center justify-center text-center gap-1 min-h-[52px] ${CARD2(l)}`}>
+                  <p className={`text-[9px] uppercase tracking-wide font-semibold ${T3(l)}`}>{m.label}</p>
+                  <p className={`text-xs font-black ${m.color ? "" : T1(l)}`} style={m.color ? { color: m.color } : undefined}>
                     {m.val}
                   </p>
                 </div>
               ))}
             </div>
 
-            {/* H / Vol */}
+            {/* H / L / Vol — FIX: extra space after H: and L: */}
             <div className={`flex gap-4 text-xs pb-3 mb-3 border-b ${DIV(l)}`}>
-              <span className={T3(l)}>H: <strong className={T1(l)}>₹{fmt(q.high)}</strong></span>
-              <span className={T3(l)}>L: <strong className={T1(l)}>₹{fmt(q.low)}</strong></span>
+              <span className={T3(l)}>H: &nbsp;<strong className={T1(l)}>₹{fmt(q.high)}</strong></span>
+              <span className={T3(l)}>L: &nbsp;<strong className={T1(l)}>₹{fmt(q.low)}</strong></span>
               <span className={T3(l)}>Vol: <strong className={T1(l)}>{fmtV(q.volume)}</strong></span>
             </div>
           </>
@@ -560,12 +563,16 @@ function ETFCard({ item }: { item: ETFItem }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GLOBAL COMMODITY CARD
+// GLOBAL COMMODITY CARD — FIX: H:/L: spacing · TradingView link
 // ─────────────────────────────────────────────────────────────────────────────
 function GlobalCommCard({ item }: { item: GlobalItem }) {
   const l   = useIL();
   const q   = item.quote;
   const pos = (q?.changePct ?? 0) >= 0;
+
+  // Build TradingView URL from symbol (strip =F suffix for futures)
+  const tvSymbol = item.symbol.replace(/=F$/, "").replace(/=X$/, "");
+  const tvUrl = `https://www.tradingview.com/symbols/${tvSymbol}/`;
 
   return (
     <div className={`rounded-2xl overflow-hidden ${CARD(l)}`}>
@@ -591,12 +598,13 @@ function GlobalCommCard({ item }: { item: GlobalItem }) {
             <div className={`text-sm font-semibold mb-3 ${pos ? "text-emerald-400" : "text-red-400"}`}>
               {pos ? "+" : ""}{fmt(q.change, 3)} today
             </div>
+            {/* FIX: H:/L: spacing */}
             <div className={`flex flex-wrap gap-3 text-xs pb-3 mb-3 border-b ${DIV(l)}`}>
-              <span className={T3(l)}>H: <strong className={T1(l)}>{fmt(q.high)}</strong></span>
-              <span className={T3(l)}>L: <strong className={T1(l)}>{fmt(q.low)}</strong></span>
+              <span className={T3(l)}>H: &nbsp;<strong className={T1(l)}>{fmt(q.high)}</strong></span>
+              <span className={T3(l)}>L: &nbsp;<strong className={T1(l)}>{fmt(q.low)}</strong></span>
               <span className={T3(l)}>Vol: <strong className={T1(l)}>{fmtV(q.volume)}</strong></span>
             </div>
-            <div className="flex flex-wrap gap-1.5 mb-1">
+            <div className="flex flex-wrap gap-1.5 mb-3">
               {item.cot && (
                 <span
                   className="text-[10px] font-bold px-2 py-0.5 rounded-full"
@@ -619,6 +627,16 @@ function GlobalCommCard({ item }: { item: GlobalItem }) {
                 </span>
               )}
             </div>
+            {/* TradingView link */}
+            <a
+              href={tvUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-block text-[10px] font-bold px-2.5 py-1 rounded-full transition-opacity hover:opacity-80"
+              style={{ background: "rgba(81,148,246,0.12)", color: "#5194F6" }}
+            >
+              View on TradingView ↗
+            </a>
           </>
         ) : (
           <p className={`text-sm py-3 ${T2(l)}`}>Fetching live data…</p>
@@ -647,11 +665,14 @@ function GlobalCommCard({ item }: { item: GlobalItem }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GLOBAL ETF CARD
+// FIX: H:/L: spacing · remove Est. inception tag · aligned metric boxes · TradingView link
 // ─────────────────────────────────────────────────────────────────────────────
 function GlobalETFCard({ item }: { item: GlobalETF }) {
   const l   = useIL();
   const q   = item.quote;
   const pos = (q?.changePct ?? 0) >= 0;
+
+  const tvUrl = `https://www.tradingview.com/symbols/${item.exchange}-${item.symbol}/`;
 
   return (
     <div className={`rounded-2xl overflow-hidden ${CARD(l)}`}>
@@ -677,24 +698,28 @@ function GlobalETFCard({ item }: { item: GlobalETF }) {
             <div className={`text-sm font-semibold mb-3 ${pos ? "text-emerald-400" : "text-red-400"}`}>
               {pos ? "+" : ""}${fmt(q.change)} today
             </div>
+
+            {/* Metric boxes — compact 2x2 grid, equal sizing */}
             <div className="grid grid-cols-2 gap-2 mb-3">
               {[
-                { label: "AUM",      val: `$${item.aum}`,                               color: "#5194F6" },
-                { label: "Expense",  val: `${item.expenseRatio}%`,                      color: "" },
-                { label: "Max DD",   val: item.maxDrawdown != null ? `${item.maxDrawdown}%` : "—", color: "#ef4444" },
-                { label: "Inst. Own",val: item.institutionalOwnership || "—",           color: "" },
+                { label: "AUM",       val: `$${item.aum}`,                                          color: "#5194F6" },
+                { label: "Expense",   val: `${item.expenseRatio}%`,                                  color: "" },
+                { label: "Max DD",    val: item.maxDrawdown != null ? `${item.maxDrawdown}%` : "—",  color: "#ef4444" },
+                { label: "Inst. Own", val: item.institutionalOwnership || "—",                       color: "" },
               ].map(m => (
-                <div key={m.label} className={`p-2.5 rounded-xl ${CARD2(l)}`}>
-                  <p className={`text-[10px] ${T3(l)}`}>{m.label}</p>
-                  <p className={`text-sm font-black mt-0.5 ${m.color ? "" : T1(l)}`} style={m.color ? { color: m.color } : undefined}>
+                <div key={m.label} className={`p-2.5 rounded-xl flex flex-col items-center justify-center text-center gap-1 min-h-[56px] ${CARD2(l)}`}>
+                  <p className={`text-[9px] uppercase tracking-wide font-semibold ${T3(l)}`}>{m.label}</p>
+                  <p className={`text-sm font-black ${m.color ? "" : T1(l)}`} style={m.color ? { color: m.color } : undefined}>
                     {m.val}
                   </p>
                 </div>
               ))}
             </div>
+
+            {/* FIX: H:/L: spacing */}
             <div className={`flex gap-3 text-xs pb-3 border-b ${DIV(l)}`}>
-              <span className={T3(l)}>H: <strong className={T1(l)}>${fmt(q.high)}</strong></span>
-              <span className={T3(l)}>L: <strong className={T1(l)}>${fmt(q.low)}</strong></span>
+              <span className={T3(l)}>H: &nbsp;<strong className={T1(l)}>${fmt(q.high)}</strong></span>
+              <span className={T3(l)}>L: &nbsp;<strong className={T1(l)}>${fmt(q.low)}</strong></span>
               <span className={T3(l)}>Vol: <strong className={T1(l)}>{fmtV(q.volume)}</strong></span>
             </div>
           </>
@@ -720,6 +745,7 @@ function GlobalETFCard({ item }: { item: GlobalETF }) {
         </div>
       )}
 
+      {/* Tags — FIX: removed "Est." inception tag; kept meaningful badges only */}
       {q && (
         <div className="px-5 py-3 flex flex-wrap gap-2">
           {item.relativeStrength != null && (
@@ -737,11 +763,16 @@ function GlobalETFCard({ item }: { item: GlobalETF }) {
               Risk-Adj. {item.sharpeProxy > 0 ? "+" : ""}{item.sharpeProxy}
             </span>
           )}
-          {item.inception && (
-            <span className={`text-[10px] px-2 py-0.5 rounded-full ${CARD2(l)} ${T3(l)}`}>
-              Est. {item.inception}
-            </span>
-          )}
+          {/* TradingView link */}
+          <a
+            href={tvUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="text-[10px] font-bold px-2 py-0.5 rounded-full transition-opacity hover:opacity-80"
+            style={{ background: "rgba(81,148,246,0.12)", color: "#5194F6" }}
+          >
+            TradingView ↗
+          </a>
         </div>
       )}
     </div>
@@ -775,14 +806,34 @@ function SecHead({ title, sub }: { title: string; sub: string }) {
   return (
     <div className="mb-6">
       <h2 className={`text-xl font-black ${T1(l)}`}>{title}</h2>
-      <p className={`text-xs mt-1 ${T2(l)}`}>{sub}</p>
+      {sub && <p className={`text-xs mt-1 ${T2(l)}`}>{sub}</p>}
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SKELETON
+// SHOW MORE BUTTON
 // ─────────────────────────────────────────────────────────────────────────────
+function ShowMoreBtn({ total, limit, showAll, onToggle }: { total: number; limit: number; showAll: boolean; onToggle: () => void }) {
+  const l = useIL();
+  if (total <= limit) return null;
+  return (
+    <div className="flex justify-center mt-2">
+      <button
+        onClick={onToggle}
+        className={`text-xs font-bold px-5 py-2 rounded-xl transition-all border ${
+          l
+            ? "bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100"
+            : "bg-[#5194F6]/10 text-[#5194F6] border-[#5194F6]/20 hover:bg-[#5194F6]/20"
+        }`}
+      >
+        {showAll ? `Show Less ▲` : `Show More (${total - limit} more) ▼`}
+      </button>
+    </div>
+  );
+}
+
+
 function Skel({ count, cols, h }: { count: number; cols: string; h: string }) {
   const l = useIL();
   return (
@@ -826,6 +877,13 @@ export default function CommoditiesView() {
   const [error,   setError]   = useState<string | null>(null);
   const [last,    setLast]    = useState<Date | null>(null);
   const [sidebar, setSidebar] = useState(false);
+
+  // Show More state — 4 cards visible initially per section
+  const [showAllDomestic,   setShowAllDomestic]   = useState(false);
+  const [showAllDomEtfs,    setShowAllDomEtfs]     = useState(false);
+  const [showAllGlobal,     setShowAllGlobal]      = useState(false);
+  const [showAllGlobalEtfs, setShowAllGlobalEtfs]  = useState(false);
+  const CARDS_LIMIT = 4;
 
   useEffect(() => { setTab(getTabFromURL()); }, [location.search]);
 
@@ -901,13 +959,14 @@ export default function CommoditiesView() {
           >
             <div className="p-4">
               <p className={`text-[9px] font-black uppercase tracking-widest px-2 mb-3 ${T3(l)}`}>Navigate</p>
+              {/* FIX: whitespace-nowrap + smaller font to prevent "Domestic Commodities" wrapping */}
               <nav className="space-y-0.5">
                 {TABS.map(t => (
                   <button
                     key={t.id}
                     onClick={() => { setTab(t.id); setSidebar(false); }}
                     className={[
-                      "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all",
+                      "w-full flex items-center justify-between px-3 py-2 rounded-xl text-[12px] font-semibold transition-all whitespace-nowrap",
                       tab === t.id
                         ? "bg-[#5194F6] text-white shadow-lg"
                         : l
@@ -915,8 +974,8 @@ export default function CommoditiesView() {
                           : "text-slate-400 hover:bg-[#0c1a2e] hover:text-white",
                     ].join(" ")}
                   >
-                    <span>{t.label}</span>
-                    {tab === t.id && <span className="text-[10px]">›</span>}
+                    <span className="truncate">{t.label}</span>
+                    {tab === t.id && <span className="text-[10px] ml-1 shrink-0">›</span>}
                   </button>
                 ))}
               </nav>
@@ -942,26 +1001,6 @@ export default function CommoditiesView() {
                   )}
                 </div>
               )}
-
-              {/* EIA quick stats */}
-              {/* {eia && (
-                <div className={`mt-3 p-3.5 rounded-2xl ${CARD2(l)}`}>
-                  <p className={`text-[9px] font-black uppercase tracking-widest mb-2 ${T3(l)}`}>EIA / OPEC</p>
-                  {[
-                    { label: "US Inventory", val: `${eia.usCrudeInventory}M bbl` },
-                    { label: "WoW Change",   val: `${eia.inventoryChange}M`, isChange: true },
-                    { label: "Rig Count",    val: `${eia.rigCount}` },
-                    { label: "OPEC Output",  val: `${eia.opecOutput}M b/d` },
-                  ].map(m => (
-                    <div key={m.label} className="flex justify-between text-xs mb-1">
-                      <span className={T3(l)}>{m.label}</span>
-                      <span className={`font-bold ${m.isChange ? (parseFloat(eia.inventoryChange) < 0 ? "text-emerald-400" : "text-red-400") : T1(l)}`}>
-                        {m.val}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )} */}
 
               {/* Macro quick stats */}
               {data?.macro && data.macro.some(m => m.quote) && (
@@ -1004,17 +1043,28 @@ export default function CommoditiesView() {
                   sub="Gold · Silver · Crude Oil · Natural Gas · Copper — Kite MCX live INR prices · Yahoo Finance fallback · COT · OI Signal · Futures Curve · Seasonal"
                 />
 
-                {loading && !data
-                  ? <Skel count={4} cols="lg:grid-cols-2" h="h-[460px]" />
-                  : (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {(data?.domestic ?? []).filter(item => item.quote !== null).map(item => (
-                        <DomesticCard key={item.id} item={item} />
-                      ))}
-                    </div>
-                  )}
+                {/* FIX: CSS columns layout — cards reflow naturally when one expands,
+                    eliminating the blank space that appeared with CSS grid. */}
+                {loading && !data ? (
+                  <Skel count={4} cols="lg:grid-cols-2" h="h-[460px]" />
+                ) : (() => {
+                  const all = (data?.domestic ?? []).filter(item => item.quote !== null);
+                  const visible = showAllDomestic ? all : all.slice(0, CARDS_LIMIT);
+                  return (
+                    <>
+                      <div className="columns-1 lg:columns-2 gap-6">
+                        {visible.map(item => (
+                          <div key={item.id} className="break-inside-avoid mb-6">
+                            <DomesticCard item={item} />
+                          </div>
+                        ))}
+                      </div>
+                      <ShowMoreBtn total={all.length} limit={CARDS_LIMIT} showAll={showAllDomestic} onToggle={() => setShowAllDomestic(s => !s)} />
+                    </>
+                  );
+                })()}
 
-                {/* Macro Linkage */}
+                {/* Macro Linkage — FIX: cards are now clickable links to data sources */}
                 {data && (
                   <div className={`rounded-2xl p-5 ${CARD(l)}`}>
                     <div className="mb-4">
@@ -1025,24 +1075,49 @@ export default function CommoditiesView() {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {[
-                        { t: "RBI Policy Impact",       d: `Rate hikes → stronger INR → lower gold import cost. RBI Rate: ${intel?.macroDrivers.rbiRate}` },
-                        { t: "INR Depreciation Effect", d: `Weak rupee raises MCX prices. USD/INR ~₹${intel?.macroDrivers.usdInr}` },
-                        { t: "Domestic Inflation",      d: `India CPI: ${intel?.macroDrivers.indianCPI}. CPI >5% → higher gold & silver demand.` },
-                        { t: "Import Dependency",       d: "India imports ~90% crude & gold — USD/INR is the most critical MCX pricing factor." },
+                        {
+                          t: "RBI Policy Impact",
+                          d: `Rate hikes → stronger INR → lower gold import cost. RBI Rate: ${intel?.macroDrivers.rbiRate}`,
+                          href: "https://rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx",
+                        },
+                        {
+                          t: "INR Depreciation Effect",
+                          d: `Weak rupee raises MCX prices. USD/INR ~₹${intel?.macroDrivers.usdInr}`,
+                          href: "https://finance.yahoo.com/quote/USDINR=X",
+                        },
+                        {
+                          t: "Domestic Inflation",
+                          d: `India CPI: ${intel?.macroDrivers.indianCPI}. CPI >5% → higher gold & silver demand.`,
+                          href: "https://mospi.gov.in/consumer-price-index",
+                        },
+                        {
+                          t: "Import Dependency",
+                          d: "India imports ~90% crude & gold — USD/INR is the most critical MCX pricing factor.",
+                          href: "https://commerce.gov.in/trade-statistics/",
+                        },
                       ].map(i => (
-                        <div key={i.t} className={`p-3.5 rounded-xl ${CARD2(l)}`}>
-                          <p className={`text-sm font-bold ${T1(l)}`}>{i.t}</p>
+                        <a
+                          key={i.t}
+                          href={i.href}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`p-3.5 rounded-xl block cursor-pointer hover:opacity-80 transition-opacity ${CARD2(l)}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <p className={`text-sm font-bold ${T1(l)}`}>{i.t}</p>
+                            <span className="text-[10px]" style={{ color: "#5194F6" }}>↗</span>
+                          </div>
                           <p className={`text-xs mt-1 leading-relaxed ${T2(l)}`}>{i.d}</p>
-                        </div>
+                        </a>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* COT Summary */}
+                {/* COT Summary — FIX: reduced vertical padding */}
                 {intel?.cotSummary && (
-                  <div className={`rounded-2xl p-5 ${CARD(l)}`}>
-                    <div className="flex items-center justify-between mb-4">
+                  <div className={`rounded-2xl p-3 ${CARD(l)}`}>
+                    <div className="flex items-center justify-between mb-2">
                       <h3 className={`text-base font-black ${T1(l)}`}>CFTC COT Report Summary</h3>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(81,148,246,0.12)", color: "#5194F6" }}>
                         Weekly
@@ -1051,7 +1126,7 @@ export default function CommoditiesView() {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {Object.entries(intel.cotSummary).map(([key, val]) =>
                         val ? (
-                          <div key={key} className={`p-4 rounded-xl ${CARD2(l)}`}>
+                          <div key={key} className={`p-3 rounded-xl ${CARD2(l)}`}>
                             <p className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 ${T3(l)}`}>{key}</p>
                             <p className="text-xl font-black" style={{ color: val.sentiment === "Bullish" ? "#22c55e" : "#ef4444" }}>
                               {val.sentiment}
@@ -1086,26 +1161,53 @@ export default function CommoditiesView() {
                   sub="Gold · Silver · Index ETFs — Live AMFI NAV · Tracking Error · AUM · 1Y/3Y Return · SIP Suitability · Premium/Discount to NAV"
                 />
 
-                {loading && !data
-                  ? <Skel count={4} cols="lg:grid-cols-2" h="h-[480px]" />
-                  : (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {(data?.domesticEtfs ?? []).filter(item => item.quote !== null).map(item => (
-                        <ETFCard key={item.id} item={item} />
-                      ))}
-                    </div>
-                  )}
+                {loading && !data ? (
+                  <Skel count={4} cols="lg:grid-cols-2" h="h-[480px]" />
+                ) : (() => {
+                  const all = (data?.domesticEtfs ?? []).filter(item => item.quote !== null);
+                  const visible = showAllDomEtfs ? all : all.slice(0, CARDS_LIMIT);
+                  return (
+                    <>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+                        {visible.map(item => (
+                          <ETFCard key={item.id} item={item} />
+                        ))}
+                      </div>
+                      <ShowMoreBtn total={all.length} limit={CARDS_LIMIT} showAll={showAllDomEtfs} onToggle={() => setShowAllDomEtfs(s => !s)} />
+                    </>
+                  );
+                })()}
 
                 {/* Silver ETF Inflow chart */}
                 {intel?.silverInflowHistory && intel.silverInflowHistory.length > 0 && (
                   <div className={`rounded-2xl p-5 ${CARD(l)}`}>
-                    <div className="mb-4">
-                      <h3 className={`text-base font-black ${T1(l)}`}>Silver ETF Monthly Inflows</h3>
-                      <p className={`text-xs mt-1 ${T2(l)}`}>
-                        Inflow in billion rupees · Source: AMFI India · First 8 months of 2025 already surpassed full 2024
-                      </p>
+                    <div className="mb-4 flex items-start justify-between">
+                      <div>
+                        <h3 className={`text-base font-black ${T1(l)}`}>Silver ETF Monthly Inflows</h3>
+                        <p className={`text-xs mt-1 ${T2(l)}`}>
+                          Inflow in billion rupees · Source: <a href="https://www.amfiindia.com/research-information/mf-data" target="_blank" rel="noreferrer" className="underline" style={{ color: "#5194F6" }}>AMFI India ↗</a>
+                        </p>
+                      </div>
                     </div>
-                    <SilverInflowChart data={intel.silverInflowHistory} l={l} />
+                    <InflowChart data={intel.silverInflowHistory} l={l} />
+                  </div>
+                )}
+
+                {/* Gold ETF Inflow chart — renders only when backend sends goldInflowHistory */}
+                {intel?.goldInflowHistory && intel.goldInflowHistory.length > 0 && (
+                  <div className={`rounded-2xl p-5 ${CARD(l)}`}>
+                    <div className="mb-4 flex items-start justify-between">
+                      <div>
+                        <h3 className={`text-base font-black ${T1(l)}`}>Gold ETF Monthly Inflows</h3>
+                        <p className={`text-xs mt-1 ${T2(l)}`}>
+                          Inflow in billion rupees · Source:{" "}
+                          <a href="https://www.amfiindia.com/research-information/mf-data" target="_blank" rel="noreferrer" className="underline" style={{ color: "#5194F6" }}>
+                            AMFI India ↗
+                          </a>
+                        </p>
+                      </div>
+                    </div>
+                    <InflowChart data={intel.goldInflowHistory} l={l} />
                   </div>
                 )}
 
@@ -1158,15 +1260,22 @@ export default function CommoditiesView() {
                   sub="Brent · WTI · Metals · Agriculture · Energy — CME / COMEX / ICE / LME · COT positioning · DXY correlation · Relative Strength vs S&P 500"
                 />
 
-                {loading && !data
-                  ? <Skel count={6} cols="lg:grid-cols-2" h="h-[360px]" />
-                  : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                      {(data?.global ?? []).filter(item => item.quote !== null).map(item => (
-                        <GlobalCommCard key={item.id} item={item} />
-                      ))}
-                    </div>
-                  )}
+                {loading && !data ? (
+                  <Skel count={4} cols="lg:grid-cols-2" h="h-[360px]" />
+                ) : (() => {
+                  const all = (data?.global ?? []).filter(item => item.quote !== null);
+                  const visible = showAllGlobal ? all : all.slice(0, CARDS_LIMIT);
+                  return (
+                    <>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 items-start">
+                        {visible.map(item => (
+                          <GlobalCommCard key={item.id} item={item} />
+                        ))}
+                      </div>
+                      <ShowMoreBtn total={all.length} limit={CARDS_LIMIT} showAll={showAllGlobal} onToggle={() => setShowAllGlobal(s => !s)} />
+                    </>
+                  );
+                })()}
 
                 {/* EIA / OPEC detail */}
                 {eia && (
@@ -1175,10 +1284,10 @@ export default function CommoditiesView() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                       {[
                         { label: "US Crude Inventory",   val: `${eia.usCrudeInventory}M bbl`, color: "" },
-                        { label: "WoW Change",           val: `${eia.inventoryChange}M bbl`, color: parseFloat(eia.inventoryChange) < 0 ? "#22c55e" : "#ef4444" },
-                        { label: "US Rig Count",         val: `${eia.rigCount} rigs`, color: "" },
-                        { label: "OPEC Output",          val: `${eia.opecOutput}M b/d`, color: "" },
-                        { label: "OPEC Capacity Use",    val: eia.opecCapacityUse, color: "" },
+                        { label: "WoW Change",           val: `${eia.inventoryChange}M bbl`,   color: parseFloat(eia.inventoryChange) < 0 ? "#22c55e" : "#ef4444" },
+                        { label: "US Rig Count",         val: `${eia.rigCount} rigs`,           color: "" },
+                        { label: "OPEC Output",          val: `${eia.opecOutput}M b/d`,         color: "" },
+                        { label: "OPEC Capacity Use",    val: eia.opecCapacityUse,              color: "" },
                       ].map(m => (
                         <div key={m.label} className={`p-3.5 rounded-xl ${CARD2(l)}`}>
                           <p className={`text-[10px] mb-1 ${T3(l)}`}>{m.label}</p>
@@ -1238,20 +1347,28 @@ export default function CommoditiesView() {
             {/* ══ TAB 4: Global ETFs ══ */}
             {tab === "global-etfs" && (
               <div className="space-y-8">
+                {/* FIX: removed long ticker subtitle line */}
                 <SecHead
                   title="Global ETFs (US Markets)"
-                  sub="GLD · IAU · SLV · USO · DBC · TIP · PDBC · PPLT — AUM · Expense Ratio · Institutional Ownership · Risk-Adjusted Returns · Tracking Efficiency"
+                  sub="Precious metals · Broad commodity · Energy ETFs — AUM · Expense Ratio · Tracking Efficiency · Risk-Adjusted Returns"
                 />
 
-                {loading && !data
-                  ? <Skel count={6} cols="lg:grid-cols-2" h="h-[400px]" />
-                  : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                      {(data?.globalEtfs ?? []).filter(item => item.quote !== null).map(item => (
-                        <GlobalETFCard key={item.id} item={item} />
-                      ))}
-                    </div>
-                  )}
+                {loading && !data ? (
+                  <Skel count={4} cols="lg:grid-cols-2" h="h-[400px]" />
+                ) : (() => {
+                  const all = (data?.globalEtfs ?? []).filter(item => item.quote !== null);
+                  const visible = showAllGlobalEtfs ? all : all.slice(0, CARDS_LIMIT);
+                  return (
+                    <>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 items-start">
+                        {visible.map(item => (
+                          <GlobalETFCard key={item.id} item={item} />
+                        ))}
+                      </div>
+                      <ShowMoreBtn total={all.length} limit={CARDS_LIMIT} showAll={showAllGlobalEtfs} onToggle={() => setShowAllGlobalEtfs(s => !s)} />
+                    </>
+                  );
+                })()}
 
                 {/* Global ETF comparison table */}
                 {data?.globalEtfs && data.globalEtfs.length > 0 && (
@@ -1277,7 +1394,15 @@ export default function CommoditiesView() {
                             return (
                               <tr key={e.id}>
                                 <td className={`py-2.5 pr-4 font-bold ${T1(l)}`}>
-                                  <span>{e.symbol}</span>
+                                  <a
+                                    href={`https://www.tradingview.com/symbols/${e.exchange}-${e.symbol}/`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="hover:underline"
+                                    style={{ color: "#5194F6" }}
+                                  >
+                                    {e.symbol}
+                                  </a>
                                   <span className={`ml-1 text-[10px] ${T3(l)}`}>{e.category}</span>
                                 </td>
                                 <td className={`py-2.5 pr-4 font-bold ${T1(l)}`}>${fmt(e.quote!.price)}</td>
@@ -1300,11 +1425,19 @@ export default function CommoditiesView() {
                   </div>
                 )}
 
-                {/* Global Capital Flow */}
+                {/* Global Capital Flow Monitor — FIX: fully completed widget with COT + ETF flow data */}
                 {intel?.cotSummary && (
                   <div className={`rounded-2xl p-5 ${CARD(l)}`}>
-                    <h3 className={`text-base font-black mb-4 ${T1(l)}`}>Global Capital Flow Monitor</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className={`text-base font-black ${T1(l)}`}>Global Capital Flow Monitor</h3>
+                        <p className={`text-xs mt-1 ${T2(l)}`}>CFTC smart-money positioning · Hedge fund net speculative contracts</p>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(81,148,246,0.12)", color: "#5194F6" }}>
+                        Weekly
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                       {Object.entries(intel.cotSummary).map(([key, val]) =>
                         val ? (
                           <div key={key} className={`p-4 rounded-xl ${CARD2(l)}`}>
@@ -1312,13 +1445,42 @@ export default function CommoditiesView() {
                             <p className="text-lg font-black" style={{ color: val.sentiment === "Bullish" ? "#22c55e" : "#ef4444" }}>
                               {val.sentiment}
                             </p>
-                            <p className={`text-[10px] mt-1 ${T3(l)}`}>
-                              Hedge fund net: {val.netSpec > 0 ? "+" : ""}{fmtBig(val.netSpec)} contracts
+                            {/* Net flow bar */}
+                            <div className="mt-2 h-1.5 rounded-full overflow-hidden" style={{ background: l ? "#e2e8f0" : "#070e1a" }}>
+                              <div
+                                className="h-full rounded-full"
+                                style={{
+                                  width: `${Math.min(Math.abs(val.netSpec) / 5000 * 100, 100)}%`,
+                                  background: val.sentiment === "Bullish" ? "#22c55e" : "#ef4444",
+                                }}
+                              />
+                            </div>
+                            <p className={`text-[10px] mt-1.5 ${T3(l)}`}>
+                              Net: {val.netSpec > 0 ? "+" : ""}{fmtBig(val.netSpec)} contracts
                             </p>
                           </div>
                         ) : null
                       )}
                     </div>
+                    {/* Summary row */}
+                    {data?.globalEtfs && data.globalEtfs.length > 0 && (
+                      <div className={`p-3.5 rounded-xl ${CARD2(l)}`}>
+                        <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${T3(l)}`}>US-Listed ETF Snapshot</p>
+                        <div className="flex flex-wrap gap-3">
+                          {data.globalEtfs.filter(e => e.quote).slice(0, 6).map(e => {
+                            const ep = (e.quote!.changePct ?? 0) >= 0;
+                            return (
+                              <div key={e.id} className="flex items-center gap-1.5">
+                                <span className={`text-[10px] font-black ${T1(l)}`}>{e.symbol}</span>
+                                <span className={`text-[10px] font-bold ${ep ? "text-emerald-400" : "text-red-400"}`}>
+                                  {ep ? "+" : ""}{e.quote!.changePct.toFixed(2)}%
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1329,7 +1491,7 @@ export default function CommoditiesView() {
               <div className="space-y-6">
                 <SecHead
                   title="InvestBeans Intelligence Layer"
-                  sub="Commodity Cycle Stage · Live Hedge Engine · Regime-Adjusted Allocation · Geopolitical Risk — All derived from live market data"
+                  sub=""
                 />
 
                 {/* 1. Cycle Stage */}
@@ -1365,14 +1527,21 @@ export default function CommoditiesView() {
 
                 {/* 2. Hedge Engine */}
                 <div className={`rounded-2xl p-5 ${CARD(l)}`}>
-                  <h3 className={`text-base font-black mb-1 ${T1(l)}`}>2. Hedge Recommendation Engine</h3>
+                  <div className="flex items-start justify-between mb-1">
+                    <h3 className={`text-base font-black ${T1(l)}`}>2. Hedge Recommendation Engine</h3>
+                    <a href="https://finance.yahoo.com/quote/%5EVIX/" target="_blank" rel="noreferrer"
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-2"
+                      style={{ background: "rgba(81,148,246,0.12)", color: "#5194F6" }}>
+                      Source: CBOE VIX ↗
+                    </a>
+                  </div>
                   <p className={`text-xs mb-4 ${T2(l)}`}>Live signals from VIX · DXY direction · US 10Y Yield · S&P 500 momentum</p>
                   <div className="space-y-2">
                     {(intel?.hedgeSignals ?? []).map((s, i) => (
                       <div
                         key={i}
-                        className="p-4 rounded-xl"
-                        style={{ background: `${s.color}08`, border: `1px solid ${s.color}25` }}
+                        className={`p-4 rounded-xl border ${l ? "border-slate-200" : "border-[#1e3a5f]/50"}`}
+                        style={{ background: `${s.color}08` }}
                       >
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-bold" style={{ color: s.color }}>{s.condition}</p>
@@ -1392,7 +1561,14 @@ export default function CommoditiesView() {
 
                 {/* 3. Allocation Framework */}
                 <div className={`rounded-2xl p-5 ${CARD(l)}`}>
-                  <h3 className={`text-base font-black mb-1 ${T1(l)}`}>3. Allocation Framework</h3>
+                  <div className="flex items-start justify-between mb-1">
+                    <h3 className={`text-base font-black ${T1(l)}`}>3. Allocation Framework</h3>
+                    <a href="https://www.investopedia.com/terms/a/assetallocation.asp" target="_blank" rel="noreferrer"
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-2"
+                      style={{ background: "rgba(81,148,246,0.12)", color: "#5194F6" }}>
+                      Methodology ↗
+                    </a>
+                  </div>
                   <p className={`text-xs mb-4 ${T2(l)}`}>
                     Dynamically adjusted for: <strong style={{ color: regime?.color }}>{regime?.label}</strong>
                   </p>
@@ -1441,6 +1617,17 @@ export default function CommoditiesView() {
                         <div className={`flex justify-between text-[10px] mt-1 ${T3(l)}`}>
                           <span>0 Low</span><span>50 Moderate</span><span>100 Extreme</span>
                         </div>
+                        <div className="flex justify-end mt-1.5">
+                          <a
+                            href="https://www.matteoiacoviello.com/gpr.htm"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[9px] hover:underline"
+                            style={{ color: "#5194F6" }}
+                          >
+                            Source: Caldara & Iacoviello GPR Model ↗
+                          </a>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1452,15 +1639,26 @@ export default function CommoditiesView() {
                     className="rounded-2xl p-5"
                     style={{ background: `${regime.color}0a`, border: `1px solid ${regime.color}25` }}
                   >
-                    <h3 className="text-base font-black mb-1" style={{ color: regime.color }}>
-                      5. {regime.emoji} Regime Strategy: {regime.label}
-                    </h3>
+                    <div className="flex items-start justify-between mb-1">
+                      <h3 className={`text-base font-black ${T1(l)}`}>
+                        5. {regime.emoji} Regime Strategy: {regime.label}
+                      </h3>
+                      <a
+                        href="https://fred.stlouisfed.org/"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-2"
+                        style={{ background: "rgba(81,148,246,0.12)", color: "#5194F6" }}
+                      >
+                        Source: FRED ↗
+                      </a>
+                    </div>
                     <p className={`text-sm mb-4 ${T2(l)}`}>{regime.desc}</p>
                     <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                       {Object.entries(regime.strategy).map(([asset, rec]) => {
                         const c = rec.startsWith("↑") ? "#22c55e" : rec.startsWith("↓") ? "#ef4444" : "#6366f1";
                         return (
-                          <div key={asset} className="p-3 rounded-xl text-center" style={{ background: "rgba(0,0,0,0.12)" }}>
+                          <div key={asset} className={`p-3 rounded-xl text-center ${l ? "bg-slate-100" : "bg-black/20"}`}>
                             <p className={`text-[10px] uppercase font-bold mb-1 ${T2(l)}`}>{asset}</p>
                             <p className="text-sm font-black" style={{ color: c }}>{rec}</p>
                           </div>
@@ -1473,19 +1671,29 @@ export default function CommoditiesView() {
                 {/* 6. Macro Drivers Summary */}
                 {intel?.macroDrivers && (
                   <div className={`rounded-2xl p-5 ${CARD(l)}`}>
-                    <h3 className={`text-base font-black mb-4 ${T1(l)}`}>6. Macro Drivers Summary</h3>
+                    <div className="flex items-start justify-between mb-4">
+                      <h3 className={`text-base font-black ${T1(l)}`}>6. Macro Drivers Summary</h3>
+                      <a href="https://fred.stlouisfed.org/" target="_blank" rel="noreferrer"
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-2"
+                        style={{ background: "rgba(81,148,246,0.12)", color: "#5194F6" }}>
+                        Source: FRED / RBI ↗
+                      </a>
+                    </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                       {[
-                        { label: "US CPI",       val: intel.macroDrivers.usCPI },
-                        { label: "Fed Rate",      val: intel.macroDrivers.fedRateExpectation.split("(")[0].trim() },
-                        { label: "RBI Rate",      val: intel.macroDrivers.rbiRate },
-                        { label: "USD/INR",       val: `₹${intel.macroDrivers.usdInr}` },
-                        { label: "India CPI",     val: intel.macroDrivers.indianCPI },
+                        { label: "US CPI",    val: intel.macroDrivers.usCPI,    href: "https://www.bls.gov/cpi/" },
+                        { label: "Fed Rate",  val: intel.macroDrivers.fedRateExpectation.split("(")[0].trim(), href: "https://www.federalreserve.gov/monetarypolicy/openmarket.htm" },
+                        { label: "RBI Rate",  val: intel.macroDrivers.rbiRate,  href: "https://rbi.org.in/" },
+                        { label: "USD/INR",   val: intel.macroDrivers.usdInr ? `₹${intel.macroDrivers.usdInr}` : "—", href: "https://finance.yahoo.com/quote/USDINR=X/" },
+                        { label: "India CPI", val: intel.macroDrivers.indianCPI, href: "https://mospi.gov.in/consumer-price-index" },
                       ].map(m => (
-                        <div key={m.label} className={`p-3.5 rounded-xl ${CARD2(l)}`}>
-                          <p className={`text-[10px] mb-1 ${T3(l)}`}>{m.label}</p>
-                          <p className={`text-base font-black ${T1(l)}`}>{m.val}</p>
-                        </div>
+                        <a key={m.label} href={m.href} target="_blank" rel="noreferrer"
+                          className={`p-3.5 rounded-xl flex flex-col items-center justify-center text-center min-h-[64px] hover:opacity-80 transition-opacity ${CARD2(l)}`}>
+                          <p className={`text-[9px] uppercase tracking-wide font-semibold mb-1 ${T3(l)}`}>{m.label}</p>
+                          <p className={`text-base font-black ${!m.val || m.val === "N/A" ? T3(l) : T1(l)}`}>
+                            {m.val && m.val !== "N/A" && m.val !== "null" ? m.val : "Loading…"}
+                          </p>
+                        </a>
                       ))}
                     </div>
                     <p className={`text-xs mt-3 ${T3(l)}`}>{intel.macroDrivers.fedRateExpectation}</p>

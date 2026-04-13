@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import AdminBlogForm from '@/components/AdminBlogForm';
 import { getAllBlogs, getAdminBlogs, deleteBlog, getBlogById, toggleLike, Blog } from '@/services/blogService';
-import { Loader2, Plus, Edit2, Trash2, Eye, Search, Tag, Calendar, TrendingUp, Sparkles, Heart, AlertCircle, CheckCircle } from 'lucide-react';
+import { Loader2, Plus, Edit2, Trash2, Search, Tag, Calendar, TrendingUp, Sparkles, Heart, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/controllers/AuthContext';
 import { useTheme } from '@/controllers/Themecontext';
 import { ChevronDown } from "lucide-react";
@@ -327,6 +327,12 @@ useEffect(() => {
   };
 
   const handleReadMore = (blogId: string) => {
+    if (!user) {
+      // Save intended destination and redirect to signin
+      localStorage.setItem('preAuthPath', `/blogs/${blogId}`);
+      navigate('/signin');
+      return;
+    }
     navigate(`/blogs/${blogId}`);
   };
 
@@ -347,14 +353,14 @@ useEffect(() => {
                 <div className="inline-flex items-center gap-3 mb-4">
                   <span className={`inline-flex items-center gap-2 text-xs uppercase tracking-[0.5em] ${isLight ? "text-blue-500" : "text-blue-200/80"}`}>
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
-                    InvestBeans
+                    BLOGS
                   </span>
                 </div>
                 <h1 className={`text-4xl sm:text-5xl lg:text-6xl font-black leading-tight ${isLight ? "text-slate-900" : "text-white"}`}>
-                  Investment Blog
+                  InvestBeans Journal
                 </h1>
                 <p className={`text-lg sm:text-xl font-medium mt-2 ${isLight ? "text-slate-500" : "text-blue-100/70"}`}>
-                  Expert insights for smart investors
+                  Where markets, money, and meaning converge
                 </p>
               </div>
               {isAdmin && (
@@ -480,82 +486,84 @@ useEffect(() => {
             <>
               {/* Featured Article */}
               {featuredBlog && currentPage === 1 && selectedCategory === 'All' && !searchQuery && (
-                <div className="mb-16 sm:mb-20">
-                  <div className="flex items-center gap-3 mb-8">
-                    <TrendingUp size={28} className="text-blue-400" />
-                    <h2 className={`text-3xl sm:text-4xl font-bold ${isLight ? "text-slate-800" : "text-white"}`}>
+                <div className="mb-10 sm:mb-12">
+                  <div className="flex items-center gap-3 mb-5">
+                    <TrendingUp size={22} className="text-blue-400" />
+                    <h2 className={`text-2xl sm:text-3xl font-bold ${isLight ? "text-slate-800" : "text-white"}`}>
                       Featured Article
                     </h2>
                   </div>
                   
-                  <div className={`relative overflow-hidden rounded-[32px] hover:border-blue-500/40 transition-all duration-300 ${isLight ? "border border-slate-200 bg-white shadow-xl shadow-slate-200/60" : "border border-white/10 bg-white/5 backdrop-blur-2xl shadow-[0_20px_80px_-40px_rgba(15,23,42,0.8)]"}`}>
-                    <div className="grid grid-cols-1 lg:grid-cols-2">
-                      <div className="relative h-80 lg:h-full cursor-pointer group overflow-hidden" onClick={() => handleReadMore(featuredBlog._id)}>
-                        <img src={featuredBlog.blogImage} alt={featuredBlog.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <div className={`relative overflow-hidden rounded-[28px] hover:border-blue-500/40 transition-all duration-300 ${isLight ? "border border-slate-200 bg-white shadow-xl shadow-slate-200/60" : "border border-white/10 bg-white/5 backdrop-blur-2xl shadow-[0_20px_80px_-40px_rgba(15,23,42,0.8)]"}`}>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 min-h-0">
+                      <div className="relative h-[400px] lg:h-[400px] cursor-pointer group overflow-hidden " onClick={() => handleReadMore(featuredBlog._id)}>
+                        <img src={featuredBlog.blogImage} alt={featuredBlog.title} className="w-full h-full object-cover  group-hover:scale-105 transition-transform duration-500" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       </div>
 
-                      <div className="p-8 sm:p-10 lg:p-12 flex flex-col justify-center">
-                        <div className="flex flex-wrap items-center gap-3 mb-6">
-                          <span className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-md">
-                            <Sparkles size={14} />
-                            {featuredBlog.category}
-                          </span>
-                          <span className={`text-sm font-semibold ${isLight ? "text-slate-400" : "text-white/50"}`}>{featuredBlog.readTime}</span>
-                          <button
-                            onClick={(e) => handleLike(featuredBlog._id, e)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold transition-all ${isLikedByUser(featuredBlog) ? "bg-red-50 text-red-500 hover:bg-red-100" : isLight ? "bg-slate-100 text-slate-500 hover:bg-slate-200" : "bg-white/5 text-white/50 hover:bg-white/10"}`}
-                          >
-                            <Heart size={14} className={isLikedByUser(featuredBlog) ? "fill-current" : ""} />
-                            <span>{featuredBlog.likes}</span>
-                          </button>
-                          {!featuredBlog.isPublished && (
-                            <span className="bg-[#5194F6] text-white px-3 py-1.5 rounded-full text-sm font-bold">Draft</span>
+                      <div className="p-6 sm:p-7 flex flex-col justify-between">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2 mb-3">
+                            <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md">
+                              <Sparkles size={11} />
+                              {featuredBlog.category}
+                            </span>
+                            <span className={`text-xs font-semibold ${isLight ? "text-slate-400" : "text-white/50"}`}>{featuredBlog.readTime}</span>
+                            <button
+                              onClick={(e) => handleLike(featuredBlog._id, e)}
+                              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all ${isLikedByUser(featuredBlog) ? "bg-red-50 text-red-500 hover:bg-red-100" : isLight ? "bg-slate-100 text-slate-500 hover:bg-slate-200" : "bg-white/5 text-white/50 hover:bg-white/10"}`}
+                            >
+                              <Heart size={11} className={isLikedByUser(featuredBlog) ? "fill-current" : ""} />
+                              <span>{featuredBlog.likes}</span>
+                            </button>
+                            {!featuredBlog.isPublished && (
+                              <span className="bg-[#5194F6] text-white px-2.5 py-1 rounded-full text-xs font-bold">Draft</span>
+                            )}
+                          </div>
+                          
+                          <h3 onClick={() => handleReadMore(featuredBlog._id)} className={`text-lg sm:text-xl lg:text-2xl font-bold mb-2 cursor-pointer line-clamp-2 leading-tight transition-colors ${isLight ? "text-slate-800 hover:text-blue-600" : "text-white hover:text-blue-200"}`}>
+                            {featuredBlog.title}
+                          </h3>
+                          
+                          <p className={`mb-3 text-sm line-clamp-2 leading-relaxed ${isLight ? "text-slate-500" : "text-white/60"}`}>{featuredBlog.description}</p>
+                          
+                          {featuredBlog.tags && featuredBlog.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mb-4">
+                              {featuredBlog.tags.slice(0, 4).map((tag, index) => (
+                                <span key={index} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${isLight ? "bg-slate-100 text-slate-500 border border-slate-200" : "bg-white/5 text-white/70 border border-white/10"}`}>
+                                  <Tag size={10} />{tag}
+                                </span>
+                              ))}
+                            </div>
                           )}
                         </div>
-                        
-                        <h3 onClick={() => handleReadMore(featuredBlog._id)} className={`text-2xl sm:text-3xl lg:text-4xl font-bold mb-5 cursor-pointer line-clamp-2 leading-tight transition-colors ${isLight ? "text-slate-800 hover:text-blue-600" : "text-white hover:text-blue-200"}`}>
-                          {featuredBlog.title}
-                        </h3>
-                        
-                        <p className={`mb-6 text-base sm:text-lg line-clamp-3 leading-relaxed ${isLight ? "text-slate-500" : "text-white/60"}`}>{featuredBlog.description}</p>
-                        
-                        {featuredBlog.tags && featuredBlog.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mb-8">
-                            {featuredBlog.tags.slice(0, 5).map((tag, index) => (
-                              <span key={index} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${isLight ? "bg-slate-100 text-slate-500 border border-slate-200" : "bg-white/5 text-white/70 border border-white/10"}`}>
-                                <Tag size={12} />{tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        
-                        <div className="flex flex-col gap-6">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
+
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
                               {featuredBlog.author.name.charAt(0)}
                             </div>
                             <div>
-                              <p className={`font-bold text-base ${isLight ? "text-slate-800" : "text-white"}`}>{featuredBlog.author.name}</p>
-                              <p className={`text-sm flex items-center gap-1.5 ${isLight ? "text-slate-400" : "text-white/50"}`}>
-                                <Calendar size={14} />
+                              <p className={`font-bold text-sm ${isLight ? "text-slate-800" : "text-white"}`}>{featuredBlog.author.name}</p>
+                              <p className={`text-xs flex items-center gap-1 ${isLight ? "text-slate-400" : "text-white/50"}`}>
+                                <Calendar size={11} />
                                 {new Date(featuredBlog.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                               </p>
                             </div>
                           </div>
                           
-                          <div className="flex gap-3">
+                          <div className="flex gap-2">
                             {isAdmin ? (
                               <>
-                                <button onClick={() => handleEdit(featuredBlog)} className={`flex-1 px-5 py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm font-bold ${isLight ? "bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200" : "bg-white/10 border border-white/20 text-white hover:bg-white/20"}`}>
-                                  <Edit2 size={16} />Edit
+                                <button onClick={() => handleEdit(featuredBlog)} className={`flex-1 px-4 py-2 rounded-xl transition-all flex items-center justify-center gap-2 text-xs font-bold ${isLight ? "bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200" : "bg-white/10 border border-white/20 text-white hover:bg-white/20"}`}>
+                                  <Edit2 size={13} />Edit
                                 </button>
-                                <button onClick={() => handleDelete(featuredBlog._id)} disabled={deleteLoading === featuredBlog._id} className="flex-1 bg-red-500/20 border border-red-500/30 text-red-500 px-5 py-3 rounded-xl hover:bg-red-500/30 transition-all flex items-center justify-center gap-2 text-sm font-bold disabled:opacity-50">
-                                  {deleteLoading === featuredBlog._id ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}Delete
+                                <button onClick={() => handleDelete(featuredBlog._id)} disabled={deleteLoading === featuredBlog._id} className="flex-1 bg-red-500/20 border border-red-500/30 text-red-500 px-4 py-2 rounded-xl hover:bg-red-500/30 transition-all flex items-center justify-center gap-2 text-xs font-bold disabled:opacity-50">
+                                  {deleteLoading === featuredBlog._id ? <Loader2 className="animate-spin" size={13} /> : <Trash2 size={13} />}Delete
                                 </button>
                               </>
                             ) : (
-                              <button onClick={() => handleReadMore(featuredBlog._id)} className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 px-8 py-4 font-bold text-base text-white shadow-lg shadow-blue-500/25 hover:scale-[1.02] transition-all">
+                              <button onClick={() => handleReadMore(featuredBlog._id)} className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-2.5 font-bold text-sm text-white shadow-lg shadow-blue-500/25 hover:scale-[1.02] transition-all">
                                 Read Article →
                               </button>
                             )}
@@ -594,7 +602,6 @@ useEffect(() => {
                               {post.category}
                             </span>
                             <span className={`text-xs font-medium ${isLight ? "text-slate-400" : "text-white/40"}`}>{post.readTime}</span>
-                            <span className={`text-xs flex items-center gap-1 ${isLight ? "text-slate-400" : "text-white/40"}`}><Eye size={12} /> {post.views}</span>
                             <button
                               onClick={(e) => handleLike(post._id, e)}
                               className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold transition-all ${isLikedByUser(post) ? "bg-red-500/20 text-red-500" : isLight ? "bg-slate-100 text-slate-400 hover:bg-slate-200" : "bg-white/5 text-white/50 hover:bg-white/10"}`}
@@ -712,7 +719,7 @@ useEffect(() => {
                   <button
                     onClick={handleNlSubmit}
                     disabled={nlStatus === "loading" || !!nlFieldError}
-                    className={`px-10 py-5 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl text-base hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2 ${isLight ? "bg-[#5194F6] text-white hover:bg-[#3a7de0] shadow-blue-200" : "bg-white text-slate-900 hover:bg-blue-50"}`}
+                    className={`px-10 py-5 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl text-base hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2 ${isLight ? "bg-[#5194F6] text-white hover:bg-[#3a7de0] shadow-blue-200" : "bg-[#3a7de0] text-slate-900 hover:bg-blue-50"}`}
                   >
                     {nlStatus === "loading" ? (
                       <><Loader2 className="w-4 h-4 animate-spin" /> Subscribing…</>

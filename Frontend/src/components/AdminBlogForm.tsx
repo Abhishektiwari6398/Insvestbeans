@@ -321,10 +321,10 @@ const AdminBlogForm: React.FC<AdminBlogFormProps> = ({ onClose, onSuccess, editB
             </div>
           </div>
 
-          {/* Description */}
+          {/* Overview */}
           <div>
             <label htmlFor="description" className={`block text-sm font-semibold mb-2 ${isLight ? "text-slate-600" : "text-white/70"}`}>
-              📄 Description * <span className={`text-xs font-normal ${isLight ? "text-slate-400" : "text-white/40"}`}>({formData.description.length}/500)</span>
+              📄 Overview * <span className={`text-xs font-normal ${isLight ? "text-slate-400" : "text-white/40"}`}>({formData.description.length}/500)</span>
             </label>
             <textarea id="description" name="description" value={formData.description} onChange={handleInputChange} maxLength={500} rows={3}
               className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500/40 focus:outline-none transition-all resize-none ${isLight ? "bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:border-blue-400 focus:bg-white" : "bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-blue-500/50"}`}

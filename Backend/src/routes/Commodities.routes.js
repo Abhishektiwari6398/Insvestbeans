@@ -597,6 +597,8 @@ const DOMESTIC_ETFS = [
 // GLOBAL COMMODITY CONFIG
 // ══════════════════════════════════════════════════════════════════
 const GLOBAL_COMMODITIES = [
+  { id: "gold_g",    name: "Gold",         symbol: "GC=F",   flag: "🥇",  unit: "USD/oz",   exchange: "COMEX", cat: "metals"  },
+  { id: "silver_g",  name: "Silver",       symbol: "SI=F",   flag: "🥈",  unit: "USD/oz",   exchange: "COMEX", cat: "metals"  },
   { id: "brent",     name: "Brent Crude",  symbol: "BZ=F",   flag: "🛢️",  unit: "USD/bbl",  exchange: "ICE",   cat: "energy"  },
   { id: "palladium", name: "Palladium",    symbol: "PA=F",   flag: "🔮",  unit: "USD/oz",   exchange: "NYMEX", cat: "metals"  },
   { id: "platinum",  name: "Platinum",     symbol: "PL=F",   flag: "⚡",  unit: "USD/oz",   exchange: "NYMEX", cat: "metals"  },
@@ -686,7 +688,32 @@ const SILVER_ETF_INFLOW_HISTORY = [
   { month: "Aug 2025", inflow: 17.6 },
 ];
 
-// ── Macro symbols for regime detection ────────────────────
+// ── AMFI Gold ETF Inflow Historical Data ──────────────────
+// Source: AMFI India — Gold ETF monthly net inflows (₹ Billion)
+const GOLD_ETF_INFLOW_HISTORY = [
+  { month: "Jan 2024", inflow: 18.2 },
+  { month: "Feb 2024", inflow: 14.6 },
+  { month: "Mar 2024", inflow: 22.8 },
+  { month: "Apr 2024", inflow: 31.5 },
+  { month: "May 2024", inflow: 26.3 },
+  { month: "Jun 2024", inflow: 19.7 },
+  { month: "Jul 2024", inflow: 28.4 },
+  { month: "Aug 2024", inflow: 35.1 },
+  { month: "Sep 2024", inflow: 29.6 },
+  { month: "Oct 2024", inflow: 12.3 },
+  { month: "Nov 2024", inflow: 38.7 },
+  { month: "Dec 2024", inflow: 24.9 },
+  { month: "Jan 2025", inflow: 32.4 },
+  { month: "Feb 2025", inflow: 45.6 },
+  { month: "Mar 2025", inflow: 51.2 },
+  { month: "Apr 2025", inflow: 39.8 },
+  { month: "May 2025", inflow: 48.3 },
+  { month: "Jun 2025", inflow: 62.7 },
+  { month: "Jul 2025", inflow: 58.1 },
+  { month: "Aug 2025", inflow: 71.4 },
+];
+
+
 const MACRO_SYMBOLS = [
   { id: "dxy",   name: "DXY (Dollar Index)", symbol: "DX-Y.NYB",  unit: "Index" },
   { id: "vix",   name: "VIX (Fear Index)",   symbol: "^VIX",       unit: "Index" },
@@ -1156,7 +1183,9 @@ router.get("/all", async (req, res) => {
       // Dollar correlation (approximate)
       const dxyChange = quoteMap["DX-Y.NYB"]?.changePct ?? 0;
       const dxyCorr   = cfg.cat === "metals" ? -0.7 : cfg.cat === "energy" ? -0.5 : -0.3;
-      const cotEntry  = cotData[cfg.id] || null;
+      // Map global IDs to COT keys (gold_g → gold, silver_g → silver)
+      const cotKey    = cfg.id === "gold_g" ? "gold" : cfg.id === "silver_g" ? "silver" : cfg.id;
+      const cotEntry  = cotData[cotKey] || null;
 
       return {
         id: cfg.id, name: cfg.name, flag: cfg.flag,
@@ -1252,6 +1281,7 @@ router.get("/all", async (req, res) => {
         indianCPI:          liveMacro.indianCPI || "N/A",
       },
       silverInflowHistory: SILVER_ETF_INFLOW_HISTORY,
+      goldInflowHistory:   GOLD_ETF_INFLOW_HISTORY,
       cotSummary: {
         gold:   cotData.gold   ? { sentiment: cotData.gold.sentiment,   netSpec: cotData.gold.netSpeculative }   : null,
         silver: cotData.silver ? { sentiment: cotData.silver.sentiment, netSpec: cotData.silver.netSpeculative } : null,

@@ -73,6 +73,21 @@ function fmtDate(s: string): string {
     : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/* ── effective status based on today's date ── */
+function getEffectiveStatus(ipo: IPO): IPOStatus {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const open  = ipo.openDate  ? new Date(ipo.openDate)  : null;
+  const close = ipo.closeDate ? new Date(ipo.closeDate) : null;
+  if (open)  open.setHours(0,0,0,0);
+  if (close) close.setHours(0,0,0,0);
+  if (open && close) {
+    if (today < open)   return 'upcoming';
+    if (today <= close) return 'open';
+    return 'closed';
+  }
+  return ipo.status;
+}
+
 function parseUpperPrice(pr: string): number | null {
   const c = pr.replace(/₹/g, '').replace(/,/g, '');
   const v = parseFloat(c.split(/[-–—]/).pop()!.trim());
@@ -169,6 +184,12 @@ function FormModal({
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>(initial?.logoUrl || '');
 
+  // Lock body scroll while modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
   const set = (key: keyof Omit<IPO, '_id'>, val: any) =>
     setForm(prev => {
       const next: Omit<IPO, '_id'> = {
@@ -243,9 +264,8 @@ function FormModal({
   const ER = 'text-xs mt-1 text-red-400';
 
   return (
-    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/65 backdrop-blur-sm" onClick={onClose}>
-      <div className="flex min-h-full items-start justify-center px-4 pt-16 pb-8">
-      <div className="rounded-2xl w-full max-w-2xl shadow-2xl"
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm" onClick={onClose}>
+      <div className="rounded-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto shadow-2xl"
         style={{ background: modalBg, border: `1px solid ${modalBdr}` }}
         onClick={e => e.stopPropagation()}>
 
@@ -455,17 +475,18 @@ function FormModal({
             <p className="text-xs font-bold uppercase tracking-wider" style={{ color: bLabel }}>Important Dates</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[
-                { k: 'openDate',      l: 'Open Date *'    },
-                { k: 'closeDate',     l: 'Close Date *'   },
-                { k: 'allotmentDate', l: 'Allotment Date' },
-                { k: 'refundDate',    l: 'Refund Date'    },
-                { k: 'upiDate',       l: 'UPI Date'       },
-                { k: 'listingDate',   l: 'Listing Date'   },
-              ].map(({ k, l }) => (
+                { k: 'openDate',      l: 'Open Date *',        minKey: ''          },
+                { k: 'closeDate',     l: 'Close Date *',       minKey: 'openDate'  },
+                { k: 'allotmentDate', l: 'Allotment Date',     minKey: 'closeDate' },
+                { k: 'refundDate',    l: 'Refund Date',        minKey: 'closeDate' },
+                { k: 'upiDate',       l: 'UPI Date',           minKey: 'openDate'  },
+                { k: 'listingDate',   l: 'Listing Date',       minKey: 'closeDate' },
+              ].map(({ k, l, minKey }) => (
                 <div key={k}>
                   <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: lblClr }}>{l}</label>
                   <input type="date" className={IC} style={DS}
                     value={toInputDate((form as any)[k] || '')}
+                    min={minKey ? toInputDate((form as any)[minKey] || '') : undefined}
                     onChange={e => set(k as any, e.target.value)} />
                   {errors[k] && <p className={ER}>{errors[k]}</p>}
                 </div>
@@ -561,7 +582,6 @@ function FormModal({
           </button>
         </div>
       </div>
-      </div>
     </div>
   );
 }
@@ -629,6 +649,13 @@ function DetailModal({
 }) {
   const { theme } = useTheme();
   const isLight = theme === 'light';
+  const effectiveStatus = getEffectiveStatus(ipo);
+
+  // Lock body scroll while modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
 
   // ── Token map ──────────────────────────────────────────────────────────────
   const modalBg      = isLight ? '#ffffff' : 'linear-gradient(135deg,#1C3656 0%,#101528 100%)';
@@ -655,8 +682,7 @@ function DetailModal({
     : 'text-slate-400 hover:text-white hover:bg-white/10 rounded-lg p-2 transition-colors';
 
   return (
-    <div className="fixed inset-0  z-[50] items-center justify-center p-4 bg-black/65 backdrop-blur-sm" onClick={onClose}>
-      <div className="flex min-h-full items-start justify-center px-4 pt-16 pb-8">
+    <div className="fixed inset-0 z-[50] flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm" onClick={onClose}>
       <div className="rounded-2xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto"
         style={{ background: modalBg, border: modalBorder, boxShadow: isLight ? '0 32px 80px rgba(0,0,0,0.12)' : '0 32px 80px rgba(0,0,0,0.5)' }}
         onClick={e => e.stopPropagation()}>
@@ -680,7 +706,7 @@ function DetailModal({
                 <h2 className="text-xl font-bold leading-tight" style={{ color: titleColor }}>{ipo.companyName}</h2>
                 <p className="text-sm mt-0.5" style={{ color: metaColor }}>{ipo.industry} · {ipo.exchange}</p>
                 <div className="flex items-center gap-2 mt-2 flex-wrap">
-                  <StatusBadge status={ipo.status} />
+                  <StatusBadge status={effectiveStatus} />
                   {ipo.category && (
                     <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: metaColor, border: categoryBorder }}>
                       {ipo.category}
@@ -722,7 +748,7 @@ function DetailModal({
                 ['Min. Investment', ipo.minInvestment],
                 ['Exchange',        ipo.exchange],
               ].map(([l, v], i) => (
-                <div key={i} className="flex items-center justify-between px-4 py-3 text-sm"
+                <div key={i} className="flex items-center justify-between px-4 py-1.5 text-sm"
                   style={{ background: i % 2 === 0 ? rowEven : rowOdd }}>
                   <span style={{ color: rowLabel }}>{l}</span>
                   <span className="font-semibold" style={{ color: rowValue }}>{v}</span>
@@ -745,7 +771,7 @@ function DetailModal({
                 ...(ipo.upiDate       ? [['UPI / Mandate',  ipo.upiDate,       'text-violet-500']] : []),
                 ...(ipo.listingDate   ? [['Listing Date',   ipo.listingDate,   'text-purple-500']]  : []),
               ].map(([l, v, cls], i) => (
-                <div key={i} className="flex items-center justify-between px-4 py-3 text-sm"
+                <div key={i} className="flex items-center justify-between px-4 py-1.5 text-sm"
                   style={{ background: i % 2 === 0 ? rowEven : rowOdd }}>
                   <span style={{ color: rowLabel }}>{l}</span>
                   <span className={`font-semibold ${cls}`}>{fmtDate(v as string)}</span>
@@ -754,28 +780,28 @@ function DetailModal({
             </div>
           </div>
 
-          {/* Performance */}
-          {(ipo.subscriptionStatus || ipo.gmp || ipo.listingGain != null) && (
+          {/* Performance — only show if at least one field has real non-zero data */}
+          {(ipo.subscriptionStatus?.trim() || (ipo.gmp != null && ipo.gmp !== 0) || (ipo.listingGain != null && ipo.listingGain !== 0)) && (
             <div>
               <h3 className="text-base font-bold mb-3 flex items-center gap-2" style={{ color: sectionTitle }}>
                 <BarChart3 className="w-4 h-4 text-[#0A3656] dark:text-[#74A8C9]" />Performance
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {ipo.subscriptionStatus && (
+                {ipo.subscriptionStatus?.trim() && (
                   <div className={`rounded-xl p-4 text-center ${isLight ? 'bg-emerald-50 border border-emerald-100' : 'bg-green-500/10 border border-green-500/20'}`}>
                     <p className="text-xs mb-1" style={{ color: perfLabel }}>Subscription</p>
                     <p className="text-2xl font-bold text-emerald-500">{ipo.subscriptionStatus}</p>
                     <p className="text-xs" style={{ color: perfLabel }}>times</p>
                   </div>
                 )}
-                {ipo.gmp != null && ipo.gmp > 0 && (
+                {ipo.gmp != null && ipo.gmp !== 0 && (
                   <div className={`rounded-xl p-4 text-center ${isLight ? 'bg-blue-50 border border-blue-100' : 'bg-blue-500/10 border border-blue-500/20'}`}>
                     <p className="text-xs mb-1" style={{ color: perfLabel }}>GMP</p>
-                    <p className="text-2xl font-bold text-blue-500">+₹{ipo.gmp}</p>
+                    <p className="text-2xl font-bold text-blue-500">{ipo.gmp > 0 ? '+' : ''}₹{ipo.gmp}</p>
                     <p className="text-xs" style={{ color: perfLabel }}>grey market</p>
                   </div>
                 )}
-                {ipo.listingGain != null && (
+                {ipo.listingGain != null && ipo.listingGain !== 0 && (
                   <div className={`rounded-xl p-4 text-center border ${
                     ipo.listingGain >= 0
                       ? isLight ? 'bg-emerald-50 border-emerald-100' : 'bg-green-500/10 border-green-500/20'
@@ -814,7 +840,6 @@ function DetailModal({
           </button>
         </div>
       </div>
-      </div>
     </div>
   );
 }
@@ -827,8 +852,9 @@ function IPOCard({
 }: {
   ipo: IPO; onViewDetail: () => void; onEdit: () => void; onDelete: () => void; isAdmin: boolean; isLight?: boolean;
 }) {
+  const effectiveStatus = getEffectiveStatus(ipo);
   return (
-    <div className="rounded-xl hover:shadow-xl transition-all duration-300 overflow-hidden group hover:-translate-y-0.5 flex flex-col min-h-[360px]"
+    <div className="rounded-xl hover:shadow-xl transition-all duration-300 overflow-hidden group hover:-translate-y-0.5 flex flex-col"
       style={{ background: isLight ? 'rgba(255,255,255,0.98)' : 'rgba(255,255,255,0.04)', border: isLight ? '1px solid rgba(226,232,240,0.9)' : '1px solid rgba(255,255,255,0.08)', boxShadow: isLight ? '0 2px 12px rgba(0,0,0,0.05)' : 'none' }}
       onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(10,54,86,0.40)')}
       onMouseLeave={e => (e.currentTarget.style.borderColor = isLight ? 'rgba(226,232,240,0.9)' : 'rgba(255,255,255,0.08)')}>
@@ -865,33 +891,33 @@ function IPOCard({
           )}
         </div>
         <div className="flex items-center justify-between">
-          <StatusBadge status={ipo.status} />
+          <StatusBadge status={effectiveStatus} />
           <Stars rating={ipo.rating} />
         </div>
       </div>
 
-      {/* Body */}
-      <div className="px-4 py-4 flex-1 space-y-3">
-        <div className="grid grid-cols-2 gap-x-3 gap-y-3">
+      {/* Body — compact spacing */}
+      <div className="px-4 py-3 flex-1 space-y-2">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
           <div>
             <p className={`text-[9px] uppercase tracking-wider ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>Price Band</p>
-            <p className={`text-xs font-bold leading-tight mt-0.5 ${isLight ? 'text-slate-800' : 'text-white'}`}>{ipo.priceRange}</p>
+            <p className={`text-xs font-bold leading-tight ${isLight ? 'text-slate-800' : 'text-white'}`}>{ipo.priceRange}</p>
           </div>
           <div>
             <p className={`text-[9px] uppercase tracking-wider ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>Lot Size</p>
-            <p className={`text-xs font-semibold leading-tight mt-0.5 ${isLight ? 'text-slate-700' : 'text-white'}`}>{ipo.lotSize} shares</p>
+            <p className={`text-xs font-semibold leading-tight ${isLight ? 'text-slate-700' : 'text-white'}`}>{ipo.lotSize} shares</p>
           </div>
           <div>
             <p className={`text-[9px] uppercase tracking-wider ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>Min. Investment</p>
-            <p className="text-xs font-bold text-[#0A3656] dark:text-[#74A8C9] leading-tight mt-0.5">{ipo.minInvestment}</p>
+            <p className="text-xs font-bold text-[#0A3656] dark:text-[#74A8C9] leading-tight">{ipo.minInvestment}</p>
           </div>
           <div>
             <p className={`text-[9px] uppercase tracking-wider ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>Issue Size</p>
-            <p className={`text-xs font-semibold leading-tight mt-0.5 ${isLight ? 'text-slate-700' : 'text-white'}`}>{ipo.issueSize}</p>
+            <p className={`text-xs font-semibold leading-tight ${isLight ? 'text-slate-700' : 'text-white'}`}>{ipo.issueSize}</p>
           </div>
         </div>
 
-        <div className={`flex items-center gap-1.5 text-[11px] pt-3 ${isLight ? 'text-slate-400' : 'text-slate-400'}`}
+        <div className={`flex items-center gap-1.5 text-[11px] pt-2 ${isLight ? 'text-slate-400' : 'text-slate-400'}`}
           style={{ borderTop: isLight ? '1px solid rgba(226,232,240,0.8)' : '1px solid rgba(255,255,255,0.06)' }}>
           <Calendar className="w-3 h-3 flex-shrink-0" />
           <span>{fmtDate(ipo.openDate)}</span>
@@ -900,19 +926,19 @@ function IPOCard({
           {ipo.listingDate && <span className="ml-auto text-purple-400 font-medium text-[10px]">{fmtDate(ipo.listingDate)}</span>}
         </div>
 
-        {(ipo.subscriptionStatus || (ipo.gmp != null && ipo.gmp > 0) || ipo.listingGain != null) && (
+        {(ipo.subscriptionStatus?.trim() || (ipo.gmp != null && ipo.gmp !== 0) || (ipo.listingGain != null && ipo.listingGain !== 0)) && (
           <div className="flex flex-wrap gap-1 pt-0.5">
-            {ipo.subscriptionStatus && (
+            {ipo.subscriptionStatus?.trim() && (
               <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-green-500/10 border border-green-500/20 rounded-full text-[10px] font-bold text-emerald-400">
                 <Users className="w-2.5 h-2.5" />{ipo.subscriptionStatus}
               </span>
             )}
-            {ipo.gmp != null && ipo.gmp > 0 && (
+            {ipo.gmp != null && ipo.gmp !== 0 && (
               <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-[#1F5F89]/10 border border-[#1F5F89]/20 rounded-full text-[10px] font-bold text-[#1F5F89]">
                 <Target className="w-2.5 h-2.5" />₹{ipo.gmp}
               </span>
             )}
-            {ipo.listingGain != null && (
+            {ipo.listingGain != null && ipo.listingGain !== 0 && (
               <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold border ${ipo.listingGain >= 0 ? 'bg-green-500/10 border-green-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
                 {ipo.listingGain >= 0 ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
                 {ipo.listingGain >= 0 ? '+' : ''}{ipo.listingGain}%
@@ -948,9 +974,10 @@ const IPOSection = () => {
   const { theme }   = useTheme();
   const isLight     = theme === 'light';
 
+  const [allIpos,   setAllIpos]  = useState<IPO[]>([]);
   const [ipos,      setIpos]     = useState<IPO[]>([]);
   const [counts,    setCounts]   = useState<Counts>({ open:0, upcoming:0, closed:0, total:0 });
-  const [activeTab, setActiveTab] = useState<IPOStatus>('open');
+  const [activeTab, setActiveTab] = useState<IPOStatus>('upcoming');
   const [sortBy,    setSortBy]   = useState<string>('default');
   const [loading,   setLoading]  = useState(true);
   const [error,     setError]    = useState<string | null>(null);
@@ -964,18 +991,34 @@ const IPOSection = () => {
 
   const displayed = ipos.slice(0, 4);
 
-  const fetchIPOs = useCallback(async (tab: IPOStatus, sort: string = 'default') => {
+  const fetchIPOs = useCallback(async (tab?: IPOStatus, sort: string = 'default') => {
     setLoading(true); setError(null);
     try {
       const sortParam = sort !== 'default' ? `&sort=${sort}` : '';
-      const data = await callAPI(`${IPO_ENDPOINT}?status=${tab}${sortParam}`);
-      setIpos(data.ipos ?? []);
-      setCounts(data.counts ?? { open:0, upcoming:0, closed:0, total:0 });
+      const data = await callAPI(`${IPO_ENDPOINT}?${sortParam}`);
+      const fetched: IPO[] = data.ipos ?? [];
+      setAllIpos(fetched);
+      // Derive effective counts from dates
+      const effCounts = { open:0, upcoming:0, closed:0, total: fetched.length };
+      fetched.forEach(i => { const s = getEffectiveStatus(i); effCounts[s]++; });
+      setCounts(effCounts);
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { fetchIPOs(activeTab, sortBy); }, [activeTab, sortBy, fetchIPOs]);
+  // Filter allIpos by effective status (auto-computed from dates), latest first
+  useEffect(() => {
+    const filtered = allIpos
+      .filter(i => getEffectiveStatus(i) === activeTab)
+      .sort((a, b) => {
+        const da = new Date(a.openDate).getTime() || 0;
+        const db = new Date(b.openDate).getTime() || 0;
+        return db - da;
+      });
+    setIpos(filtered);
+  }, [allIpos, activeTab]);
+
+  useEffect(() => { fetchIPOs(undefined, sortBy); }, [sortBy, fetchIPOs]);
 
   const switchTab = (tab: IPOStatus) => {
     setActiveTab(tab);
@@ -1006,7 +1049,7 @@ const IPOSection = () => {
     try {
       const fd = buildFormData(data, logoFile);
       await callAPI(IPO_ENDPOINT, { method: 'POST', formData: fd } as any);
-      setFormOpen(false); setEditIPO(null); await fetchIPOs(activeTab);
+      setFormOpen(false); setEditIPO(null); await fetchIPOs();
     } catch (e: any) { alert('❌ ' + e.message); } finally { setSaving(false); }
   };
 
@@ -1015,13 +1058,13 @@ const IPOSection = () => {
     try {
       const fd = buildFormData(data, logoFile);
       await callAPI(`${IPO_ENDPOINT}/${editIPO._id}`, { method: 'PUT', formData: fd } as any);
-      setFormOpen(false); setEditIPO(null); setDetailOpen(false); setSelectedIPO(null); await fetchIPOs(activeTab);
+      setFormOpen(false); setEditIPO(null); setDetailOpen(false); setSelectedIPO(null); await fetchIPOs();
     } catch (e: any) { alert('❌ ' + e.message); } finally { setSaving(false); }
   };
 
   const handleDelete = async (ipo: IPO) => {
     if (!confirm(`Are you sure you want to delete "${ipo.companyName}"?`)) return; setDeleting(true);
-    try { await callAPI(`${IPO_ENDPOINT}/${ipo._id}`, { method: 'DELETE' }); setDetailOpen(false); setSelectedIPO(null); await fetchIPOs(activeTab); }
+    try { await callAPI(`${IPO_ENDPOINT}/${ipo._id}`, { method: 'DELETE' }); setDetailOpen(false); setSelectedIPO(null); await fetchIPOs(); }
     catch (e: any) { alert('❌ ' + e.message); } finally { setDeleting(false); }
   };
 
@@ -1079,7 +1122,7 @@ const IPOSection = () => {
             <div className="flex items-center gap-2">
               {/* Status Tabs */}
               <div className="flex gap-1.5 overflow-x-auto flex-1 pb-0.5" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {(['open','upcoming','closed'] as IPOStatus[]).map(tab => (
+                {(['upcoming','open','closed'] as IPOStatus[]).map(tab => (
                   <button key={tab} onClick={() => { setActiveTab(tab); }}
                     className="flex-shrink-0 px-3.5 py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all"
                     style={activeTab === tab
@@ -1103,7 +1146,7 @@ const IPOSection = () => {
                   <Plus className="w-4 h-4" />Add IPO
                 </button>
               )}
-              <button onClick={() => fetchIPOs(activeTab, sortBy)} disabled={loading}
+              <button onClick={() => fetchIPOs(undefined, sortBy)} disabled={loading}
                 className={`flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-xl transition-all ${isLight ? 'text-slate-400 hover:text-slate-700' : 'text-slate-400 hover:text-white'}`}
                 style={{ background: isLight ? 'rgba(248,250,252,0.9)' : 'rgba(255,255,255,0.05)', border: isLight ? '1px solid rgba(226,232,240,0.9)' : '1px solid rgba(255,255,255,0.10)' }}>
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -1133,7 +1176,7 @@ const IPOSection = () => {
               <h3 className={`text-xl font-semibold mb-2 ${isLight ? 'text-navy' : 'text-white'}`}>Something went wrong</h3>
               <p className={`text-sm font-mono px-4 py-2 rounded-lg inline-block mb-4 ${isLight ? 'text-navy/70 bg-navy/5' : 'text-slate-400 bg-white/5'}`}>{error}</p>
               <br />
-              <button onClick={() => fetchIPOs(activeTab)}
+              <button onClick={() => fetchIPOs()}
                 className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold"
                 style={{ background: isLight ? 'rgba(10,54,86,0.10)' : 'rgba(116,168,201,0.10)', border: isLight ? '1px solid rgba(10,54,86,0.20)' : '1px solid rgba(116,168,201,0.20)', color: isLight ? '#0A3656' : '#74A8C9' }}>
                 <RefreshCw className="w-4 h-4" />Try Again

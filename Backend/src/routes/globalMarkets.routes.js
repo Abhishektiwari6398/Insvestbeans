@@ -500,12 +500,16 @@ router.get("/global", async (req, res) => {
       }
     }
 
-    // ── Events ────────────────────────────────────────────
-    const today  = new Date().setHours(0, 0, 0, 0);
+    // ── Events — Fix 6: show ALL events in the next 365 days ────
+    const today     = new Date().setHours(0, 0, 0, 0);
+    const yearAhead = today + 365 * 24 * 60 * 60 * 1000;
     const events = KNOWN_EVENTS
-      .filter(e => new Date(e.date) >= today)
-      .sort((a, b) => new Date(a.date) - new Date(b.date))
-      .slice(0, 12);
+      .filter(e => {
+        const d = new Date(e.date).getTime();
+        return d >= today && d <= yearAhead;
+      })
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    // No slice — show every event for the next 365 days
 
     // ── Regional Performance ──────────────────────────────
     const calculateRegions = () => [

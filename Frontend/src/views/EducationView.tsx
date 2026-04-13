@@ -742,7 +742,7 @@ const EducationView = () => {
 
         {/* ── BODY ──────────────────────────────────────────────────────────── */}
         <div className="container mx-auto px-4 lg:px-6 py-8">
-          <div className="flex gap-7">
+          <div className="flex gap-7 items-start">
 
             {/* ── SIDEBAR ───────────────────────────────────────────────────── */}
             <aside className="hidden lg:flex flex-col gap-1 w-52 flex-shrink-0 sticky top-24 self-start"
@@ -752,7 +752,7 @@ const EducationView = () => {
                 borderRadius: 18,
                 padding: '16px 12px',
                 backdropFilter: 'blur(16px)',
-                height: 'fit-content',
+                minHeight:500,
               }}>
               <p className="text-[10px] font-bold uppercase tracking-widest mb-2 px-2"
                 style={{ color: isLight ? 'rgba(13,37,64,0.35)' : 'rgba(148,163,184,0.4)' }}>
@@ -785,6 +785,9 @@ const EducationView = () => {
                   </button>
                 );
               })}
+
+              {/* Spacer — pushes CTA to bottom */}
+              <div className="flex-1" />
 
               {/* Sidebar CTA */}
               <div className="mt-4 pt-4" style={{ borderTop: isLight ? '1px solid rgba(226,232,240,0.8)' : '1px solid rgba(255,255,255,0.07)' }}>

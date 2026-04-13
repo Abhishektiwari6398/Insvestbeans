@@ -80,13 +80,13 @@ const insightSchema = new mongoose.Schema(
       },
       url: {
         type: String,
+        required: [true, "Source URL is required"],
         trim: true,
         validate: {
           validator: function (v) {
-            if (!v) return true;
             return /^https?:\/\/.+/.test(v);
           },
-          message: "Please provide a valid URL",
+          message: "Please provide a valid URL starting with http:// or https://",
         },
       },
       publishedDate: {

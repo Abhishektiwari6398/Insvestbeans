@@ -14,14 +14,16 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTheme } from "@/controllers/Themecontext";
+import { useAuth } from "@/controllers/AuthContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import AdminEventForm from "@/components/AdminEventForm";
 import {
   Calendar, Globe, Flag, Clock, Megaphone, AlertCircle,
   TrendingUp, Landmark, BarChart2, Umbrella, BookOpen,
   RefreshCw, Zap, Activity, ExternalLink, Target,
   ChevronDown, ChevronUp, TrendingDown, Minus,
-  DollarSign, Lightbulb, Eye, SlidersHorizontal,
+  DollarSign, Eye, SlidersHorizontal,
   Radio, ArrowUpRight, ArrowDownRight,
 } from "lucide-react";
 
@@ -51,6 +53,7 @@ interface MarketEvent {
   impactTerm?: "short" | "medium" | "long" | "short-medium";
   whoAffected?: { assets: string[]; sectors: string[] };
   investbeansInsight?: string;
+  sourceUrl?: string;
 }
 
 interface MacroSnapshot { usdInr?: number; vix?: number; }
@@ -151,57 +154,57 @@ function buildDescription(e: ApiEvent): string {
 // Light/dark variants
 const T = {
   dark: {
-    pageBg:       "#07111b",
-    panelBg:      "#0c1821",
-    cardBg:       "#0f1e2d",
-    cardHover:    "#131c2a",
-    elevated:     "#141c27",
-    border:       "#1a2d3f",
-    borderBright: "#243348",
-    accent:       "#74A8C9",
-    accentDim:    "rgba(116,168,201,0.12)",
-    accentBorder: "rgba(116,168,201,0.30)",
-    green:        "#00d084",
-    greenDim:     "rgba(0,208,132,0.1)",
-    red:          "#ff4757",
-    redDim:       "rgba(255,71,87,0.1)",
-    amber:        "#ffa825",
-    amberDim:     "rgba(255,168,37,0.1)",
-    blue:         "#3d9aff",
-    blueDim:      "rgba(61,154,255,0.1)",
-    purple:       "#a78bfa",
-    purpleDim:    "rgba(167,139,250,0.1)",
-    textPrimary:  "#e2e8f0",
-    textSecond:   "#a0b4c8",
-    textMuted:    "#6b8aaa",
-    textTiny:     "#4a6680",
-    tickerBg:     "#080b10",
+    pageBg:       "#070e1a",
+    panelBg:      "#040810",
+    cardBg:       "#0c1a2e",
+    cardHover:    "#0f1e35",
+    elevated:     "#070e1a",
+    border:       "rgba(30,58,95,0.5)",
+    borderBright: "rgba(30,58,95,0.8)",
+    accent:       "#5194F6",
+    accentDim:    "rgba(81,148,246,0.12)",
+    accentBorder: "rgba(81,148,246,0.25)",
+    green:        "#22c55e",
+    greenDim:     "rgba(34,197,94,0.12)",
+    red:          "#ef4444",
+    redDim:       "rgba(239,68,68,0.12)",
+    amber:        "#f59e0b",
+    amberDim:     "rgba(245,158,11,0.12)",
+    blue:         "#5194F6",
+    blueDim:      "rgba(81,148,246,0.12)",
+    purple:       "#8b5cf6",
+    purpleDim:    "rgba(139,92,246,0.12)",
+    textPrimary:  "#ffffff",
+    textSecond:   "#94a3b8",
+    textMuted:    "#64748b",
+    textTiny:     "#475569",
+    tickerBg:     "#040810",
   },
   light: {
-    pageBg:       "#f5f4f0",
+    pageBg:       "#f0f7fe",
     panelBg:      "#ffffff",
     cardBg:       "#ffffff",
-    cardHover:    "#f7f9fc",
-    elevated:     "#f0f4f8",
-    border:       "#dde3ec",
-    borderBright: "#c8d3e0",
-    accent:       "#0A3656",
-    accentDim:    "rgba(10,54,86,0.08)",
-    accentBorder: "rgba(10,54,86,0.25)",
-    green:        "#0ab066",
-    greenDim:     "rgba(10,176,102,0.08)",
-    red:          "#e8334a",
-    redDim:       "rgba(232,51,74,0.08)",
+    cardHover:    "#f8fafc",
+    elevated:     "#f1f5f9",
+    border:       "#e2e8f0",
+    borderBright: "#cbd5e1",
+    accent:       "#5194F6",
+    accentDim:    "rgba(81,148,246,0.08)",
+    accentBorder: "rgba(81,148,246,0.25)",
+    green:        "#16a34a",
+    greenDim:     "rgba(22,163,74,0.08)",
+    red:          "#dc2626",
+    redDim:       "rgba(220,38,38,0.08)",
     amber:        "#d97706",
     amberDim:     "rgba(217,119,6,0.08)",
-    blue:         "#2563eb",
-    blueDim:      "rgba(37,99,235,0.08)",
+    blue:         "#5194F6",
+    blueDim:      "rgba(81,148,246,0.08)",
     purple:       "#7c3aed",
     purpleDim:    "rgba(124,58,237,0.08)",
     textPrimary:  "#0f172a",
-    textSecond:   "#1e293b",
-    textMuted:    "#475569",
-    textTiny:     "#64748b",
+    textSecond:   "#334155",
+    textMuted:    "#64748b",
+    textTiny:     "#94a3b8",
     tickerBg:     "#0d1117",
   },
 };
@@ -244,23 +247,78 @@ function useMarketEvents() {
   const fetchData = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const res  = await fetch(`${API}/markets/global`, { credentials: "include" });
-      if (!res.ok) throw new Error(`Server ${res.status}`);
-      const data = await res.json();
-      const raw: ApiEvent[] = Array.isArray(data?.events) ? data.events : [];
-      const events: MarketEvent[] = raw.map((e, i) => ({
-        id: `api-${i}`, date: e.date, title: e.title, description: buildDescription(e),
-        region: mapRegion(e.region), category: inferCategory(e.title),
-        impact: (e.impact as any) ?? "Medium", source: "api",
-        whatHappened: e.whatHappened, whyItMatters: e.whyItMatters,
-        marketImpact: e.marketImpact, impactTerm: e.impactTerm,
-        whoAffected: e.whoAffected, investbeansInsight: e.investbeansInsight,
-      }));
-      setApiEvents(events);
-      setMacro({
-        usdInr: data?.forex?.find((f: any) => f.pair === "USD/INR")?.rate,
-        vix:    data?.vix?.value,
-      });
+      // ── Fetch DB events + legacy global feed IN PARALLEL ──
+      const [adminRes, legacyRes] = await Promise.allSettled([
+        fetch(`${API}/admin/events/public`, { credentials: "include" }),
+        fetch(`${API}/markets/global`,      { credentials: "include" }),
+      ]);
+
+      // ── 1. DB events (admin-curated, both India + Global) ──
+      const dbEvents: MarketEvent[] = [];
+      if (adminRes.status === "fulfilled" && adminRes.value.ok) {
+        const adminData = await adminRes.value.json();
+        if (adminData.success && Array.isArray(adminData.data)) {
+          for (const e of adminData.data) {
+            dbEvents.push({
+              id:                 e.id ?? e._id?.toString() ?? Math.random().toString(36),
+              date:               e.date,
+              title:              e.title,
+              description:        e.description || buildDescription(e),
+              region:             mapRegion(e.region ?? "india"),
+              category:           (e.category as Category) ?? inferCategory(e.title),
+              impact:             (e.impact as any) ?? "Medium",
+              source:             "api" as const,
+              whatHappened:       e.whatHappened,
+              whyItMatters:       e.whyItMatters,
+              marketImpact:       e.marketImpact,
+              impactTerm:         e.impactTerm,
+              whoAffected:        e.whoAffected,
+              investbeansInsight: e.investbeansInsight,
+              sourceUrl:          e.sourceUrl,
+            });
+          }
+        }
+      }
+
+      // ── 2. Legacy global feed — add events NOT already covered by DB ──
+      const legacyEvents: MarketEvent[] = [];
+      if (legacyRes.status === "fulfilled" && legacyRes.value.ok) {
+        const data = await legacyRes.value.json();
+        const raw: ApiEvent[] = Array.isArray(data?.events) ? data.events : [];
+        setMacro({
+          usdInr: data?.forex?.find((f: any) => f.pair === "USD/INR")?.rate,
+          vix:    data?.vix?.value,
+        });
+        // Build a dedup key set from DB events
+        const dbKeys = new Set(dbEvents.map(e => `${e.date}__${e.title.trim().toLowerCase()}`));
+        raw.forEach((e, i) => {
+          const key = `${e.date}__${e.title.trim().toLowerCase()}`;
+          if (!dbKeys.has(key)) {
+            legacyEvents.push({
+              id:          `api-${i}`,
+              date:        e.date,
+              title:       e.title,
+              description: buildDescription(e),
+              region:      mapRegion(e.region),
+              category:    inferCategory(e.title),
+              impact:      (e.impact as any) ?? "Medium",
+              source:      "api" as const,
+              whatHappened: e.whatHappened,
+              whyItMatters: e.whyItMatters,
+              marketImpact: e.marketImpact,
+              impactTerm:   e.impactTerm,
+              whoAffected:  e.whoAffected,
+              investbeansInsight: e.investbeansInsight,
+            });
+          }
+        });
+      }
+
+      const merged = [...dbEvents, ...legacyEvents];
+      if (merged.length === 0 && adminRes.status !== "fulfilled") {
+        throw new Error("Could not load events");
+      }
+      setApiEvents(merged);
       setLastFetched(new Date());
     } catch (err: any) {
       setError(err.message || "Network error");
@@ -320,23 +378,58 @@ function useKiteHolidays() {
   return { indiaHolidays, fromApi };
 }
 
+function useGlobalHolidays() {
+  const [globalHolidays, setGlobalHolidays] = useState<MarketEvent[]>(GLOBAL_HOLIDAYS_STATIC);
+  const [fromApi, setFromApi] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const currentYear = new Date().getFullYear();
+        const nextYear = currentYear + 1;
+        const [r1, r2] = await Promise.allSettled([
+          fetch(`${API}/kite/global-holidays?year=${currentYear}`, { credentials: "include" }),
+          fetch(`${API}/kite/global-holidays?year=${nextYear}`,    { credentials: "include" }),
+        ]);
+        const holidays: MarketEvent[] = [];
+        let idx = 0;
+        for (const result of [r1, r2]) {
+          if (result.status !== "fulfilled" || !result.value.ok) continue;
+          const json = await result.value.json();
+          if (json?.status !== "success" || !Array.isArray(json?.data)) continue;
+          for (const h of json.data) {
+            if (!h.date) continue;
+            const title = h.name || h.reason || "Market Holiday";
+            holidays.push({
+              id: `global-h-${idx++}`, date: h.date, title,
+              description: h.description || "Global market holiday.",
+              region: "global" as Region, category: "holiday" as Category,
+              impact: "Medium" as const, source: "api" as const,
+            });
+          }
+        }
+        if (!cancelled && holidays.length > 0) { setGlobalHolidays(holidays); setFromApi(true); }
+      } catch { /* static fallback */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  return { globalHolidays, fromApi };
+}
+
 // ─── LiveTicker bar ───────────────────────────────────────────────────────────
 const LiveTickerBar: React.FC<{ macro: MacroSnapshot; eventCount: number; upcomingCount: number; isLight: boolean }> = ({ macro, eventCount, upcomingCount, isLight }) => {
-  const bg         = isLight ? "#1a2535"   : "#080b10";
-  const borderCol  = isLight ? "#2e3f56"   : "#1a2535";
-  const labelCol   = isLight ? "#7a9ab8"   : "#3d5168";
-  const dividerCol = isLight ? "#2e3f56"   : "#1a2535";
-  const accentCol  = isLight ? "#0A3656"   : "#74A8C9";
-  const valueCol   = isLight ? "#e2f0ff"   : "#e2e8f0";
-  const greenCol   = isLight ? "#00d084"   : "#00d084";
+  // Light mode: visible dark-navy bar; dark mode: near-black
+  const bg         = isLight ? "#1e3a5f"   : "#080b10";
+  const borderCol  = isLight ? "#2d5a8e"   : "#1a2535";
+  const labelCol   = isLight ? "#93c5fd"   : "#4d6a82";
+  const dividerCol = isLight ? "#2d5a8e"   : "#1e3248";
+  const accentCol  = "#74A8C9";
+  const valueCol   = isLight ? "#ffffff"   : "#e2e8f0";
+  const greenCol   = "#00d084";
 
   const items = [
-    { label: "USD/INR",  value: macro.usdInr ? macro.usdInr.toFixed(2) : "—",    color: valueCol },
-    { label: "VIX",      value: macro.vix ? macro.vix.toFixed(2) : "—",           color: macro.vix ? (macro.vix < 20 ? greenCol : macro.vix < 30 ? "#ffa825" : "#ff4757") : valueCol },
-    { label: "EVENTS",   value: String(eventCount),                                color: accentCol },
-    { label: "UPCOMING", value: String(upcomingCount),                             color: greenCol  },
-    { label: "CALENDAR", value: "NSE · BSE · NYSE · LSE",                          color: labelCol  },
-    { label: "DATA",     value: "Yahoo Finance · RBI · FOMC · ECB",                color: labelCol  },
+    { label: "EVENTS",   value: String(eventCount),   color: accentCol },
+    { label: "UPCOMING", value: String(upcomingCount), color: greenCol  },
   ];
   return (
     <div style={{
@@ -517,9 +610,278 @@ const ImpactMeter: React.FC<{ impact: "High" | "Medium" | "Low"; tk: typeof T.da
   );
 };
 
+// ─── AdminInlinePanel — sirf Section 03 + 04 fields (no title/date/description) ──
+const ASSETS_LIST = ["Equity", "Commodities", "Forex", "Bonds"];
+const ASSET_PILL_COLOR: Record<string, { c: string; bg: string }> = {
+  Equity:      { c: "#74A8C9", bg: "rgba(116,168,201,0.15)" },
+  Commodities: { c: "#00d084", bg: "rgba(0,208,132,0.12)"   },
+  Forex:       { c: "#ffa825", bg: "rgba(255,168,37,0.12)"  },
+  Bonds:       { c: "#a78bfa", bg: "rgba(167,139,250,0.12)" },
+};
+
+const AdminInlinePanel: React.FC<{
+  event: MarketEvent; tk: typeof T.dark; isLight: boolean;
+  onSaved: () => void; onCancel: () => void;
+}> = ({ event, tk, isLight, onSaved, onCancel }) => {
+  const _API = (import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1");
+
+  const [marketImpact, setMarketImpact] = useState<string>(event.marketImpact ?? "");
+  const [impactTerm,   setImpactTerm]   = useState<string>(event.impactTerm   ?? "");
+  // Single-select: take first asset if any
+  const [asset,    setAsset]   = useState<string>((event.whoAffected?.assets ?? [])[0] ?? "");
+  const [sectors,  setSectors] = useState<string>((event.whoAffected?.sectors ?? []).join(", "));
+  const [saving,   setSaving]  = useState(false);
+
+  const wordCount = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
+  const sectorWC  = wordCount(sectors);
+
+  // Single-select toggle
+  const selectAsset = (a: string) => setAsset(prev => prev === a ? "" : a);
+
+  const inp: React.CSSProperties = {
+    width: "100%", padding: "6px 9px", borderRadius: 5, fontSize: 11,
+    border: `1px solid ${tk.border}`, background: isLight ? "#fff" : "#040c18",
+    color: tk.textPrimary, outline: "none", fontFamily: "inherit",
+    boxSizing: "border-box",
+  };
+
+  const pillStyle = (active: boolean, ac: string, abg: string): React.CSSProperties => ({
+    padding: "3px 10px", borderRadius: 4, fontSize: 10, fontWeight: 700, cursor: "pointer",
+    border: `1px solid ${active ? ac : tk.border}`,
+    background: active ? abg : "transparent",
+    color: active ? ac : tk.textMuted,
+    transition: "all 0.1s", whiteSpace: "nowrap" as const,
+  });
+
+  const lbl: React.CSSProperties = {
+    fontSize: 9, fontWeight: 700, color: tk.accent, letterSpacing: "0.1em",
+    display: "block", marginBottom: 4, textTransform: "uppercase",
+  };
+
+  const handleSave = async () => {
+    if (sectorWC > 70) return alert("Sectors must be \u226470 words");
+    setSaving(true);
+    try {
+      const token = localStorage.getItem("accessToken");
+      const authHeader: Record<string,string> = token ? { Authorization: `Bearer ${token}` } : {};
+      const enrichment = {
+        marketImpact, impactTerm,
+        whoAffected: { assets: asset ? [asset] : [], sectors },
+      };
+      const isRealDbId = /^[0-9a-f]{24}$/i.test(event.id);
+      let res: Response;
+
+      if (isRealDbId) {
+        // Already in DB → PATCH enrichment fields only
+        res = await fetch(`${_API}/admin/events/${event.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", ...authHeader },
+          credentials: "include",
+          body: JSON.stringify(enrichment),
+        });
+      } else {
+        // Not in DB yet (came from live API feed) → check by title+date if already saved
+        const checkRes = await fetch(
+          `${_API}/admin/events?title=${encodeURIComponent(event.title.trim())}&date=${event.date}&limit=1`,
+          { headers: authHeader, credentials: "include" }
+        );
+        const checkData = checkRes.ok ? await checkRes.json() : null;
+        const existing = checkData?.data?.[0] ?? null;
+
+        if (existing?._id) {
+          // Already saved before → PATCH that record
+          res = await fetch(`${_API}/admin/events/${existing._id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", ...authHeader },
+            credentials: "include",
+            body: JSON.stringify(enrichment),
+          });
+        } else {
+          // Brand new → POST with FULL event data (all fields) + enrichment
+          // Include whatHappened + sourceUrl so card doesn't lose data after save
+          res = await fetch(`${_API}/admin/events`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...authHeader },
+            credentials: "include",
+            body: JSON.stringify({
+              title:        event.title,
+              date:         event.date,
+              region:       event.region,
+              impact:       event.impact       ?? "Medium",
+              description:  event.description  ?? "",
+              whatHappened: event.whatHappened  ?? "",
+              sourceUrl:    event.sourceUrl     ?? "",
+              ...enrichment,
+            }),
+          });
+        }
+      }
+
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || "Save failed");
+      onSaved();
+    } catch (err: any) {
+      alert(err.message || "Save failed");
+    } finally { setSaving(false); }
+  };
+
+  const MI_OPTS = [
+    { val: "bullish", label: "▲ BULLISH", c: tk.green,  bg: tk.greenDim  },
+    { val: "bearish", label: "▼ BEARISH", c: tk.red,    bg: tk.redDim    },
+    { val: "mixed",   label: "— MIXED",   c: tk.amber,  bg: tk.amberDim  },
+  ];
+  const TERM_OPTS = [
+    { val: "short",        label: "SHORT"        },
+    { val: "medium",       label: "MEDIUM"       },
+    { val: "long",         label: "LONG"         },
+    { val: "short-medium", label: "SHORT-MED"    },
+  ];
+
+  return (
+    <div
+      style={{
+        borderTop: `2px solid ${tk.accent}`,
+        background: isLight ? "rgba(81,148,246,0.03)" : "rgba(81,148,246,0.05)",
+        padding: "14px 16px",
+      }}
+      onClick={e => e.stopPropagation()}
+    >
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        <div style={{ width: 5, height: 5, borderRadius: "50%", background: tk.accent, boxShadow: `0 0 0 3px ${tk.accentDim}` }} />
+        <span style={{ fontSize: 10, fontWeight: 700, color: tk.accent, letterSpacing: "0.14em", textTransform: "uppercase" }}>
+          Admin — Enrich Event
+        </span>
+        <span style={{ fontSize: 9, color: tk.textMuted }}>
+          Market Impact · Who Is Affected
+        </span>
+      </div>
+
+      {/* ── 01 MARKET IMPACT ── */}
+      <div style={{
+        background: isLight ? "#f0f7fe" : "#060d1c",
+        border: `1px solid ${tk.border}`, borderRadius: 7,
+        padding: "10px 12px", marginBottom: 10,
+      }}>
+        <span style={{ ...lbl, color: tk.accent, marginBottom: 8 }}>01 — Market Impact</span>
+
+        {/* Direction */}
+        <div style={{ marginBottom: 8 }}>
+          <span style={{ fontSize: 8, color: tk.textMuted, display: "block", marginBottom: 5, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            Direction
+          </span>
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+            <button type="button" onClick={() => setMarketImpact("")}
+              style={pillStyle(marketImpact === "", tk.textMuted, "rgba(100,116,139,0.12)")}>NONE</button>
+            {MI_OPTS.map(o => (
+              <button type="button" key={o.val} onClick={() => setMarketImpact(o.val)}
+                style={pillStyle(marketImpact === o.val, o.c, o.bg)}>{o.label}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Time Horizon */}
+        <div>
+          <span style={{ fontSize: 8, color: tk.textMuted, display: "block", marginBottom: 5, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            Time Horizon
+          </span>
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+            <button type="button" onClick={() => setImpactTerm("")}
+              style={pillStyle(impactTerm === "", tk.textMuted, "rgba(100,116,139,0.12)")}>NONE</button>
+            {TERM_OPTS.map(o => (
+              <button type="button" key={o.val} onClick={() => setImpactTerm(o.val)}
+                style={pillStyle(impactTerm === o.val, tk.accent, tk.accentDim)}>{o.label}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── 04 WHO IS AFFECTED ── */}
+      <div style={{
+        background: isLight ? "#f0f7fe" : "#060d1c",
+        border: `1px solid ${tk.border}`, borderRadius: 7,
+        padding: "10px 12px", marginBottom: 10,
+      }}>
+        <span style={{ ...lbl, color: "#74A8C9", marginBottom: 8 }}>04 — Who Is Affected</span>
+
+        {/* Assets */}
+        <div style={{ marginBottom: 8 }}>
+          <span style={{ fontSize: 8, color: tk.textMuted, display: "block", marginBottom: 5, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            Asset Class — select one
+          </span>
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+            {ASSETS_LIST.map(a => {
+              const { c, bg } = ASSET_PILL_COLOR[a] ?? { c: tk.accent, bg: tk.accentDim };
+              return (
+                <button type="button" key={a} onClick={() => selectAsset(a)}
+                  style={pillStyle(asset === a, c, bg)}>{a.toUpperCase()}</button>
+              );
+            })}
+          </div>
+          {asset && (
+            <div style={{ marginTop: 5 }}>
+              <span style={{ fontSize: 9, color: tk.textMuted }}>
+                ✓ {asset} selected ·{" "}
+                <span style={{ cursor: "pointer", color: tk.accent }} onClick={() => setAsset("")}>clear</span>
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Key Sectors */}
+        <div>
+          <span style={{ fontSize: 8, color: tk.textMuted, display: "block", marginBottom: 4, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            Key Sectors
+            <span style={{ color: sectorWC > 70 ? tk.red : tk.textMuted, marginLeft: 6, fontWeight: 400, textTransform: "none" }}>
+              {sectorWC}/70 words
+            </span>
+          </span>
+          <textarea
+            style={{ ...inp, resize: "none", minHeight: 38, maxHeight: 72, lineHeight: "1.5", borderColor: sectorWC > 70 ? tk.red : tk.border }}
+            value={sectors}
+            onChange={e => setSectors(e.target.value)}
+            placeholder="e.g. Banking & NBFCs · Housing Finance · Auto"
+            maxLength={600}
+          />
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+        <button
+          type="button" onClick={onCancel}
+          style={{
+            padding: "6px 16px", borderRadius: 6, fontSize: 11, fontWeight: 600,
+            border: `1px solid ${tk.border}`, background: "transparent",
+            color: tk.textMuted, cursor: "pointer",
+          }}
+        >Cancel</button>
+        <button
+          type="button"
+          disabled={saving || sectorWC > 70}
+          onClick={handleSave}
+          style={{
+            padding: "6px 18px", borderRadius: 6, fontSize: 11, fontWeight: 700,
+            border: "none",
+            background: (saving || sectorWC > 70) ? tk.border : tk.accent,
+            color: "#fff", cursor: saving ? "not-allowed" : "pointer",
+            opacity: saving ? 0.65 : 1, transition: "all 0.15s",
+          }}
+        >
+          {saving ? "Saving…" : "Save Changes"}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // ─── EventTerminalCard ────────────────────────────────────────────────────────
-const EventTerminalCard: React.FC<{ event: MarketEvent; isLight: boolean; tk: typeof T.dark; idx: number }> = ({ event, isLight, tk, idx }) => {
-  const [expanded, setExpanded] = useState(false);
+const EventTerminalCard: React.FC<{
+  event: MarketEvent; isLight: boolean; tk: typeof T.dark; idx: number; section: Section;
+  isAdmin?: boolean; onRefresh?: () => void;
+}> = ({ event, isLight, tk, idx, section, isAdmin, onRefresh }) => {
+  const [expanded,      setExpanded]      = useState(false);
+  const [adminEditing,  setAdminEditing]  = useState(false);
   const past = isPast(event.date);
   const today_ = isToday(event.date);
   const days = daysUntil(event.date);
@@ -527,10 +889,13 @@ const EventTerminalCard: React.FC<{ event: MarketEvent; isLight: boolean; tk: ty
   const Icon = catCfg.icon;
   const catColor = (tk as any)[catCfg.colorKey] ?? tk.accent;
   const d = parseDate(event.date);
-  const hasDetail = !!(event.whatHappened || event.whyItMatters || event.marketImpact || event.whoAffected || event.investbeansInsight);
+  const hasDetail = !!(event.whatHappened || event.whyItMatters || event.marketImpact || event.whoAffected);
   const miCfg = event.marketImpact ? MI_CONFIG[event.marketImpact] : null;
   const MiIcon = miCfg?.icon ?? Minus;
   const miColor = miCfg ? (tk as any)[miCfg.colorKey] : tk.textMuted;
+  // Only real DB events (MongoDB 24-char hex ObjectId) can be enriched by admin
+  // Legacy fallback events have ids like "api-0", "api-5" — no backend record to PATCH
+  const isDbEvent = /^[0-9a-f]{24}$/i.test(event.id);
 
   // Countdown badge
   const countdownEl = !past && (
@@ -547,7 +912,7 @@ const EventTerminalCard: React.FC<{ event: MarketEvent; isLight: boolean; tk: ty
         background: past ? "transparent" : expanded ? tk.cardHover : tk.cardBg,
         border: `1px solid ${past ? tk.textTiny : expanded ? tk.borderBright : tk.border}`,
         borderRadius: 8,
-        opacity: past ? 0.5 : 1,
+        opacity: past ? 0.55 : 1,
         transition: "all 0.15s",
         animation: `fadeSlideIn 0.25s ease both`,
         animationDelay: `${idx * 0.04}s`,
@@ -558,7 +923,7 @@ const EventTerminalCard: React.FC<{ event: MarketEvent; isLight: boolean; tk: ty
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "52px 1fr auto",
+          gridTemplateColumns: "44px 1fr auto",
           gap: 0,
           cursor: hasDetail ? "pointer" : "default",
         }}
@@ -567,110 +932,107 @@ const EventTerminalCard: React.FC<{ event: MarketEvent; isLight: boolean; tk: ty
         {/* Date column */}
         <div style={{
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-          padding: "12px 0",
+          padding: "10px 0",
           borderRight: `1px solid ${tk.border}`,
           background: past ? "transparent" : `${catColor}08`,
+          minWidth: 44, flexShrink: 0,
         }}>
-          <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1, color: past ? tk.textMuted : catColor, fontFamily: "'IBM Plex Mono', monospace" }}>
+          <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1, color: past ? tk.textMuted : catColor }}>
             {String(d.getDate()).padStart(2, "0")}
           </span>
-          <span style={{ fontSize: 8, fontWeight: 600, letterSpacing: "0.12em", marginTop: 2, color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace", textTransform: "uppercase" }}>
+          <span style={{ fontSize: 7, fontWeight: 600, letterSpacing: "0.08em", marginTop: 2, color: tk.textMuted, textTransform: "uppercase" }}>
             {MONTHS[d.getMonth()]}
           </span>
-          <span style={{ fontSize: 8, color: tk.textTiny, fontFamily: "'IBM Plex Mono', monospace" }}>
+          <span style={{ fontSize: 7, color: tk.textTiny }}>
             {d.getFullYear()}
           </span>
         </div>
 
         {/* Content column */}
-        <div style={{ padding: "10px 14px", minWidth: 0 }}>
-          {/* Header row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5, flexWrap: "wrap" }}>
+        <div style={{ padding: "9px 10px", minWidth: 0, overflow: "hidden" }}>
+          {/* Title row */}
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 6, marginBottom: 3, flexWrap: "nowrap" }}>
             <div style={{
-              width: 22, height: 22, borderRadius: 5, flexShrink: 0,
+              width: 18, height: 18, borderRadius: 4, flexShrink: 0, marginTop: 1,
               display: "flex", alignItems: "center", justifyContent: "center",
               background: `${catColor}15`,
             }}>
-              <Icon size={11} color={catColor} />
+              <Icon size={9} color={catColor} />
             </div>
-            <span style={{ fontSize: 13, fontWeight: 600, color: tk.textPrimary, lineHeight: 1.3, flex: 1, minWidth: 0, fontFamily: "'Outfit', sans-serif" }}>
+            <span style={{
+              fontSize: 12, fontWeight: 600, color: tk.textPrimary, lineHeight: 1.35,
+              flex: 1, minWidth: 0, wordBreak: "break-word",
+            }}>
               {event.title}
             </span>
-            {countdownEl}
-            {event.source === "api" && (
-              <span style={{
-                fontSize: 8, fontWeight: 700, padding: "2px 6px", borderRadius: 3, letterSpacing: "0.14em",
-                background: tk.accentDim, color: tk.accent, border: `1px solid ${tk.accentBorder}`,
-                fontFamily: "'IBM Plex Mono', monospace",
-              }}>LIVE</span>
-            )}
           </div>
 
-          {/* Tags row */}
-          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
-            {/* Category */}
-            <span style={{
-              fontSize: 9, padding: "2px 7px", borderRadius: 3,
-              background: `${catColor}12`, color: catColor,
-              fontFamily: "'IBM Plex Mono', monospace", letterSpacing: "0.08em", fontWeight: 600,
+          {/* Countdown badge on its own line on mobile */}
+          {countdownEl && (
+            <div style={{ marginBottom: 3, marginLeft: 24 }}>{countdownEl}</div>
+          )}
+
+          {/* Description — max 2 lines */}
+          {event.description && (
+            <p style={{
+              fontSize: 10, color: tk.textMuted, margin: "2px 0 0 24px", lineHeight: 1.55,
+              overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical" as any, wordBreak: "break-word",
             }}>
-              {catCfg.label.toUpperCase()}
-            </span>
-
-            {/* Market impact */}
-            {miCfg && (
-              <span style={{
-                fontSize: 9, padding: "2px 7px", borderRadius: 3, letterSpacing: "0.08em", fontWeight: 600,
-                background: `${miColor}12`, color: miColor,
-                fontFamily: "'IBM Plex Mono', monospace",
-                display: "inline-flex", alignItems: "center", gap: 3,
-              }}>
-                <MiIcon size={8} />
-                {miCfg.label}
-              </span>
-            )}
-
-            {/* Impact term */}
-            {event.impactTerm && (
-              <span style={{
-                fontSize: 9, padding: "2px 7px", borderRadius: 3,
-                background: tk.elevated, color: tk.textSecond,
-                fontFamily: "'IBM Plex Mono', monospace",
-              }}>
-                {event.impactTerm.toUpperCase()}
-              </span>
-            )}
-
-            {/* Status */}
-            {past
-              ? <span style={{ fontSize: 9, color: tk.textMuted, marginLeft: "auto", fontFamily: "'IBM Plex Mono', monospace" }}>COMPLETED</span>
-              : <span style={{ display: "inline-flex", alignItems: "center", gap: 4, marginLeft: "auto" }}>
-                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: tk.green, boxShadow: `0 0 0 2px ${tk.greenDim}`, animation: "tickerPulse 2s infinite" }} />
-                  <span style={{ fontSize: 9, color: tk.green, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600 }}>UPCOMING</span>
-                </span>
-            }
-          </div>
-
-          {/* Description — short */}
-          {!expanded && event.description && (
-            <p style={{ fontSize: 11, color: tk.textMuted, margin: "6px 0 0", lineHeight: 1.6, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" as any }}>
               {event.description}
             </p>
           )}
+
+          {/* Admin-set category badges — shown in collapsed view */}
+          {(event.marketImpact || event.impactTerm || (event.whoAffected?.assets?.length ?? 0) > 0) && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 5, marginLeft: 24 }}>
+              {event.marketImpact && (() => {
+                const c = event.marketImpact === "bullish" ? tk.green : event.marketImpact === "bearish" ? tk.red : tk.amber;
+                return (
+                  <span style={{ fontSize: 8, fontWeight: 700, padding: "2px 6px", borderRadius: 3,
+                    background: `${c}15`, color: c, letterSpacing: "0.04em", whiteSpace: "nowrap" }}>
+                    {event.marketImpact.toUpperCase()}
+                  </span>
+                );
+              })()}
+              {event.impactTerm && (
+                <span style={{ fontSize: 8, fontWeight: 600, padding: "2px 6px", borderRadius: 3,
+                  background: tk.elevated, color: tk.textSecond, border: `1px solid ${tk.border}`, whiteSpace: "nowrap" }}>
+                  {event.impactTerm.replace("-", " ").toUpperCase()}
+                </span>
+              )}
+              {(event.whoAffected?.assets ?? []).map(a => {
+                const ac = ASSET_COLOR[a] ?? tk.blue;
+                return (
+                  <span key={a} style={{ fontSize: 8, fontWeight: 700, padding: "2px 6px", borderRadius: 3,
+                    background: `${ac}14`, color: ac, letterSpacing: "0.04em", whiteSpace: "nowrap" }}>
+                    {a.toUpperCase()}
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Right — impact meter + chevron */}
+        {/* Right column — UPCOMING/PAST status + chevron + admin edit */}
         <div style={{
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-          padding: "0 14px", gap: 8, borderLeft: `1px solid ${tk.border}`,
+          padding: "0 10px", gap: 6, borderLeft: `1px solid ${tk.border}`,
+          minWidth: 60, flexShrink: 0,
         }}>
-          <ImpactMeter impact={event.impact} tk={tk} />
-          <span style={{ fontSize: 8, color: IMP_CONFIG[event.impact] ? (event.impact === "High" ? tk.red : event.impact === "Medium" ? tk.amber : tk.textMuted) : tk.textMuted, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700 }}>
-            {IMP_CONFIG[event.impact]?.label}
-          </span>
+          {/* Status — events section only */}
+          {section === "events" && (
+            past
+              ? <span style={{ fontSize: 8, color: tk.textMuted, fontWeight: 600 }}>PAST</span>
+              : <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                  <span style={{ width: 4, height: 4, borderRadius: "50%", background: tk.green, animation: "tickerPulse 2s infinite", flexShrink: 0 }} />
+                  <span style={{ fontSize: 8, color: tk.green, fontWeight: 600 }}>UPCOMING</span>
+                </span>
+          )}
+          {/* Chevron — centered */}
           {hasDetail && (
             <div style={{
-              width: 20, height: 20, borderRadius: 4,
+              width: 22, height: 22, borderRadius: 4,
               background: expanded ? tk.accentDim : tk.elevated,
               border: `1px solid ${expanded ? tk.accentBorder : tk.border}`,
               display: "flex", alignItems: "center", justifyContent: "center",
@@ -678,40 +1040,60 @@ const EventTerminalCard: React.FC<{ event: MarketEvent; isLight: boolean; tk: ty
               {expanded ? <ChevronUp size={11} color={tk.accent} /> : <ChevronDown size={11} color={tk.textMuted} />}
             </div>
           )}
+          {/* Source link */}
+          {!hasDetail && event.source === "api" && (
+            <span style={{ fontSize: 8, color: tk.accent, fontWeight: 600 }}>LIVE</span>
+          )}
+
+          {/* ── Admin pencil edit — all api events except holidays; upsert handles non-DB ids ── */}
+          {isAdmin && event.source === "api" && event.category !== "holiday" && (
+            <button
+              title="Admin: Edit Section 03 & 04"
+              onClick={e => { e.stopPropagation(); setAdminEditing(p => !p); setExpanded(false); }}
+              style={{
+                width: 24, height: 24, borderRadius: 5, cursor: "pointer",
+                background: adminEditing ? tk.accentDim : "transparent",
+                border: `1px solid ${adminEditing ? tk.accentBorder : tk.border}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "all 0.12s",
+              }}
+            >
+              {/* Pencil SVG */}
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                stroke={adminEditing ? tk.accent : tk.textMuted}
+                strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* ── Expanded 5-section panel ──────────────────────────── */}
+      {/* ── Expanded panel ──────────────────────────────────── */}
       {expanded && hasDetail && (
         <div style={{ borderTop: `1px solid ${tk.border}` }}>
 
-          {/* 1 — What Happened */}
+          {/* 1 — What Happened (max 2 lines) */}
           {event.whatHappened && (
-            <div style={{ padding: "12px 18px 12px 18px", borderBottom: `1px solid ${tk.border}`, background: tk.elevated }}>
+            <div style={{ padding: "12px 18px", borderBottom: `1px solid ${tk.border}`, background: tk.elevated }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", color: tk.accent, fontFamily: "'IBM Plex Mono', monospace" }}>01 — WHAT HAPPENED</span>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", color: tk.accent }}>01 — WHAT HAPPENED</span>
                 <Eye size={10} color={tk.accent} />
               </div>
-              <p style={{ fontSize: 12, color: tk.textSecond, margin: 0, lineHeight: 1.7 }}>{event.whatHappened}</p>
+              <p style={{ fontSize: 12, color: tk.textSecond, margin: 0, lineHeight: 1.7,
+                overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as any,
+              }}>
+                {event.whatHappened}
+              </p>
             </div>
           )}
 
-          {/* 2 — Why It Matters */}
-          {event.whyItMatters && (
-            <div style={{ padding: "12px 18px", borderBottom: `1px solid ${tk.border}` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", color: tk.purple, fontFamily: "'IBM Plex Mono', monospace" }}>02 — WHY IT MATTERS</span>
-                <Zap size={10} color={tk.purple} />
-              </div>
-              <p style={{ fontSize: 12, color: tk.textSecond, margin: 0, lineHeight: 1.7 }}>{event.whyItMatters}</p>
-            </div>
-          )}
-
-          {/* 3 — Market Impact */}
+          {/* 2 — Market Impact */}
           {event.marketImpact && (
             <div style={{ padding: "12px 18px", borderBottom: `1px solid ${tk.border}`, background: tk.elevated }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", color: miColor, fontFamily: "'IBM Plex Mono', monospace" }}>03 — MARKET IMPACT</span>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", color: miColor }}>02 — MARKET IMPACT</span>
                 <MiIcon size={10} color={miColor} />
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -720,7 +1102,6 @@ const EventTerminalCard: React.FC<{ event: MarketEvent; isLight: boolean; tk: ty
                     fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 5,
                     background: `${miColor}15`, color: miColor,
                     display: "inline-flex", alignItems: "center", gap: 5,
-                    fontFamily: "'IBM Plex Mono', monospace", letterSpacing: "0.08em",
                   }}>
                     <MiIcon size={10} /> {miCfg.label}
                   </span>
@@ -729,7 +1110,6 @@ const EventTerminalCard: React.FC<{ event: MarketEvent; isLight: boolean; tk: ty
                   <span style={{
                     fontSize: 11, fontWeight: 600, padding: "4px 12px", borderRadius: 5,
                     background: tk.elevated, color: tk.textSecond,
-                    fontFamily: "'IBM Plex Mono', monospace",
                     border: `1px solid ${tk.border}`,
                   }}>
                     {event.impactTerm.toUpperCase()} TERM
@@ -739,57 +1119,63 @@ const EventTerminalCard: React.FC<{ event: MarketEvent; isLight: boolean; tk: ty
             </div>
           )}
 
-          {/* 4 — Who Is Affected */}
+          {/* 3 — Who Is Affected */}
           {event.whoAffected && (event.whoAffected.assets.length > 0 || event.whoAffected.sectors.length > 0) && (
             <div style={{ padding: "12px 18px", borderBottom: `1px solid ${tk.border}` }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", color: tk.blue, fontFamily: "'IBM Plex Mono', monospace" }}>04 — WHO IS AFFECTED</span>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", color: tk.blue }}>03 — WHO IS AFFECTED</span>
                 <DollarSign size={10} color={tk.blue} />
               </div>
               {event.whoAffected.assets.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: event.whoAffected.sectors.length > 0 ? 8 : 0 }}>
                   {event.whoAffected.assets.map(a => {
                     const ac = ASSET_COLOR[a] ?? tk.blue;
                     return (
                       <span key={a} style={{
                         fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 4,
-                        background: `${ac}14`, color: ac, fontFamily: "'IBM Plex Mono', monospace",
-                        letterSpacing: "0.06em",
+                        background: `${ac}14`, color: ac, letterSpacing: "0.06em",
                       }}>{a.toUpperCase()}</span>
                     );
                   })}
                 </div>
               )}
               {event.whoAffected.sectors.length > 0 && (
-                <p style={{ fontSize: 11.5, color: tk.textSecond, margin: 0, lineHeight: 1.7 }}>
+                <p style={{ fontSize: 11.5, color: tk.textSecond, margin: 0, lineHeight: 1.7,
+                  overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" as any,
+                }}>
                   {event.whoAffected.sectors.join("  ·  ")}
                 </p>
               )}
             </div>
           )}
 
-          {/* 5 — InvestBeans Take */}
-          {event.investbeansInsight && (
-            <div style={{
-              padding: "12px 18px",
-              background: isLight ? `${tk.accentDim}` : `linear-gradient(135deg, rgba(116,168,201,0.06), transparent)`,
-              borderTop: `1px solid ${tk.accentBorder}`,
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", color: tk.accent, fontFamily: "'IBM Plex Mono', monospace" }}>05 — INVESTBEANS TAKE</span>
-                <Lightbulb size={10} color={tk.accent} />
-                <span style={{
-                  fontSize: 8, padding: "1px 6px", borderRadius: 3, marginLeft: 4,
-                  background: tk.accentDim, color: tk.textMuted,
-                  fontFamily: "'IBM Plex Mono', monospace", letterSpacing: "0.08em",
-                }}>GUIDANCE · NOT ADVICE</span>
-              </div>
-              <p style={{ fontSize: 12, color: isLight ? tk.textPrimary : "#9bc1da", margin: 0, lineHeight: 1.75, fontStyle: "italic" }}>
-                {event.investbeansInsight}
-              </p>
-            </div>
-          )}
+          {/* Source link — always shown when expanded */}
+          <div style={{
+            padding: "8px 18px", background: tk.elevated, borderTop: `1px solid ${tk.border}`,
+            display: "flex", alignItems: "center", gap: 8,
+          }}>
+            <ExternalLink size={10} color={tk.accent} />
+            <a
+              href={event.sourceUrl || `https://www.rbi.org.in/`}
+              target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: 10, fontWeight: 600, color: tk.accent, textDecoration: "none", letterSpacing: "0.06em" }}
+              onClick={e => e.stopPropagation()}
+            >
+              SOURCE ↗
+            </a>
+          </div>
         </div>
+      )}
+
+      {/* ── Admin Inline Edit Panel (Section 03 + 04 only) ───── */}
+      {adminEditing && isAdmin && event.source === "api" && event.category !== "holiday" && (
+        <AdminInlinePanel
+          event={event}
+          tk={tk}
+          isLight={isLight}
+          onSaved={() => { setAdminEditing(false); onRefresh?.(); }}
+          onCancel={() => setAdminEditing(false)}
+        />
       )}
     </div>
   );
@@ -798,15 +1184,18 @@ const EventTerminalCard: React.FC<{ event: MarketEvent; isLight: boolean; tk: ty
 // ─── Main EventsView ──────────────────────────────────────────────────────────
 const EventsView: React.FC = () => {
   const { theme }  = useTheme();
+  const { isAdmin } = useAuth();
   const isLight    = theme === "light";
   const tk         = isLight ? T.light : T.dark;
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [region,   setRegion]   = useState<Region>((searchParams.get("region")  as Region)  ?? "india");
   const [section,  setSection]  = useState<Section>((searchParams.get("section") as Section) ?? "events");
-  const [selMonth, setSelMonth] = useState<number | null>(null);
+  const [selMonth, setSelMonth] = useState<string | null>(null); // "YYYY-M" key
   const [sideOpen, setSideOpen] = useState(true);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [sentimentFilter, setSentimentFilter] = useState<"all" | "bullish" | "mixed" | "bearish">("all");
+  // Admin modal state removed — events come from API feed, admin enriches via inline panel
 
   useEffect(() => {
     setRegion((searchParams.get("region")  as Region)  ?? "india");
@@ -816,6 +1205,7 @@ const EventsView: React.FC = () => {
 
   const { apiEvents, macro, loading, error, refresh, lastFetched } = useMarketEvents();
   const { indiaHolidays, fromApi: holidaysFromApi } = useKiteHolidays();
+  const { globalHolidays, fromApi: globalHolidaysFromApi } = useGlobalHolidays();
 
   const handleTab = (r: Region, s: Section) => {
     setRegion(r); setSection(s); setSelMonth(null);
@@ -823,22 +1213,58 @@ const EventsView: React.FC = () => {
   };
 
   const sourceEvents = useMemo<MarketEvent[]>(() => {
-    if (section === "holidays") return region === "india" ? indiaHolidays : GLOBAL_HOLIDAYS_STATIC;
+    if (section === "holidays") return region === "india" ? indiaHolidays : globalHolidays;
     return apiEvents.filter(e => e.region === region);
-  }, [section, region, apiEvents, indiaHolidays]);
+  }, [section, region, apiEvents, indiaHolidays, globalHolidays]);
 
   const availableMonths = useMemo(() => {
-    const s = new Set(sourceEvents.map(e => parseDate(e.date).getMonth()));
-    return Array.from(s).sort((a, b) => a - b);
+    const map = new Map<string, string>(); // key → label
+    for (const e of sourceEvents) {
+      const d = parseDate(e.date);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      if (!map.has(key)) map.set(key, `${MONTHS[d.getMonth()]} ${d.getFullYear()}`);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [sourceEvents]);
 
   const filteredEvents = useMemo<MarketEvent[]>(() => {
-    let evts = sourceEvents;
-    if (selMonth !== null) evts = evts.filter(e => parseDate(e.date).getMonth() === selMonth);
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const futureLimit = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    const isHolidaySection = section === "holidays";
+
+    let evts = sourceEvents.filter(e => {
+      const d = parseDate(e.date);
+      // Holidays: show only upcoming (today onwards), up to 365 days future
+      if (isHolidaySection) return d >= todayStart && d <= futureLimit;
+      // Events: show if date >= 2 calendar days ago AND <= 365 days future
+      const twoDaysAgo = new Date(todayStart);
+      twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+      if (d < twoDaysAgo) return false;        // older than 2 days → hide
+      if (d > futureLimit) return false;       // more than 365 days ahead → hide
+      return true;
+    });
+
+    if (selMonth !== null) {
+      evts = evts.filter(e => {
+        const d = parseDate(e.date);
+        return `${d.getFullYear()}-${d.getMonth()}` === selMonth;
+      });
+    }
+
+    // Sentiment filter (events only)
+    if (!isHolidaySection && sentimentFilter !== "all") {
+      evts = evts.filter(e =>
+        sentimentFilter === "bullish" ? e.marketImpact === "bullish" :
+        sentimentFilter === "bearish" ? e.marketImpact === "bearish" :
+        e.marketImpact === "mixed"
+      );
+    }
+
     const up   = evts.filter(e => !isPast(e.date)).sort((a, b) => parseDate(a.date).getTime() - parseDate(b.date).getTime());
     const past = evts.filter(e =>  isPast(e.date)).sort((a, b) => parseDate(b.date).getTime() - parseDate(a.date).getTime());
     return [...up, ...past];
-  }, [sourceEvents, selMonth]);
+  }, [sourceEvents, selMonth, sentimentFilter, section]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, { label: string; events: MarketEvent[] }>();
@@ -857,24 +1283,22 @@ const EventsView: React.FC = () => {
 
   const btnStyle = (active: boolean): React.CSSProperties => ({
     display: "flex", alignItems: "center", gap: 6,
-    padding: "7px 14px", borderRadius: 6,
-    fontSize: 11, fontWeight: 600, cursor: "pointer",
-    letterSpacing: "0.04em",
+    padding: "7px 14px", borderRadius: 8,
+    fontSize: 12, fontWeight: 600, cursor: "pointer",
+    letterSpacing: "0.01em",
     border: `1px solid ${active ? tk.accentBorder : tk.border}`,
     background: active ? tk.accentDim : "transparent",
     color: active ? tk.accent : tk.textSecond,
     transition: "all 0.15s",
-    fontFamily: "'IBM Plex Mono', monospace",
     whiteSpace: "nowrap",
   });
 
   const sectionBtnStyle = (active: boolean): React.CSSProperties => ({
-    flex: 1, padding: "7px 0", borderRadius: 5, fontSize: 10, fontWeight: 700,
-    cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase" as const,
+    flex: 1, padding: "6px 0", borderRadius: 6, fontSize: 11, fontWeight: 600,
+    cursor: "pointer", letterSpacing: "0.02em",
     border: "none", transition: "all 0.15s",
     background: active ? (isLight ? tk.accent : tk.accentDim) : "transparent",
     color: active ? (isLight ? "#fff" : tk.accent) : tk.textMuted,
-    fontFamily: "'IBM Plex Mono', monospace",
   });
 
   return (
@@ -883,11 +1307,11 @@ const EventsView: React.FC = () => {
 
       {/* ── Global styles ──────────────────────────────────────── */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         @keyframes tickerPulse {
-          0%   { box-shadow: 0 0 0 0 rgba(116,168,201,0.5); opacity:1; }
-          70%  { box-shadow: 0 0 0 6px rgba(116,168,201,0);  opacity:0.8; }
-          100% { box-shadow: 0 0 0 0 rgba(116,168,201,0);   opacity:1; }
+          0%   { box-shadow: 0 0 0 0 rgba(81,148,246,0.5); opacity:1; }
+          70%  { box-shadow: 0 0 0 6px rgba(81,148,246,0);  opacity:0.8; }
+          100% { box-shadow: 0 0 0 0 rgba(81,148,246,0);   opacity:1; }
         }
         @keyframes fadeSlideIn {
           from { opacity:0; transform:translateY(6px); }
@@ -905,20 +1329,39 @@ const EventsView: React.FC = () => {
           .mobile-filter-btn  { display: none !important; }
           .mobile-filter-drawer { display: none !important; }
           .desktop-sidebar    { display: block !important; }
+          .events-page-header { flex-wrap: nowrap !important; }
         }
         /* Mobile: hide sidebar, show drawer button */
         @media (max-width: 767px) {
           .desktop-filter-btn { display: none !important; }
           .mobile-filter-btn  { display: flex !important; }
           .desktop-sidebar    { display: none !important; }
+          .events-outer-pad   { padding: 0 !important; }
+          .events-main-grid   { flex-direction: column !important; padding: 0 !important; }
+          .events-feed        { padding: 12px 10px !important; }
+          .events-page-header { padding: 10px 12px !important; gap: 8px !important; }
+          .events-header-right { flex-wrap: wrap !important; gap: 6px !important; }
+          .sentiment-pills button { padding: 4px 8px !important; font-size: 10px !important; }
+          .events-page-header h1 { font-size: 14px !important; }
+          .events-date-refresh  { display: none !important; }
         }
-        /* Mobile: force single column grid */
-        @media (max-width: 767px) {
-          .events-main-grid { flex-direction: column !important; }
+        /* Small mobile */
+        @media (max-width: 480px) {
+          .events-feed { padding: 10px 8px !important; }
+          .events-page-header { padding: 8px 10px !important; }
+          .sentiment-pills { display: none !important; }
+        }
+        /* Card grid — always single column on mobile */
+        @media (max-width: 640px) {
+          .event-card-grid { grid-template-columns: 40px 1fr auto !important; }
+          .event-card-date-num { font-size: 14px !important; }
+          .event-card-title { font-size: 11px !important; }
+          .event-expanded-pad { padding: 10px 12px !important; }
+          .admin-inline-pad { padding: 12px !important; }
         }
       `}</style>
 
-      <div style={{ minHeight: "100vh", background: tk.pageBg, fontFamily: "'Outfit', sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: tk.pageBg, fontFamily: "'Inter', sans-serif" }}>
 
         {/* ── Live Ticker ─────────────────────────────────────── */}
         <LiveTickerBar macro={macro} eventCount={filteredEvents.length} upcomingCount={upcomingCount} isLight={isLight} />
@@ -928,9 +1371,9 @@ const EventsView: React.FC = () => {
           background: tk.panelBg, borderBottom: `1px solid ${tk.border}`,
           padding: "14px 20px",
           display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
-        }}>
-          {/* LEFT: icon + title — always flush left */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginRight: "auto" }}>
+        }} className="events-page-header">
+          {/* LEFT: icon + title + date + refresh */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{
               width: 32, height: 32, borderRadius: 8,
               background: tk.accentDim, border: `1px solid ${tk.accentBorder}`,
@@ -939,82 +1382,82 @@ const EventsView: React.FC = () => {
               <Calendar size={15} color={tk.accent} />
             </div>
             <div>
-              <h1 style={{ fontSize: 16, fontWeight: 700, color: tk.textPrimary, margin: 0, lineHeight: 1.2, fontFamily: "'Outfit', sans-serif" }}>
+              <h1 style={{ fontSize: 16, fontWeight: 700, color: tk.textPrimary, margin: 0, lineHeight: 1.2 }}>
                 Market Calendar
               </h1>
-              <span style={{ fontSize: 9, color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: "0.1em" }}>
+              <span style={{ fontSize: 9, color: tk.textMuted, letterSpacing: "0.1em" }}>
                 EVENTS & HOLIDAYS
               </span>
             </div>
-
-            {/* Stats pills — next to title */}
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginLeft: 12 }}>
-              <div style={{
-                padding: "4px 12px", borderRadius: 5,
-                background: tk.greenDim, border: `1px solid ${tk.green}30`,
-                display: "flex", alignItems: "center", gap: 6,
+            {/* Date (today's date) + Refresh — moved to LEFT */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 16 }} className="events-date-refresh">
+              <span style={{
+                fontSize: 11, color: tk.textMuted,
+                display: "flex", alignItems: "center", gap: 5,
+                padding: "5px 10px", borderRadius: 6,
+                border: `1px solid ${tk.border}`, background: tk.elevated,
               }}>
-                <span style={{ fontSize: 9, color: tk.green, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700 }}>↑</span>
-                <span style={{ fontSize: 10, color: tk.green, fontFamily: "'IBM Plex Mono', monospace" }}>{upcomingCount} UPCOMING</span>
-              </div>
-              <div style={{
-                padding: "4px 12px", borderRadius: 5,
-                background: tk.redDim, border: `1px solid ${tk.red}25`,
-                display: "flex", alignItems: "center", gap: 6,
+                <Calendar size={10} color={tk.textMuted} />
+                {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+              </span>
+              <button onClick={refresh} disabled={loading} style={{
+                display: "flex", alignItems: "center", gap: 5,
+                fontSize: 11, fontWeight: 600, padding: "5px 12px", borderRadius: 6,
+                border: `1px solid ${tk.border}`, cursor: loading ? "not-allowed" : "pointer",
+                background: loading ? tk.elevated : "transparent",
+                color: tk.accent, opacity: loading ? 0.5 : 1, transition: "all 0.15s",
               }}>
-                <span style={{ fontSize: 10, color: tk.red, fontFamily: "'IBM Plex Mono', monospace" }}>{highCount} HIGH IMPACT</span>
-              </div>
+                <RefreshCw size={11} style={{ animation: loading ? "spin 1s linear infinite" : "none" }} />
+                REFRESH
+              </button>
             </div>
           </div>
 
-          {/* RIGHT: time + refresh + filter */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            {lastFetched && (
-              <span style={{
-                fontSize: 9, color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace",
-                display: "flex", alignItems: "center", gap: 5,
-              }}>
-                <Clock size={9} color={tk.textMuted} />
-                {lastFetched.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
-              </span>
+          {/* RIGHT: Sentiment filter + desktop sidebar toggle */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto", flexWrap: "wrap" }} className="events-header-right">
+            {/* Sentiment filter pills */}
+            {section === "events" && (
+              <div style={{ display: "flex", gap: 4, padding: "3px", borderRadius: 8, background: tk.elevated, border: `1px solid ${tk.border}` }} className="sentiment-pills">
+                {(["all", "bullish", "mixed", "bearish"] as const).map(s => {
+                  const labels: Record<string, string> = { all: "All", bullish: "Positive", mixed: "Stable", bearish: "Negative" };
+                  const colors: Record<string, string> = { bullish: tk.green, mixed: tk.amber, bearish: tk.red, all: tk.accent };
+                  const active = sentimentFilter === s;
+                  return (
+                    <button key={s} onClick={() => setSentimentFilter(s)} style={{
+                      padding: "5px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600,
+                      cursor: "pointer", border: "none", transition: "all 0.15s",
+                      background: active ? (s === "all" ? tk.accentDim : `${colors[s]}18`) : "transparent",
+                      color: active ? (s === "all" ? tk.accent : colors[s]) : tk.textMuted,
+                    }}>
+                      {labels[s]}
+                    </button>
+                  );
+                })}
+              </div>
             )}
-            <button onClick={refresh} disabled={loading} style={{
-              display: "flex", alignItems: "center", gap: 5,
-              fontSize: 9, fontWeight: 700, padding: "5px 12px", borderRadius: 5,
-              border: `1px solid ${tk.border}`, cursor: loading ? "not-allowed" : "pointer",
-              background: loading ? tk.elevated : "transparent",
-              color: tk.accent, opacity: loading ? 0.5 : 1, transition: "all 0.15s",
-              fontFamily: "'IBM Plex Mono', monospace", letterSpacing: "0.1em",
-            }}>
-              <RefreshCw size={10} style={{ animation: loading ? "spin 1s linear infinite" : "none" }} />
-              REFRESH
-            </button>
-            {/* Desktop: toggle sidebar */}
+            {/* Desktop sidebar toggle */}
             <button onClick={() => setSideOpen(p => !p)} style={{
               display: "flex", alignItems: "center", gap: 5,
-              fontSize: 9, fontWeight: 700, padding: "5px 12px", borderRadius: 5,
+              fontSize: 11, fontWeight: 600, padding: "5px 12px", borderRadius: 6,
               border: `1px solid ${sideOpen ? tk.accentBorder : tk.border}`,
               background: sideOpen ? tk.accentDim : "transparent",
               color: sideOpen ? tk.accent : tk.textSecond,
               cursor: "pointer", transition: "all 0.15s",
-              fontFamily: "'IBM Plex Mono', monospace", letterSpacing: "0.1em",
-              // hide on mobile, show on desktop
               display: "none" as any,
             }} className="desktop-filter-btn">
-              <SlidersHorizontal size={10} />
+              <SlidersHorizontal size={11} />
               FILTER
             </button>
-            {/* Mobile: open drawer */}
+            {/* Mobile drawer toggle */}
             <button onClick={() => setMobileFilterOpen(p => !p)} style={{
               display: "flex", alignItems: "center", gap: 5,
-              fontSize: 9, fontWeight: 700, padding: "5px 12px", borderRadius: 5,
+              fontSize: 11, fontWeight: 600, padding: "5px 12px", borderRadius: 6,
               border: `1px solid ${mobileFilterOpen ? tk.accentBorder : tk.border}`,
               background: mobileFilterOpen ? tk.accentDim : "transparent",
               color: mobileFilterOpen ? tk.accent : tk.textSecond,
               cursor: "pointer", transition: "all 0.15s",
-              fontFamily: "'IBM Plex Mono', monospace", letterSpacing: "0.1em",
             }} className="mobile-filter-btn">
-              <SlidersHorizontal size={10} />
+              <SlidersHorizontal size={11} />
               FILTER
             </button>
           </div>
@@ -1030,42 +1473,30 @@ const EventsView: React.FC = () => {
             gridTemplateColumns: "1fr 1fr",
             gap: "16px 24px",
           }}>
-            {/* Region */}
+            {/* India */}
             <div>
-              <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.18em", color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace", display: "block", marginBottom: 8 }}>
-                REGION
-              </span>
+              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.16em", color: tk.textMuted, display: "block", marginBottom: 8 }}>INDIA</span>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <button style={btnStyle(region === "india")} onClick={() => { handleTab("india", section); }}>
-                  <Flag size={11} /> INDIA
-                </button>
-                <button style={btnStyle(region === "global")} onClick={() => { handleTab("global", section); }}>
-                  <Globe size={11} /> GLOBAL
-                </button>
+                <button style={sectionBtnStyle(region === "india" && section === "events")} onClick={() => { handleTab("india", "events"); setMobileFilterOpen(false); }}>Events</button>
+                <button style={sectionBtnStyle(region === "india" && section === "holidays")} onClick={() => { handleTab("india", "holidays"); setMobileFilterOpen(false); }}>Holidays</button>
               </div>
             </div>
-
-            {/* View */}
+            {/* Global — Events + Holidays */}
             <div>
-              <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.18em", color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace", display: "block", marginBottom: 8 }}>
-                VIEW
-              </span>
-              <div style={{ display: "flex", gap: 3, padding: 3, borderRadius: 7, background: tk.elevated, border: `1px solid ${tk.border}` }}>
-                <button style={sectionBtnStyle(section === "events")} onClick={() => handleTab(region, "events")}>EVENTS</button>
-                <button style={sectionBtnStyle(section === "holidays")} onClick={() => handleTab(region, "holidays")}>HOLIDAYS</button>
+              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.16em", color: tk.textMuted, display: "block", marginBottom: 8 }}>GLOBAL</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <button style={sectionBtnStyle(region === "global" && section === "events")} onClick={() => { handleTab("global", "events"); setMobileFilterOpen(false); }}>Events</button>
+                <button style={sectionBtnStyle(region === "global" && section === "holidays")} onClick={() => { handleTab("global", "holidays"); setMobileFilterOpen(false); }}>Holidays</button>
               </div>
             </div>
-
             {/* Month */}
             <div style={{ gridColumn: "1 / -1" }}>
-              <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.18em", color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace", display: "block", marginBottom: 8 }}>
-                MONTH
-              </span>
+              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.16em", color: tk.textMuted, display: "block", marginBottom: 8 }}>MONTH</span>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 <button style={btnStyle(selMonth === null)} onClick={() => setSelMonth(null)}>ALL</button>
-                {availableMonths.map(m => (
-                  <button key={m} style={btnStyle(selMonth === m)} onClick={() => setSelMonth(m)}>
-                    {MONTHS[m].toUpperCase()}
+                {availableMonths.map(([key, label]) => (
+                  <button key={key} style={btnStyle(selMonth === key)} onClick={() => setSelMonth(key)}>
+                    {label.toUpperCase()}
                   </button>
                 ))}
               </div>
@@ -1074,10 +1505,13 @@ const EventsView: React.FC = () => {
         )}
 
         {/* ── Main layout ─────────────────────────────────────── */}
+        <div style={{ padding: "0 24px" }} className="events-outer-pad">
         <div style={{
           display: "flex",
           alignItems: "flex-start",
           minHeight: "calc(100vh - 120px)",
+          maxWidth: 1400,
+          margin: "0 auto",
         }} className="events-main-grid">
 
           {/* ── LEFT SIDEBAR ─────────────────────────────────── */}
@@ -1094,111 +1528,81 @@ const EventsView: React.FC = () => {
               alignSelf: "flex-start",
             }}>
 
-              {/* Region */}
+              {/* REGION — with inline Events/Holidays sub-tabs */}
               <div style={{ marginBottom: 20 }}>
-                <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.18em", color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace", display: "block", marginBottom: 8 }}>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.16em", color: tk.textMuted, display: "block", marginBottom: 8 }}>
                   REGION
                 </span>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <button style={btnStyle(region === "india")} onClick={() => handleTab("india", section)}>
-                    <Flag size={11} /> INDIA
-                  </button>
-                  <button style={btnStyle(region === "global")} onClick={() => handleTab("global", section)}>
-                    <Globe size={11} /> GLOBAL
-                  </button>
-                </div>
-              </div>
 
-              {/* Section */}
-              <div style={{ marginBottom: 20 }}>
-                <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.18em", color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace", display: "block", marginBottom: 8 }}>
-                  VIEW
-                </span>
-                <div style={{
-                  display: "flex", gap: 3, padding: 3, borderRadius: 7,
-                  background: tk.elevated, border: `1px solid ${tk.border}`,
-                }}>
-                  <button style={sectionBtnStyle(section === "events")} onClick={() => handleTab(region, "events")}>
-                    EVENTS
+                {/* INDIA */}
+                <div style={{ marginBottom: 6 }}>
+                  <button
+                    onClick={() => handleTab("india", section)}
+                    style={{
+                      width: "100%", display: "flex", alignItems: "center", gap: 8,
+                      padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                      cursor: "pointer", transition: "all 0.15s", textAlign: "left",
+                      border: `1px solid ${region === "india" ? tk.accentBorder : tk.border}`,
+                      background: region === "india" ? tk.accentDim : "transparent",
+                      color: region === "india" ? tk.accent : tk.textSecond,
+                    }}
+                  >
+                    <Flag size={12} /> INDIA
                   </button>
-                  <button style={sectionBtnStyle(section === "holidays")} onClick={() => handleTab(region, "holidays")}>
-                    HOLIDAYS
+                  {region === "india" && (
+                    <div style={{ display: "flex", gap: 3, padding: "4px 4px 0", marginTop: 3 }}>
+                      <button style={sectionBtnStyle(section === "events")} onClick={() => handleTab("india", "events")}>Events</button>
+                      <button style={sectionBtnStyle(section === "holidays")} onClick={() => handleTab("india", "holidays")}>Holidays</button>
+                    </div>
+                  )}
+                </div>
+
+                {/* GLOBAL — Events + Holidays */}
+                <div>
+                  <button
+                    onClick={() => handleTab("global", section)}
+                    style={{
+                      width: "100%", display: "flex", alignItems: "center", gap: 8,
+                      padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                      cursor: "pointer", transition: "all 0.15s", textAlign: "left",
+                      border: `1px solid ${region === "global" ? tk.accentBorder : tk.border}`,
+                      background: region === "global" ? tk.accentDim : "transparent",
+                      color: region === "global" ? tk.accent : tk.textSecond,
+                    }}
+                  >
+                    <Globe size={12} /> GLOBAL
                   </button>
+                  {region === "global" && (
+                    <div style={{ display: "flex", gap: 3, padding: "4px 4px 0", marginTop: 3 }}>
+                      <button style={sectionBtnStyle(section === "events")} onClick={() => handleTab("global", "events")}>Events</button>
+                      <button style={sectionBtnStyle(section === "holidays")} onClick={() => handleTab("global", "holidays")}>Holidays</button>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Month filter */}
               <div style={{ marginBottom: 20 }}>
-                <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.18em", color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace", display: "block", marginBottom: 8 }}>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.16em", color: tk.textMuted, display: "block", marginBottom: 8 }}>
                   MONTH
                 </span>
                 <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                  <button
-                    style={btnStyle(selMonth === null)}
-                    onClick={() => setSelMonth(null)}
-                  >
+                  <button style={btnStyle(selMonth === null)} onClick={() => setSelMonth(null)}>
                     ALL MONTHS
                   </button>
-                  {availableMonths.map(m => (
-                    <button
-                      key={m}
-                      style={btnStyle(selMonth === m)}
-                      onClick={() => setSelMonth(m)}
-                    >
-                      {MONTHS[m].toUpperCase()}
+                  {availableMonths.map(([key, label]) => (
+                    <button key={key} style={btnStyle(selMonth === key)} onClick={() => setSelMonth(key)}>
+                      {label.toUpperCase()}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Stats */}
-              <div style={{ marginBottom: 20 }}>
-                <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.18em", color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace", display: "block", marginBottom: 8 }}>
-                  STATS
-                </span>
-                {[
-                  { label: "Total", value: filteredEvents.length, color: tk.textSecond },
-                  { label: "Upcoming", value: upcomingCount, color: tk.green },
-                  { label: "Past", value: pastCount, color: tk.textMuted },
-                  { label: "High Impact", value: highCount, color: tk.red },
-                ].map(s => (
-                  <div key={s.label} style={{
-                    display: "flex", justifyContent: "space-between", alignItems: "center",
-                    padding: "5px 0", borderBottom: `1px solid ${tk.border}`,
-                  }}>
-                    <span style={{ fontSize: 10, color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace" }}>{s.label}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: s.color, fontFamily: "'IBM Plex Mono', monospace" }}>{s.value}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Macro */}
-              {(macro.usdInr || macro.vix) && (
-                <div>
-                  <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.18em", color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace", display: "block", marginBottom: 8 }}>
-                    MACRO
-                  </span>
-                  {macro.usdInr && (
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: `1px solid ${tk.border}` }}>
-                      <span style={{ fontSize: 9, color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace" }}>USD/INR</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: tk.amber, fontFamily: "'IBM Plex Mono', monospace" }}>{macro.usdInr.toFixed(2)}</span>
-                    </div>
-                  )}
-                  {macro.vix && (
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0" }}>
-                      <span style={{ fontSize: 9, color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace" }}>VIX</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, fontFamily: "'IBM Plex Mono', monospace",
-                        color: macro.vix < 20 ? tk.green : macro.vix < 30 ? tk.amber : tk.red,
-                      }}>{macro.vix.toFixed(2)}</span>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           )}
 
           {/* ── MAIN FEED ──────────────────────────────────────── */}
-          <div style={{ flex: 1, minWidth: 0, padding: "18px 20px", overflowY: "auto" }}>
+          <div style={{ flex: 1, minWidth: 0, padding: "18px 20px", overflowY: "auto" }} className="events-feed">
 
             {/* Error banner */}
             {error && section === "events" && !loading && (
@@ -1248,8 +1652,6 @@ const EventsView: React.FC = () => {
 
             {/* Event groups */}
             {!loading && Array.from(grouped.values()).map(({ label, events }) => {
-              const nUp   = events.filter(e => !isPast(e.date)).length;
-              const nPast = events.filter(e =>  isPast(e.date)).length;
               return (
                 <div key={label} style={{ marginBottom: 28 }}>
                   {/* Month header */}
@@ -1260,28 +1662,20 @@ const EventsView: React.FC = () => {
                       display: "flex", alignItems: "center", gap: 7,
                     }}>
                       <span style={{ width: 5, height: 5, borderRadius: "50%", background: tk.accent, flexShrink: 0 }} />
-                      <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.18em", color: tk.textSecond, fontFamily: "'IBM Plex Mono', monospace", textTransform: "uppercase" }}>
+                      <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.18em", color: tk.textSecond, textTransform: "uppercase" }}>
                         {label}
                       </span>
-                    </div>
-                    <div style={{ display: "flex", gap: 5 }}>
-                      {nUp > 0 && (
-                        <span style={{ fontSize: 8, padding: "2px 7px", borderRadius: 3, background: tk.greenDim, color: tk.green, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700 }}>
-                          {nUp} UPCOMING
-                        </span>
-                      )}
-                      {nPast > 0 && (
-                        <span style={{ fontSize: 8, padding: "2px 7px", borderRadius: 3, background: tk.elevated, color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace" }}>
-                          {nPast} PAST
-                        </span>
-                      )}
                     </div>
                     <div style={{ flex: 1, height: 1, background: tk.border }} />
                   </div>
 
                   <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                     {events.map((e, i) => (
-                      <EventTerminalCard key={e.id} event={e} isLight={isLight} tk={tk} idx={i} />
+                      <EventTerminalCard
+                        key={e.id} event={e} isLight={isLight} tk={tk} idx={i} section={section}
+                        isAdmin={isAdmin}
+                        onRefresh={refresh}
+                      />
                     ))}
                   </div>
                 </div>
@@ -1298,7 +1692,8 @@ const EventsView: React.FC = () => {
                 <Zap size={11} color={tk.accent} style={{ marginTop: 1, flexShrink: 0 }} />
                 <span style={{ fontSize: 10, color: tk.textMuted, lineHeight: 1.7, fontFamily: "'IBM Plex Mono', monospace" }}>
                   Events sourced from Yahoo Finance, RBI, FOMC, ECB calendars
-                  {holidaysFromApi ? " · India holidays live from Kite API" : " · India holidays from static NSE/BSE calendar"}.
+                  {holidaysFromApi ? " · India holidays live from Kite API" : " · India holidays from static NSE/BSE calendar"}
+                  {globalHolidaysFromApi ? " · Global holidays live from Nager.Date API" : " · Global holidays from static calendar"}.
                   Not SEBI-registered. Not investment advice.
                 </span>
               </div>
@@ -1307,8 +1702,10 @@ const EventsView: React.FC = () => {
             <div style={{ height: 60 }} />
           </div>
         </div>
+        </div>
       </div>
       <Footer />
+
     </>
   );
 };

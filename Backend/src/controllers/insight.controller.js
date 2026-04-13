@@ -65,6 +65,8 @@ export const createInsight = asyncHandler(async (req, res) => {
   if (!title?.trim())          throw new ApiError(400, "Title is required");
   if (!description?.trim())    throw new ApiError(400, "Description is required");
   if (!credits?.source?.trim()) throw new ApiError(400, "Credit source is required");
+  if (!credits?.url?.trim())   throw new ApiError(400, "Source URL is required");
+  if (!/^https?:\/\/.+/.test(credits.url.trim())) throw new ApiError(400, "Source URL must start with http:// or https://");
   if (!category?.trim())       throw new ApiError(400, "Category is required");
   if (!marketType)             throw new ApiError(400, "Market type is required");
 
@@ -221,10 +223,13 @@ export const updateInsight = asyncHandler(async (req, res) => {
   if (marketType)  insight.marketType  = marketType;
 
   if (credits) {
+    const incomingUrl = credits.url?.trim() || insight.credits.url;
+    if (!incomingUrl) throw new ApiError(400, "Source URL is required");
+    if (!/^https?:\/\/.+/.test(incomingUrl)) throw new ApiError(400, "Source URL must start with http:// or https://");
     insight.credits = {
       source:        credits.source?.trim()  || insight.credits.source,
       author:        credits.author?.trim()  || insight.credits.author,
-      url:           credits.url?.trim()     || insight.credits.url,
+      url:           incomingUrl,
       publishedDate: insight.credits.publishedDate,
     };
   }

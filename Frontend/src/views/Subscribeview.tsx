@@ -235,7 +235,7 @@ const Subscribeview = ({
 
         {/* Social proof */}
         <p className={`text-xs mt-1.5 ${subTextCls}`}>
-          🔒 No spam, ever. Join 50,000+ investors getting daily market insights.
+          🔒 No spam, ever. Get daily market insights you can trust.
         </p>
       </div>
     </div>

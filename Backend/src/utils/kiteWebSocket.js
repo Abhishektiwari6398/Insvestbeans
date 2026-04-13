@@ -263,7 +263,7 @@ export class KiteWebSocketManager {
           last_price:    tick.last_price,
           last_quantity: tick.last_quantity,
           avg_price:     tick.average_price,
-          volume:        tick.volume         ?? 0,
+          volume:      tick.volume_traded ?? tick.volume ?? undefined,
           buy_quantity:  tick.buy_quantity   ?? 0,
           sell_quantity: tick.sell_quantity  ?? 0,
           oi:            tick.oi             ?? 0,

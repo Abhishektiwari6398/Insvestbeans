@@ -177,12 +177,12 @@ const getBlogById = asyncHandler(async (req, res) => {
 
     // Try finding by ID first
     if (mongoose.Types.ObjectId.isValid(id)) {
-        blog = await Blog.findById(id).populate('author', 'name email');
+        blog = await Blog.findById(id).populate('author', 'name email isAdmin');
     }
 
     // If not found, try slug
     if (!blog) {
-        blog = await Blog.findOne({ slug: id }).populate('author', 'name email');
+        blog = await Blog.findOne({ slug: id }).populate('author', 'name email isAdmin');
     }
 
     if (!blog) {

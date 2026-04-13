@@ -73,11 +73,15 @@ const DecodeMarketsPage = () => {
 
   const handleTabChange = (newTab: ActiveTab) => {
     setActiveTab(newTab);
+    setCurrentPage(1);
     navigate(`/insights/${newTab}`, { replace: true });
   };
 
   const [insights, setInsights] = useState<InsightData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const CARDS_PER_PAGE = 12;
+  const MAX_PAGES = 4;
   const [selectedInsight, setSelectedInsight] = useState<InsightData | null>(null);
   const [showInsightModal, setShowInsightModal] = useState(false);
   const [showAdminForm, setShowAdminForm] = useState(false);
@@ -90,7 +94,7 @@ const DecodeMarketsPage = () => {
     try {
       setLoading(true);
       const endpoint = isAdmin ? "/insights/admin/all" : "/insights";
-      const response = await api.get(endpoint, { params: { marketType: activeTab, limit: 200, page: 1 } });
+      const response = await api.get(endpoint, { params: { marketType: activeTab, limit: MAX_PAGES * CARDS_PER_PAGE, page: 1 } });
       if (response.data?.success && response.data?.data) {
         setInsights(response.data.data.insights || []);
       } else { setInsights([]); }
@@ -158,8 +162,8 @@ const DecodeMarketsPage = () => {
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12">
 
-        {/* ── Top bar: Back + Admin ──────────────────────────────────────── */}
-        <div className="flex items-center justify-between mb-6">
+        {/* ── Top bar: Back (left) + Tabs top-right ──────────────────────── */}
+        <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
           <button
             onClick={() => {
               navigate("/");
@@ -177,10 +181,11 @@ const DecodeMarketsPage = () => {
             <ArrowLeft className="w-4 h-4" /> Back
           </button>
 
+          {/* Admin create button only */}
           {isAdmin && (
             <button
               onClick={() => { setEditingInsight(null); setShowAdminForm(true); }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 shadow-lg"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 shadow-lg"
               style={{ background: "linear-gradient(135deg,#22c55e,#16a34a)" }}
             >
               <Plus className="w-4 h-4" /> Create Insight
@@ -189,7 +194,7 @@ const DecodeMarketsPage = () => {
         </div>
 
         {/* ── Page header ─────────────────────────────────────────────────── */}
-        <div className="text-center mb-6 sm:mb-8">
+        <div className="relative text-center mb-6 sm:mb-8">
           <div
             className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full mb-4 sm:mb-5"
             style={{ background: "rgba(81,148,246,0.1)", border: "1px solid rgba(81,148,246,0.2)" }}
@@ -198,17 +203,18 @@ const DecodeMarketsPage = () => {
             <span className="text-[11px] sm:text-xs font-semibold text-[#5194F6] uppercase tracking-wide">Market Intelligence</span>
           </div>
 
-          <h1 className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 leading-tight ${isLight ? "text-navy" : "text-white"}`}>
-            Decode the{" "}
-            <span style={{ background: "linear-gradient(135deg,#5194F6,#7eb8ff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              Market
-            </span>
-          </h1>
+          {/* Heading row: heading centered, tab switcher floated right */}
+          <div className="relative flex items-center justify-center">
+            <h1 className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 leading-tight ${isLight ? "text-navy" : "text-white"}`}>
+              Decode the{" "}
+              <span style={{ background: "linear-gradient(135deg,#5194F6,#7eb8ff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                Market
+              </span>
+            </h1>
 
-          {/* ── Tab Switcher (same style as HomeView) ── */}
-          <div className="flex justify-center mt-5">
+            {/* Tab Switcher — absolute right, vertically centred with heading */}
             <div
-              className="flex gap-1 p-1 rounded-xl"
+              className="absolute right-0 top-1/2 -translate-y-1/2 flex gap-1 p-1 rounded-xl hidden sm:flex"
               style={{ background: tabContainerBg, border: tabContainerBorder }}
             >
               {TABS.map(({ key, label }) => (
@@ -227,6 +233,27 @@ const DecodeMarketsPage = () => {
               ))}
             </div>
           </div>
+
+          {/* Tab switcher for mobile (below heading) */}
+          <div
+            className="flex sm:hidden gap-1 p-1 rounded-xl justify-center mt-1 mb-3"
+            style={{ background: tabContainerBg, border: tabContainerBorder }}
+          >
+            {TABS.map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => handleTabChange(key)}
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize"
+                style={
+                  activeTab === key
+                    ? { background: GOLD, color: "#ffffff" }
+                    : { color: tabInactiveColor }
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* ── Active tab sub-header pill ───────────────────────────────────── */}
@@ -243,13 +270,6 @@ const DecodeMarketsPage = () => {
           </h2>
           <p className="text-slate-400 text-xs sm:text-sm">{tab.sub}</p>
         </div>
-
-        {/* Results count */}
-        {!loading && insights.length > 0 && (
-          <p className="text-slate-400 text-xs sm:text-sm mb-5 sm:mb-6">
-            Showing <span className="text-[#5194F6] font-semibold">{insights.length}</span> insights
-          </p>
-        )}
 
         {/* ── Cards / Empty / Loading ─────────────────────────────────────── */}
         {loading ? (
@@ -273,31 +293,83 @@ const DecodeMarketsPage = () => {
               </button>
             )}
           </div>
-        ) : (
-          <>
-            {/* Desktop 3-col grid */}
-            <div className="hidden xl:grid xl:grid-cols-3 gap-6">
-              {insights.map(insight => (
-                <InsightCard key={insight._id} insight={insight} isAdmin={isAdmin}
-                  onReadMore={handleReadMore} onLike={handleLike} onEdit={handleEdit} onDelete={handleDelete} />
-              ))}
-            </div>
-            {/* Tablet 2-col grid */}
-            <div className="hidden sm:grid xl:hidden sm:grid-cols-2 gap-5">
-              {insights.map(insight => (
-                <InsightCard key={insight._id} insight={insight} isAdmin={isAdmin}
-                  onReadMore={handleReadMore} onLike={handleLike} onEdit={handleEdit} onDelete={handleDelete} />
-              ))}
-            </div>
-            {/* Mobile stack */}
-            <div className="block sm:hidden space-y-4">
-              {insights.map(insight => (
-                <InsightCard key={insight._id} insight={insight} isAdmin={isAdmin}
-                  onReadMore={handleReadMore} onLike={handleLike} onEdit={handleEdit} onDelete={handleDelete} />
-              ))}
-            </div>
-          </>
-        )}
+        ) : (() => {
+          const totalPages = Math.min(MAX_PAGES, Math.ceil(insights.length / CARDS_PER_PAGE));
+          const pageInsights = insights.slice((currentPage - 1) * CARDS_PER_PAGE, currentPage * CARDS_PER_PAGE);
+          return (
+            <>
+              {/* Results count */}
+              <p className="text-slate-400 text-xs sm:text-sm mb-5 sm:mb-6">
+                Showing{" "}
+                <span className="text-[#5194F6] font-semibold">
+                  {(currentPage - 1) * CARDS_PER_PAGE + 1}–{Math.min(currentPage * CARDS_PER_PAGE, insights.length)}
+                </span>{" "}
+                of <span className="text-[#5194F6] font-semibold">{insights.length}</span> insights
+              </p>
+
+              {/* 3-col grid (all breakpoints ≥ md) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                {pageInsights.map(insight => (
+                  <InsightCard key={insight._id} insight={insight} isAdmin={isAdmin}
+                    onReadMore={handleReadMore} onLike={handleLike} onEdit={handleEdit} onDelete={handleDelete} />
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-10">
+                  {/* Prev */}
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => { setCurrentPage(p => p - 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                    className="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-30 hover:opacity-80"
+                    style={{
+                      background: isLight ? "rgba(13,37,64,0.06)" : "rgba(81,148,246,0.08)",
+                      border: isLight ? "1px solid rgba(13,37,64,0.12)" : "1px solid rgba(81,148,246,0.2)",
+                      color: isLight ? "rgba(13,37,64,0.7)" : "rgba(203,213,225,1)",
+                    }}
+                  >
+                    ← Prev
+                  </button>
+
+                  {/* Page numbers */}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => { setCurrentPage(page); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                      className="w-9 h-9 rounded-lg text-sm font-semibold transition-all"
+                      style={
+                        currentPage === page
+                          ? { background: "#0A3656", color: "#ffffff", boxShadow: "0 2px 8px rgba(10,54,86,0.35)" }
+                          : {
+                              background: isLight ? "rgba(13,37,64,0.06)" : "rgba(81,148,246,0.08)",
+                              border: isLight ? "1px solid rgba(13,37,64,0.12)" : "1px solid rgba(81,148,246,0.2)",
+                              color: isLight ? "rgba(13,37,64,0.7)" : "rgba(203,213,225,1)",
+                            }
+                      }
+                    >
+                      {page}
+                    </button>
+                  ))}
+
+                  {/* Next */}
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => { setCurrentPage(p => p + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                    className="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-30 hover:opacity-80"
+                    style={{
+                      background: isLight ? "rgba(13,37,64,0.06)" : "rgba(81,148,246,0.08)",
+                      border: isLight ? "1px solid rgba(13,37,64,0.12)" : "1px solid rgba(81,148,246,0.2)",
+                      color: isLight ? "rgba(13,37,64,0.7)" : "rgba(203,213,225,1)",
+                    }}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
 
       <InsightModal

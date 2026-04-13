@@ -29,6 +29,8 @@ interface CleanChartProps {
   candles?:      CandlePoint[];
   // period is passed from parent so we can configure axis + delay label correctly
   period?:       string;
+  // timezone offset in hours for correct x-axis time labels (e.g. -5 for EST, 5.5 for IST)
+  tzOffset?:     number;
 }
 
 // ── Delay/description label per period ────────────────────────────
@@ -166,6 +168,7 @@ const CleanChart = ({
   high, low, isPositive,
   candles: propCandles,
   period = '1D',
+  tzOffset = 0,
 }: CleanChartProps) => {
   const { theme } = useTheme();
   const dark = theme === 'dark';
@@ -212,6 +215,8 @@ const CleanChart = ({
   // ── Period-driven axis config ──────────────────────────────────
   const timeVisible = period === '1D' || period === '5D'; // show HH:MM for intraday
   const barSpacing  = BAR_SPACING[period] ?? 6;
+  // Convert hours offset → seconds for lightweight-charts localization
+  const tzOffsetSeconds = Math.round(tzOffset * 3600);
 
   // ── Create lightweight-charts instance ────────────────────────
   // Re-runs only on theme change (dark/light) — not on data/period change
@@ -253,6 +258,19 @@ const CleanChart = ({
         fixRightEdge:   true,
         barSpacing,
         rightOffset:    3,
+        // Shift timestamps so x-axis labels show the market's local time, not UTC
+        localization: {
+          timeFormatter: (timestamp: number) => {
+            const localMs = (timestamp + tzOffsetSeconds) * 1000;
+            const d = new Date(localMs);
+            if (timeVisible) {
+              return d.getUTCHours().toString().padStart(2, '0') + ':' + d.getUTCMinutes().toString().padStart(2, '0');
+            }
+            return d.getUTCDate().toString().padStart(2, '0') + ' ' +
+              ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()] +
+              (period === '5Y' || period === 'MAX' ? ' ' + d.getUTCFullYear() : '');
+          },
+        },
       },
       handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true },
       handleScale:  { mouseWheel: false, pinch: false },
@@ -295,7 +313,22 @@ const CleanChart = ({
     chartRef.current.timeScale().fitContent();
     // Apply period-specific axis settings immediately
     chartRef.current.applyOptions({
-      timeScale: { timeVisible, barSpacing },
+      timeScale: {
+        timeVisible,
+        barSpacing,
+        localization: {
+          timeFormatter: (timestamp: number) => {
+            const localMs = (timestamp + tzOffsetSeconds) * 1000;
+            const d = new Date(localMs);
+            if (timeVisible) {
+              return d.getUTCHours().toString().padStart(2, '0') + ':' + d.getUTCMinutes().toString().padStart(2, '0');
+            }
+            return d.getUTCDate().toString().padStart(2, '0') + ' ' +
+              ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()] +
+              (period === '5Y' || period === 'MAX' ? ' ' + d.getUTCFullYear() : '');
+          },
+        },
+      },
     });
   }, [chartData, period, timeVisible, barSpacing]);
 
@@ -336,13 +369,13 @@ const CleanChart = ({
           </div>
 
           {/* Period High / Low — also derived from candle data */}
-          <div className="text-right text-xs leading-relaxed space-y-1">
-            <div className={`px-2 py-1 rounded border ${hlCls}`}>
+          <div className="flex flex-col items-end gap-1 text-xs leading-relaxed shrink-0 min-w-[90px]">
+            <div className={`w-full px-2 py-1 rounded border text-right ${hlCls}`}>
               H:&nbsp;<span className="font-semibold">
                 {pHigh.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
               </span>
             </div>
-            <div className={`px-2 py-1 rounded border ${hlCls}`}>
+            <div className={`w-full px-2 py-1 rounded border text-right ${hlCls}`}>
               L:&nbsp;<span className="font-semibold">
                 {pLow.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
               </span>

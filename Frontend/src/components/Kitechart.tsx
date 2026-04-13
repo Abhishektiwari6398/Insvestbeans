@@ -292,13 +292,13 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
       className={`rounded-2xl border shadow-sm overflow-hidden transition-all ${cardBg}`}
       style={{ width: '100%' }}
     >
-      {/* ── Kill lightweight-charts watermark anchor via CSS ──── */}
+      {/* ── Kill lightweight-charts TradingView watermark completely ── */}
       <style>{`
         .lwc-wrap a[href*="tradingview"],
-        .lwc-wrap a[href*="lightweight"] {
-          display: none !important;
-          pointer-events: none !important;
-        }
+        .lwc-wrap a[href*="lightweight"],
+        .lwc-wrap a { display: none !important; pointer-events: none !important; }
+        .lwc-wrap canvas + div a,
+        .lwc-wrap > div > div:last-child { display: none !important; }
       `}</style>
 
       {/* ── Symbol selector — horizontal scroll on mobile ─────── */}
@@ -424,6 +424,9 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
               Updated {Math.round((Date.now() - lastFetch.getTime()) / 60_000)}m ago
             </span>
           )}
+          <span className={`ml-1 opacity-60 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
+            Powered by Zerodha
+          </span>
         </span>
       </div>
     </div>

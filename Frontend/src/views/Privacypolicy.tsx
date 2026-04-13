@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/controllers/Themecontext';
 import Header from '@/components/Header';
+import { Link } from 'react-router-dom';
 
 const sections = [
   { id: 'regulatory',    num: '01', title: 'Regulatory Position & SEBI Disclaimer' },
@@ -15,10 +16,9 @@ const sections = [
   { id: 'transfers',    num: '10', title: 'Cross-Border Transfers' },
   { id: 'third-party',  num: '11', title: 'Third-Party Links' },
   { id: 'children',     num: '12', title: "Children's Privacy" },
-  { id: 'grievance',    num: '13', title: 'Grievance Officer' },
-  { id: 'liability',    num: '14', title: 'Limitation of Liability' },
-  { id: 'updates',      num: '15', title: 'Policy Updates' },
-  { id: 'contact',      num: '16', title: 'Contact Us' },
+  { id: 'liability',    num: '13', title: 'Limitation of Liability' },
+  { id: 'updates',      num: '14', title: 'Policy Updates' },
+  { id: 'contact',      num: '15', title: 'Contact Us' },
 ];
 
 export default function PrivacyPolicy() {
@@ -76,6 +76,12 @@ export default function PrivacyPolicy() {
         .pp-toclink:hover { background: ${isLight ? '#f3f4f6' : 'rgba(255,255,255,0.05)'}; }
         .pp-toclink:hover .pp-toctitle { color: ${ink}; }
 
+        .pp-toc::-webkit-scrollbar { width: 4px; }
+        .pp-toc::-webkit-scrollbar-track { background: ${isLight ? '#f0ede8' : '#161b27'}; border-radius: 4px; }
+        .pp-toc::-webkit-scrollbar-thumb { background: ${isLight ? '#d0cdc8' : '#2d3748'}; border-radius: 4px; }
+        .pp-toc::-webkit-scrollbar-thumb:hover { background: ${isLight ? '#a0a0a0' : '#4a5568'}; }
+        .pp-toc { scrollbar-width: thin; scrollbar-color: ${isLight ? '#d0cdc8 #f0ede8' : '#2d3748 #161b27'}; }
+
         .pp-section { scroll-margin-top: 80px; padding: 40px 0; border-bottom: 1px solid ${border}; }
         .pp-section:last-child { border-bottom: none; }
 
@@ -125,8 +131,8 @@ export default function PrivacyPolicy() {
             <span style={{ color: inkMid, fontWeight: 500 }}>Privacy Policy</span>
           </div>
 
-          {/* Two-col: title left, badges right */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 24, marginBottom: 40 }}>
+          {/* Title only — no right-side badges */}
+          <div style={{ marginBottom: 40 }}>
             <div>
               <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: accent, marginBottom: 12 }}>
                 Legal Document
@@ -137,26 +143,6 @@ export default function PrivacyPolicy() {
               <p style={{ fontSize: 15, color: inkMid, lineHeight: 1.7, maxWidth: 520 }}>
                 InvestBeans is a proprietorship firm providing financial education and market research. This policy explains how we collect, use, and protect your personal data in accordance with Indian law.
               </p>
-            </div>
-
-            {/* Compliance badges stacked */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
-              {[
-                { label: 'DPDP Act, 2023', dot: '#22c55e' },
-                { label: 'IT Act, 2000', dot: accent },
-                { label: 'IT (SPDI) Rules, 2011', dot: '#a78bfa' },
-              ].map(b => (
-                <div key={b.label} style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 8,
-                  padding: '7px 14px', borderRadius: 6,
-                  border: `1px solid ${border}`,
-                  background: isLight ? '#f9fafb' : 'rgba(255,255,255,0.04)',
-                  fontSize: 12, fontWeight: 500, color: inkMid,
-                }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: b.dot, flexShrink: 0 }} />
-                  {b.label}
-                </div>
-              ))}
             </div>
           </div>
 
@@ -326,7 +312,6 @@ export default function PrivacyPolicy() {
                 ['Erasure', 'Request deletion of your data'],
                 ['Portability', 'Receive your data in a portable format'],
                 ['Withdrawal', 'Withdraw consent at any time'],
-                ['Grievance', 'Lodge a complaint with our Grievance Officer'],
               ].map(([title, desc]) => (
                 <div key={title} style={{ padding: '16px', background: surface, border: `1px solid ${border}`, borderRadius: 8 }}>
                   <p style={{ fontSize: 13, fontWeight: 600, color: ink, marginBottom: 4 }}>{title}</p>
@@ -368,31 +353,9 @@ export default function PrivacyPolicy() {
             </div>
           </section>
 
-          {/* 13 – Grievance */}
-          <section id="grievance" className="pp-section">
-            <SectionHeader num="13" title="Grievance Officer" accent={accent} ink={ink} inkFaint={inkFaint} />
-            <p style={{ color: inkMid, lineHeight: 1.8, fontSize: 15, marginBottom: 20 }}>
-              As mandated under the IT Act 2000 and DPDP Act 2023, we have appointed a Grievance Officer. Complaints will be acknowledged within 24 hours and resolved within 30 days.
-            </p>
-            <div style={{ padding: '8px 20px', background: surface, border: `1px solid ${border}`, borderRadius: 8 }}>
-              {[
-                ['Name', 'To be updated'],
-                ['Email', 'support@investbeans.com'],
-                ['Phone', 'To be updated'],
-              ].map(([label, value]) => (
-                <div key={label} className="pp-contact-row">
-                  <span className="pp-contact-label">{label}</span>
-                  <span className="pp-contact-value" style={{ color: label === 'Email' ? accent : ink }}>
-                    {label === 'Email' ? <a href={`mailto:${value}`} style={{ color: accent, textDecoration: 'none' }}>{value}</a> : value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* 14 – Liability */}
+          {/* 13 – Liability */}
           <section id="liability" className="pp-section">
-            <SectionHeader num="14" title="Limitation of Liability" accent={accent} ink={ink} inkFaint={inkFaint} />
+            <SectionHeader num="13" title="Limitation of Liability" accent={accent} ink={ink} inkFaint={inkFaint} />
             <p style={{ color: inkMid, lineHeight: 1.8, fontSize: 15, marginBottom: 16 }}>
               InvestBeans shall not be liable for any financial losses, trading decisions made by users, or reliance on platform content or AI-generated insights.
             </p>
@@ -401,17 +364,17 @@ export default function PrivacyPolicy() {
             </div>
           </section>
 
-          {/* 15 – Updates */}
+          {/* 14 – Updates */}
           <section id="updates" className="pp-section">
-            <SectionHeader num="15" title="Policy Updates" accent={accent} ink={ink} inkFaint={inkFaint} />
+            <SectionHeader num="14" title="Policy Updates" accent={accent} ink={ink} inkFaint={inkFaint} />
             <p style={{ color: inkMid, lineHeight: 1.8, fontSize: 15 }}>
               We may revise this Policy to reflect changes in our practices or applicable law. Material changes will be communicated via email or a prominent notice on our website. Continued use of our services after any update constitutes acceptance of the revised Policy.
             </p>
           </section>
 
-          {/* 16 – Contact */}
+          {/* 15 – Contact */}
           <section id="contact" className="pp-section">
-            <SectionHeader num="16" title="Contact Us" accent={accent} ink={ink} inkFaint={inkFaint} />
+            <SectionHeader num="15" title="Contact Us" accent={accent} ink={ink} inkFaint={inkFaint} />
             <p style={{ color: inkMid, lineHeight: 1.8, fontSize: 15, marginBottom: 20 }}>
               For any questions or concerns about this Privacy Policy or our data practices, please reach out.
             </p>
@@ -419,7 +382,6 @@ export default function PrivacyPolicy() {
               {[
                 ['Entity', 'InvestBeans'],
                 ['Email', 'support@investbeans.com'],
-                ['Phone', 'To be updated'],
               ].map(([label, value]) => (
                 <div key={label} className="pp-contact-row">
                   <span className="pp-contact-label">{label}</span>
@@ -439,9 +401,8 @@ export default function PrivacyPolicy() {
         <div style={{ maxWidth: 1160, margin: '0 auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
           <p style={{ fontSize: 13, color: inkFaint }}>© 2026 InvestBeans. All rights reserved.</p>
           <div style={{ display: 'flex', gap: 24 }}>
-            {['Terms of Service', 'Help Center'].map(l => (
-              <a key={l} href="#" style={{ fontSize: 13, color: inkFaint, textDecoration: 'none' }}>{l}</a>
-            ))}
+            <Link to="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} style={{ fontSize: 13, color: inkFaint, textDecoration: 'none' }}>Privacy Policy</Link>
+            <Link to="/help-center" style={{ fontSize: 13, color: inkFaint, textDecoration: 'none' }}>Help Center</Link>
           </div>
         </div>
       </footer>

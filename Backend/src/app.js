@@ -169,7 +169,8 @@ import paymentRouter       from "./routes/Payment.routes.js";
 import kiteTestRouter      from "./routes/Kite_test.js";
 import adminRouter from "./routes/Admin.routes.js";
 import subscriptionRouter from "./routes/Subscription.routes.js";
-
+import adminEventsRouter from "./routes/adminEvents_routes.js";
+app.use("/api/v1/admin/events", adminEventsRouter);
 
 
 // ══════════════════════════════════════════════════════════════════════

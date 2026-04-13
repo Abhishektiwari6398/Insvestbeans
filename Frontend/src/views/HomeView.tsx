@@ -3,7 +3,7 @@ import Hero from "@/components/Hero";
 import axios from "axios";
 import { useState, useEffect, useMemo } from "react";
 import type { UserSubscription } from "./PlanCards";
-import { Activity, TrendingUp } from "lucide-react";
+import { Activity, TrendingUp, Clock } from "lucide-react";
 import { useAuth } from "@/controllers/AuthContext";
 import { useTheme } from "@/controllers/Themecontext";
 import { useNavigate } from "react-router-dom";
@@ -21,6 +21,56 @@ import TVDataStamp from "@/components/Tvdatastamp";
 
 type ActiveTab = "domestic" | "global";
 type HomeViewProps = { activeTab: ActiveTab; onChangeTab: (tab: ActiveTab) => void };
+
+
+// ── ZerodhaMarketClock: IST clock + market open/closed status ──────────────
+const ZerodhaMarketClock = ({ isLight }: { isLight: boolean }) => {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Convert to IST (UTC+5:30)
+  const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+  const istMs      = now.getTime() + IST_OFFSET;
+  const istDate    = new Date(istMs);
+
+  const hh   = istDate.getUTCHours();
+  const mm   = istDate.getUTCMinutes();
+  const ss   = istDate.getUTCSeconds();
+  const mins = hh * 60 + mm;
+
+  // NSE/BSE hours: 9:15 AM – 3:30 PM IST, Mon–Fri
+  const dayOfWeek  = istDate.getUTCDay(); // 0=Sun, 6=Sat
+  const isWeekday  = dayOfWeek >= 1 && dayOfWeek <= 5;
+  const OPEN_MIN   = 9 * 60 + 15;  // 555
+  const CLOSE_MIN  = 15 * 60 + 30; // 930
+  const isOpen     = isWeekday && mins >= OPEN_MIN && mins <= CLOSE_MIN;
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const period = hh < 12 ? "AM" : "PM";
+  const h12    = hh % 12 || 12;
+  const timeStr = `${pad(h12)}:${pad(mm)}:${pad(ss)} ${period} IST`;
+
+  return (
+    <span className="flex items-center gap-1.5" style={{ color: isLight ? "#64748b" : "#475569" }}>
+      <Clock className="w-3 h-3" />
+      <span>{timeStr}</span>
+      <span
+        className="ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide"
+        style={{
+          background: isOpen ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.10)",
+          color:      isOpen ? "#22c55e"               : "#ef4444",
+          border:     isOpen ? "1px solid rgba(34,197,94,0.25)" : "1px solid rgba(239,68,68,0.20)",
+        }}
+      >
+        {isOpen ? "Market Open" : "Market Closed"}
+      </span>
+    </span>
+  );
+};
 
 const HomeView = ({ activeTab, onChangeTab }: HomeViewProps) => {
   const { isAuthenticated } = useAuth();
@@ -207,7 +257,7 @@ const HomeView = ({ activeTab, onChangeTab }: HomeViewProps) => {
                     <p className={subTextCls}>
                       {activeTab === "domestic"
                         ? "Navigate Bharat's markets with live data, sharp analytics, and smart insights."
-                        : "Real-time market data and interactive charts at your fingertips."}
+                        : "Track real-time global markets with actionable insights and updates"}
                     </p>
                   </div>
 
@@ -229,12 +279,34 @@ const HomeView = ({ activeTab, onChangeTab }: HomeViewProps) => {
 
                 <div className="w-full mb-8 overflow-hidden rounded-2xl" style={{ border: widgetBorder, boxShadow: isLight ? "0 10px 30px rgba(4,20,33,0.10)" : "0 10px 36px rgba(0,0,0,0.42)" }}>
                   {activeTab === "domestic" ? (
-                    <KiteChart height="600px" />
+                    <>
+                      <KiteChart height="600px" />
+                      {/* Zerodha stamp — replaces TradingView for BharatPulse */}
+                      <div
+                        className="flex items-center justify-between px-4 py-2 text-[11px]"
+                        style={{
+                          background: isLight ? "rgba(252,253,254,0.97)" : "rgba(6,27,43,0.85)",
+                          borderTop: isLight ? "1px solid rgba(4,20,33,0.08)" : "1px solid rgba(124,166,194,0.12)",
+                        }}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1 font-bold" style={{ color: "#22c55e" }}>● LIVE</span>
+                          <span style={{ color: isLight ? "#475569" : "#64748b" }}>Live Chart</span>
+                          <span style={{ color: isLight ? "#94a3b8" : "#334155" }}>|</span>
+                          <span style={{ color: isLight ? "#475569" : "#64748b" }}>NSE / BSE</span>
+                        </span>
+                        <span className="flex items-center gap-3">
+                          <ZerodhaMarketClock isLight={isLight} />
+                          <span style={{ color: isLight ? "#94a3b8" : "#475569" }}>Powered by Zerodha</span>
+                        </span>
+                      </div>
+                    </>
                   ) : (
-                    <TradingViewWidget mode={activeTab} theme={isLight ? "light" : "dark"} height="600px" />
+                    <>
+                      <TradingViewWidget mode={activeTab} theme={isLight ? "light" : "dark"} height="600px" />
+                      <TVDataStamp mode={activeTab} type="chart" isLight={isLight} />
+                    </>
                   )}
-                 
-                  <TVDataStamp mode={activeTab} type="chart" isLight={isLight} />
                 </div>
 
 

@@ -68,7 +68,20 @@ function fmtDate(s: string): string {
     : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-/* ── price helpers ── */
+/* ── effective status based on today's date ── */
+function getEffectiveStatus(ipo: IPO): IPOStatus {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const open  = ipo.openDate  ? new Date(ipo.openDate)  : null;
+  const close = ipo.closeDate ? new Date(ipo.closeDate) : null;
+  if (open)  open.setHours(0,0,0,0);
+  if (close) close.setHours(0,0,0,0);
+  if (open && close) {
+    if (today < open)  return 'upcoming';
+    if (today <= close) return 'open';
+    return 'closed';
+  }
+  return ipo.status;
+}
 function parseUpperPrice(pr: string): number | null {
   const c = pr.replace(/₹/g, '').replace(/,/g, '');
   const v = parseFloat(c.split(/[-–—]/).pop()!.trim());
@@ -157,6 +170,12 @@ function FormModal({ initial, onSave, onClose, saving }: {
   const [logoFile,    setLogoFile]   = useState<File|null>(null);
   const [logoPreview, setLogoPreview] = useState<string>(initial?.logoUrl || '');
 
+  // Lock body scroll while modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
   const set = (k: keyof Omit<IPO,'_id'>, v: any) =>
     setForm(prev => {
       const next: Omit<IPO,'_id'> = {
@@ -236,7 +255,7 @@ function FormModal({ initial, onSave, onClose, saving }: {
             </div>
             <div>
               <h2 className="text-lg font-bold text-white">{initial ? 'Edit IPO' : 'Add New IPO'}</h2>
-              <p className="text-white/60 text-xs">* fields required hain</p>
+              <p className="text-white/60 text-xs">* fields are required</p>
             </div>
           </div>
           <button onClick={onClose} className="text-white/70 hover:text-white hover:bg-white/20 rounded-full p-2 transition-all">
@@ -411,17 +430,18 @@ function FormModal({ initial, onSave, onClose, saving }: {
             <p className="text-xs font-bold uppercase tracking-wider" style={{color:bLabel}}>Important Dates</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[
-                {k:'openDate',      l:'Open Date *'},
-                {k:'closeDate',     l:'Close Date *'},
-                {k:'allotmentDate', l:'Allotment Date'},
-                {k:'refundDate',    l:'Refund Date'},
-                {k:'upiDate',       l:'UPI / Mandate Date'},
-                {k:'listingDate',   l:'Listing Date'},
-              ].map(({k,l})=>(
+                {k:'openDate',      l:'Open Date *',       minKey:''},
+                {k:'closeDate',     l:'Close Date *',      minKey:'openDate'},
+                {k:'allotmentDate', l:'Allotment Date',    minKey:'closeDate'},
+                {k:'refundDate',    l:'Refund Date',       minKey:'closeDate'},
+                {k:'upiDate',       l:'UPI / Mandate Date',minKey:'openDate'},
+                {k:'listingDate',   l:'Listing Date',      minKey:'closeDate'},
+              ].map(({k,l,minKey})=>(
                 <div key={k}>
                   <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{color:lblClr}}>{l}</label>
                   <input type="date" className={IC} style={DS}
                     value={toInputDate((form as any)[k]||'')}
+                    min={minKey ? toInputDate((form as any)[minKey]||'') : undefined}
                     onChange={e=>set(k as any, e.target.value)}/>
                   {errors[k]&&<p className={ER}>{errors[k]}</p>}
                 </div>
@@ -433,7 +453,7 @@ function FormModal({ initial, onSave, onClose, saving }: {
           <section className="p-4 rounded-xl space-y-3" style={{background:blockBg,border:`1px solid ${blockBdr}`}}>
             <div>
               <p className="text-xs font-bold uppercase tracking-wider" style={{color:bLabel}}>Performance Data</p>
-              <p className="text-xs mt-0.5" style={{color:hintClr}}>Optional — baad mein bhi update kar sakte ho</p>
+              <p className="text-xs mt-0.5" style={{color:hintClr}}>Optional — can be updated later</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
@@ -577,6 +597,13 @@ function DetailModal({ ipo, onClose, onEdit, onDelete, deleting, isAdmin }: {
 }) {
   const { theme } = useTheme();
   const isLight = theme === 'light';
+  const effectiveStatus = getEffectiveStatus(ipo);
+
+  // Lock body scroll while modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
 
   // ── Token map ──────────────────────────────────────────────────────────────
   const modalBg      = isLight ? '#ffffff' : 'linear-gradient(135deg,#101528 0%,#0d1d38 100%)';
@@ -621,7 +648,7 @@ function DetailModal({ ipo, onClose, onEdit, onDelete, deleting, isAdmin }: {
                 <h2 className="text-xl font-bold leading-tight" style={{color:titleColor}}>{ipo.companyName}</h2>
                 <p className="text-sm mt-0.5" style={{color:metaColor}}>{ipo.industry} · {ipo.exchange}</p>
                 <div className="flex items-center gap-2 mt-2 flex-wrap">
-                  <StatusBadge status={ipo.status}/>
+                  <StatusBadge status={effectiveStatus}/>
                   {ipo.category&&(
                     <span className="text-xs px-2 py-0.5 rounded-full" style={{color:metaColor, border:categoryBorder}}>{ipo.category}</span>
                   )}
@@ -662,7 +689,7 @@ function DetailModal({ ipo, onClose, onEdit, onDelete, deleting, isAdmin }: {
               {[['Price Band',ipo.priceRange],['Issue Size',ipo.issueSize],
                 ['Lot Size',`${ipo.lotSize} shares`],['Min. Investment',ipo.minInvestment],
                 ['Exchange',ipo.exchange]].map(([l,v],i)=>(
-                <div key={i} className="flex items-center justify-between px-4 py-3 text-sm"
+                <div key={i} className="flex items-center justify-between px-4 py-1.5 text-sm"
                   style={{background: i%2===0 ? rowEven : rowOdd}}>
                   <span style={{color:rowLabel}}>{l}</span>
                   <span className="font-semibold" style={{color:rowValue}}>{v}</span>
@@ -685,7 +712,7 @@ function DetailModal({ ipo, onClose, onEdit, onDelete, deleting, isAdmin }: {
                 ...(ipo.upiDate?      [['UPI / Mandate', ipo.upiDate,  'text-violet-500']]:[]),
                 ...(ipo.listingDate?  [['Listing',   ipo.listingDate,  'text-purple-500']]:[]),
               ].map(([l,v,cls],i)=>(
-                <div key={i} className="flex items-center justify-between px-4 py-3 text-sm"
+                <div key={i} className="flex items-center justify-between px-4 py-1.5 text-sm"
                   style={{background: i%2===0 ? rowEven : rowOdd}}>
                   <span style={{color:rowLabel}}>{l}</span>
                   <span className={`font-semibold ${cls}`}>{fmtDate(v as string)}</span>
@@ -694,28 +721,28 @@ function DetailModal({ ipo, onClose, onEdit, onDelete, deleting, isAdmin }: {
             </div>
           </div>
 
-          {/* Performance */}
-          {(ipo.subscriptionStatus||ipo.gmp||ipo.listingGain!=null)&&(
+          {/* Performance — only show if at least one field has real non-zero data */}
+          {(ipo.subscriptionStatus?.trim()||(ipo.gmp!=null&&ipo.gmp!==0)||(ipo.listingGain!=null&&ipo.listingGain!==0))&&(
             <div>
               <h3 className="text-base font-bold mb-3 flex items-center gap-2" style={{color:sectionTitle}}>
                 <BarChart3 className="w-4 h-4 text-[#5194F6]"/>Performance
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {ipo.subscriptionStatus&&(
+                {ipo.subscriptionStatus?.trim()&&(
                   <div className={`rounded-xl p-4 text-center ${isLight ? 'bg-emerald-50 border border-emerald-100' : 'bg-green-500/10 border border-green-500/20'}`}>
                     <p className="text-xs mb-1" style={{color:perfLabel}}>Subscription</p>
                     <p className="text-2xl font-bold text-emerald-500">{ipo.subscriptionStatus}</p>
                     <p className="text-xs" style={{color:perfLabel}}>times</p>
                   </div>
                 )}
-                {ipo.gmp!=null&&ipo.gmp>0&&(
+                {ipo.gmp!=null&&ipo.gmp!==0&&(
                   <div className={`rounded-xl p-4 text-center ${isLight ? 'bg-blue-50 border border-blue-100' : 'bg-blue-500/10 border border-blue-500/20'}`}>
                     <p className="text-xs mb-1" style={{color:perfLabel}}>GMP</p>
-                    <p className="text-2xl font-bold text-blue-500">+₹{ipo.gmp}</p>
+                    <p className="text-2xl font-bold text-blue-500">{ipo.gmp>0?'+':''}₹{ipo.gmp}</p>
                     <p className="text-xs" style={{color:perfLabel}}>grey market</p>
                   </div>
                 )}
-                {ipo.listingGain!=null&&(
+                {ipo.listingGain!=null&&ipo.listingGain!==0&&(
                   <div className={`rounded-xl p-4 text-center border ${
                     ipo.listingGain>=0
                       ? isLight ? 'bg-emerald-50 border-emerald-100' : 'bg-green-500/10 border-green-500/20'
@@ -766,9 +793,11 @@ function IPOCard({ ipo, onViewDetail, onEdit, onDelete, isAdmin }: {
 }) {
   const { theme } = useTheme();
   const isLight = theme === 'light';
+  const effectiveStatus = getEffectiveStatus(ipo);
+  const displayIpo = { ...ipo, status: effectiveStatus };
   return (
     <div
-      className="rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group hover:-translate-y-0.5 flex flex-col min-h-[360px]"
+      className="rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group hover:-translate-y-0.5 flex flex-col"
       style={{background:isLight?'rgba(255,255,255,0.70)':'rgba(255,255,255,0.04)',border:isLight?'1px solid rgba(13,37,64,0.12)':'1px solid rgba(255,255,255,0.08)'}}
       onMouseEnter={e=>(e.currentTarget.style.borderColor='rgba(81,148,246,0.40)')}
       onMouseLeave={e=>(e.currentTarget.style.borderColor=isLight?'rgba(13,37,64,0.12)':'rgba(255,255,255,0.08)')}>
@@ -802,12 +831,12 @@ function IPOCard({ ipo, onViewDetail, onEdit, onDelete, isAdmin }: {
           )}
         </div>
         <div className="flex items-center justify-between">
-          <StatusBadge status={ipo.status}/><Stars rating={ipo.rating}/>
+          <StatusBadge status={displayIpo.status}/><Stars rating={ipo.rating}/>
         </div>
       </div>
 
-      <div className="px-4 py-4 flex-1 space-y-3">
-        <div className="grid grid-cols-2 gap-x-3 gap-y-3">
+      <div className="px-4 py-3 flex-1 space-y-2">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
           {[
             ['Price Band',    ipo.priceRange,    isLight?'text-navy':'text-white',    true],
             ['Lot Size',      `${ipo.lotSize} shares`, isLight?'text-navy':'text-white', false],
@@ -816,11 +845,11 @@ function IPOCard({ ipo, onViewDetail, onEdit, onDelete, isAdmin }: {
           ].map(([lbl,val,cls,bold],i)=>(
             <div key={i}>
               <p className={`text-[9px] uppercase tracking-wider ${isLight?'text-navy/50':'text-slate-500'}`}>{lbl as string}</p>
-              <p className={`text-xs leading-tight mt-0.5 ${cls} ${bold?'font-bold':'font-semibold'}`}>{val as string}</p>
+              <p className={`text-xs leading-tight ${cls} ${bold?'font-bold':'font-semibold'}`}>{val as string}</p>
             </div>
           ))}
         </div>
-        <div className={`flex items-center gap-1.5 text-[11px] pt-3 ${isLight?'text-navy/60':'text-slate-400'}`}
+        <div className={`flex items-center gap-1.5 text-[11px] pt-2 ${isLight?'text-navy/60':'text-slate-400'}`}
           style={{borderTop:isLight?'1px solid rgba(13,37,64,0.08)':'1px solid rgba(255,255,255,0.06)'}}>
           <Calendar className="w-3 h-3 flex-shrink-0"/>
           <span>{fmtDate(ipo.openDate)}</span>
@@ -828,11 +857,11 @@ function IPOCard({ ipo, onViewDetail, onEdit, onDelete, isAdmin }: {
           <span>{fmtDate(ipo.closeDate)}</span>
           {ipo.listingDate&&<span className="ml-auto text-purple-400 font-medium text-[10px]">{fmtDate(ipo.listingDate)}</span>}
         </div>
-        {(ipo.subscriptionStatus||(ipo.gmp!=null&&ipo.gmp>0)||ipo.listingGain!=null)&&(
+        {(ipo.subscriptionStatus?.trim()||(ipo.gmp!=null&&ipo.gmp!==0)||(ipo.listingGain!=null&&ipo.listingGain!==0))&&(
           <div className="flex flex-wrap gap-1 pt-0.5">
-            {ipo.subscriptionStatus&&<span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-green-500/10 border border-green-500/20 rounded-full text-[10px] font-bold text-emerald-400"><Users className="w-2.5 h-2.5"/>{ipo.subscriptionStatus}</span>}
-            {ipo.gmp!=null&&ipo.gmp>0&&<span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] font-bold text-blue-400"><Target className="w-2.5 h-2.5"/>₹{ipo.gmp}</span>}
-            {ipo.listingGain!=null&&<span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold border ${ipo.listingGain>=0?'bg-green-500/10 border-green-500/20 text-emerald-400':'bg-red-500/10 border-red-500/20 text-red-400'}`}>{ipo.listingGain>=0?<TrendingUp className="w-2.5 h-2.5"/>:<TrendingDown className="w-2.5 h-2.5"/>}{ipo.listingGain>=0?'+':''}{ipo.listingGain}%</span>}
+            {ipo.subscriptionStatus?.trim()&&<span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-green-500/10 border border-green-500/20 rounded-full text-[10px] font-bold text-emerald-400"><Users className="w-2.5 h-2.5"/>{ipo.subscriptionStatus}</span>}
+            {ipo.gmp!=null&&ipo.gmp!==0&&<span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] font-bold text-blue-400"><Target className="w-2.5 h-2.5"/>₹{ipo.gmp}</span>}
+            {ipo.listingGain!=null&&ipo.listingGain!==0&&<span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold border ${ipo.listingGain>=0?'bg-green-500/10 border-green-500/20 text-emerald-400':'bg-red-500/10 border-red-500/20 text-red-400'}`}>{ipo.listingGain>=0?<TrendingUp className="w-2.5 h-2.5"/>:<TrendingDown className="w-2.5 h-2.5"/>}{ipo.listingGain>=0?'+':''}{ipo.listingGain}%</span>}
             <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] ml-auto ${isLight?'text-navy/60':'text-slate-400'}`} style={{background:isLight?'rgba(13,37,64,0.06)':'rgba(255,255,255,0.05)'}}>{ipo.exchange}</span>
           </div>
         )}
@@ -858,15 +887,17 @@ export default function IPOPage() {
   const { theme }   = useTheme();
   const isLight     = theme === 'light';
 
+  const [allIpos,    setAllIpos]   = useState<IPO[]>([]);
   const [ipos,       setIpos]      = useState<IPO[]>([]);
   const [counts,     setCounts]    = useState<Counts>({ open:0, upcoming:0, closed:0, total:0 });
-  const [activeTab,  setActiveTab] = useState<IPOStatus>('open');
+  const [activeTab,  setActiveTab] = useState<IPOStatus>('upcoming');
   const [search,     setSearch]    = useState('');
   const [sortBy,     setSortBy]    = useState<'default'|'gmp'|'rating'|'subscribed'>('default');
   const [catFilter,  setCatFilter] = useState<''|'Mainboard'|'SME'>('');
   const [loading,    setLoading]   = useState(true);
   const [error,      setError]     = useState<string|null>(null);
-  const [showAll,    setShowAll]   = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 12;
 
   const [selectedIPO, setSelectedIPO] = useState<IPO|null>(null);
   const [detailOpen,  setDetailOpen]  = useState(false);
@@ -877,30 +908,52 @@ export default function IPOPage() {
 
   const isSearching = search.trim().length > 0;
   const timer = useRef<any>(null);
+  const totalPages = Math.ceil(ipos.length / PAGE_SIZE);
 
   const fetchIPOs = useCallback(async () => {
     const p = new URLSearchParams();
-    if (!isSearching) p.set('status', activeTab);
-    else              p.set('search', search.trim());
+    if (isSearching) p.set('search', search.trim());
     if (sortBy !== 'default') p.set('sort', sortBy);
     if (catFilter)            p.set('category', catFilter);
+    // fetch all statuses — we filter client-side by effective status
     setLoading(true); setError(null);
     try {
       const data = await callAPI(`${IPO_ENDPOINT}?${p}`);
-      setIpos(data.ipos ?? []);
-      setCounts(data.counts ?? { open:0, upcoming:0, closed:0, total:0 });
+      const fetched: IPO[] = data.ipos ?? [];
+      setAllIpos(fetched);
+      // Derive effective counts
+      const effCounts = { open:0, upcoming:0, closed:0, total: fetched.length };
+      fetched.forEach(i => { const s = getEffectiveStatus(i); effCounts[s]++; });
+      setCounts(effCounts);
     } catch (e:any) { setError(e.message); }
     finally { setLoading(false); }
-  }, [activeTab, search, sortBy, catFilter, isSearching]);
+  }, [search, sortBy, catFilter, isSearching]);
 
   useEffect(() => {
     clearTimeout(timer.current);
     timer.current = setTimeout(fetchIPOs, isSearching ? 400 : 0);
     return () => clearTimeout(timer.current);
-  }, [fetchIPOs, isSearching]);
+  }, [fetchIPOs]);
 
-  // reset showAll on filter change
-  useEffect(() => { setShowAll(false); }, [activeTab, search, catFilter, sortBy]);
+  // reset page on filter change
+  useEffect(() => { setCurrentPage(1); }, [activeTab, search, catFilter, sortBy, ipos]);
+
+  // Filter allIpos by effective status (auto-computed from dates)
+  useEffect(() => {
+    if (isSearching) {
+      setIpos(allIpos);
+    } else {
+      const filtered = allIpos
+        .filter(i => getEffectiveStatus(i) === activeTab)
+        .sort((a, b) => {
+          // Sort by openDate descending (latest first)
+          const da = new Date(a.openDate).getTime() || 0;
+          const db = new Date(b.openDate).getTime() || 0;
+          return db - da;
+        });
+      setIpos(filtered);
+    }
+  }, [allIpos, activeTab, isSearching]);
 
   // Build multipart FormData — separates logo file from text fields
   const buildFormData = (data: Omit<IPO,'_id'>, logoFile?: File|null): FormData => {
@@ -944,7 +997,7 @@ export default function IPOPage() {
     catch (e:any) { alert('❌ '+e.message); } finally { setDeleting(false); }
   };
 
-  const visibleIpos = showAll ? ipos : ipos.slice(0, 3);
+  const visibleIpos = ipos.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   /* shared dropdown style for filter bar */
   const fSelBg  = isLight ? '#ffffff' : '#1C3656';
@@ -977,7 +1030,7 @@ export default function IPOPage() {
                   <span style={{background:'linear-gradient(135deg,#5194F6,#7ab8fa)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>IPOs</span>
                 </h1>
                 <p className={`mt-1 text-sm ${isLight?'text-navy/60':'text-slate-400'}`}>
-                  Total <span className={`font-bold ${isLight?'text-navy':'text-white'}`}>{counts.total}</span> IPOs — NSE / BSE / SME
+                  Total <span className={`font-bold ${isLight?'text-navy':'text-white'}`}>{counts.total}</span> IPOs — NSE / BSE 
                 </p>
               </div>
             </div>
@@ -988,7 +1041,7 @@ export default function IPOPage() {
 
                 {/* Status tabs — "listed" tab removed */}
                 <div className="flex flex-wrap gap-2 flex-shrink-0">
-                  {(['open','upcoming','closed'] as IPOStatus[]).map(s=>(
+                  {(['upcoming','open','closed'] as IPOStatus[]).map(s=>(
                     <button key={s}
                       onClick={()=>{setActiveTab(s);setSearch('');}}
                       className="px-3 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap"
@@ -1149,9 +1202,12 @@ export default function IPOPage() {
             <>
               <p className={`text-sm mb-4 ${isLight?'text-navy/60':'text-slate-400'}`}>
                 Showing{' '}
-                <span className={`font-semibold ${isLight?'text-navy':'text-white'}`}>{visibleIpos.length}</span>
-                {!showAll&&ipos.length>3&&<span> of <span className={`font-semibold ${isLight?'text-navy':'text-white'}`}>{ipos.length}</span></span>}
-                {' '}IPO{visibleIpos.length!==1?'s':''}
+                <span className={`font-semibold ${isLight?'text-navy':'text-white'}`}>
+                  {(currentPage-1)*PAGE_SIZE+1}–{Math.min(currentPage*PAGE_SIZE,ipos.length)}
+                </span>
+                {' '}of{' '}
+                <span className={`font-semibold ${isLight?'text-navy':'text-white'}`}>{ipos.length}</span>
+                {' '}IPO{ipos.length!==1?'s':''}
                 {!isSearching&&<span className={`ml-1 ${isLight?'text-navy/40':'text-slate-500'}`}>— {STATUS_CFG[activeTab].label}</span>}
               </p>
 
@@ -1171,16 +1227,44 @@ export default function IPOPage() {
                 ))}
               </div>
 
-              {ipos.length>3&&(
-                <div className="flex justify-center mt-8">
-                  <button onClick={()=>setShowAll(v=>!v)}
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all hover:shadow-lg"
-                    style={showAll
-                      ?{background:isLight?'rgba(13,37,64,0.07)':'rgba(255,255,255,0.06)',border:isLight?'1px solid rgba(13,37,64,0.15)':'1px solid rgba(255,255,255,0.12)',color:isLight?'rgba(13,37,64,0.70)':'rgba(255,255,255,0.70)'}
-                      :{background:'linear-gradient(135deg,rgba(81,148,246,0.15),rgba(58,125,224,0.10))',border:'1px solid rgba(81,148,246,0.30)',color:'#5194F6'}}>
-                    {showAll
-                      ?<><ChevronDown className="w-4 h-4 rotate-180"/>Show Less</>
-                      :<><ChevronDown className="w-4 h-4"/>View All {ipos.length} IPOs</>}
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-8">
+                  {/* Prev */}
+                  <button
+                    onClick={()=>setCurrentPage(p=>Math.max(1,p-1))}
+                    disabled={currentPage===1}
+                    className="px-3 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-30"
+                    style={{background:isLight?'rgba(13,37,64,0.06)':'rgba(255,255,255,0.06)',border:isLight?'1px solid rgba(13,37,64,0.15)':'1px solid rgba(255,255,255,0.12)',color:isLight?'rgba(13,37,64,0.70)':'rgba(255,255,255,0.70)'}}>
+                    ‹ Prev
+                  </button>
+
+                  {/* Page numbers */}
+                  {Array.from({length:totalPages},(_,i)=>i+1).map(page=>{
+                    // Show first, last, current ±1, and ellipsis
+                    const show = page===1||page===totalPages||Math.abs(page-currentPage)<=1;
+                    const isEllipsis = !show&&(page===2||page===totalPages-1);
+                    if (!show && !isEllipsis) return null;
+                    if (isEllipsis) return <span key={page} className="px-1 text-slate-500">…</span>;
+                    return (
+                      <button key={page}
+                        onClick={()=>setCurrentPage(page)}
+                        className="w-9 h-9 rounded-lg text-sm font-semibold transition-all"
+                        style={page===currentPage
+                          ?{background:'linear-gradient(135deg,#5194F6,#3a7de0)',color:'#ffffff',boxShadow:'0 2px 8px rgba(81,148,246,0.35)'}
+                          :{background:isLight?'rgba(13,37,64,0.05)':'rgba(255,255,255,0.05)',border:isLight?'1px solid rgba(13,37,64,0.12)':'1px solid rgba(255,255,255,0.10)',color:isLight?'rgba(13,37,64,0.65)':'rgba(255,255,255,0.65)'}}>
+                        {page}
+                      </button>
+                    );
+                  })}
+
+                  {/* Next */}
+                  <button
+                    onClick={()=>setCurrentPage(p=>Math.min(totalPages,p+1))}
+                    disabled={currentPage===totalPages}
+                    className="px-3 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-30"
+                    style={{background:isLight?'rgba(13,37,64,0.06)':'rgba(255,255,255,0.06)',border:isLight?'1px solid rgba(13,37,64,0.15)':'1px solid rgba(255,255,255,0.12)',color:isLight?'rgba(13,37,64,0.70)':'rgba(255,255,255,0.70)'}}>
+                    Next ›
                   </button>
                 </div>
               )}

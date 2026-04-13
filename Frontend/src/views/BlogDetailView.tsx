@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
-import { getBlogById, deleteBlog, toggleLike, Blog } from "@/services/blogService";
+import { getBlogById, getAllBlogs, deleteBlog, toggleLike, Blog } from "@/services/blogService";
 import {
   Loader2,
   ArrowLeft,
   Edit2,
   Trash2,
-  Eye,
   Calendar,
   Clock,
   Tag,
@@ -51,6 +50,7 @@ const BlogDetailView = () => {
   const isLight = theme === "light";
 
   const [blog, setBlog] = useState<Blog | null>(null);
+  const [allBlogIds, setAllBlogIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [likeLoading, setLikeLoading] = useState(false);
@@ -167,8 +167,12 @@ const BlogDetailView = () => {
 
     setLoading(true);
     try {
-      const response = await getBlogById(id);
+      const [response, allBlogsResponse] = await Promise.all([
+        getBlogById(id),
+        getAllBlogs({ limit: 1000, sort: 'desc' })
+      ]);
       setBlog(response);
+      setAllBlogIds(allBlogsResponse.blogs.map(b => b._id));
       setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 100);
     } catch (error) {
       console.error("Error fetching blog:", error);
@@ -230,6 +234,16 @@ const BlogDetailView = () => {
     }
   };
 
+  // Previous / Next blog navigation
+  const currentIndex = allBlogIds.indexOf(id || '');
+  const prevBlogId = currentIndex > 0 ? allBlogIds[currentIndex - 1] : null;
+  const nextBlogId = currentIndex !== -1 && currentIndex < allBlogIds.length - 1 ? allBlogIds[currentIndex + 1] : null;
+
+  const handleNavigateBlog = (blogId: string) => {
+    navigate(`/blogs/${blogId}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
 
 
   if (loading) {
@@ -274,9 +288,19 @@ const BlogDetailView = () => {
         {/* Hero Image Section - Fixed width */}
         <div className="pt-8 sm:pt-12 pb-8">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
-            {/* Hero Image - Thinner */}
+            {/* Back to Blogs - top left above image */}
+            <div className="mb-4">
+              <button
+                onClick={() => navigate("/blogs")}
+                className={`inline-flex items-center gap-2 transition-colors group px-4 py-2 rounded-xl text-sm font-semibold ${isLight ? "text-slate-500 hover:text-slate-800 bg-slate-100 border border-slate-200 hover:bg-slate-200" : "text-white/60 hover:text-white bg-white/5 border border-white/10 hover:bg-white/10"}`}
+              >
+                <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                Back to Blogs
+              </button>
+            </div>
+            {/* Hero Image - comfortable height */}
             <div className="relative w-full rounded-3xl overflow-hidden shadow-2xl">
-              <div className="relative h-[160px] sm:h-[220px] lg:h-[280px] overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
+              <div className="relative h-[180px] sm:h-[260px] lg:h-[340px] overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
                 <img
                   src={blog.blogImage}
                   alt={blog.title}
@@ -315,9 +339,7 @@ const BlogDetailView = () => {
             {/* Metadata Bar with Author & Actions */}
             <div className={`pb-6 mb-8 border-b-2 ${isLight ? "border-slate-200" : "border-white/10"}`}>
           
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between lg:gap-6">
-              
-                <div className="flex flex-nowrap items-center gap-2 lg:gap-4 mb-4 lg:mb-0 overflow-x-auto pb-2 lg:pb-0">
+              <div className="flex flex-wrap items-center gap-2 mb-4">
                   <div className={`flex items-center gap-1.5 text-xs lg:text-sm font-medium px-2.5 lg:px-4 py-1.5 lg:py-2 rounded-lg flex-shrink-0 ${isLight ? "text-slate-600 bg-slate-100 border border-slate-200" : "text-white/60 bg-white/5 border border-white/10"}`}>
                     <Calendar size={14} className="text-blue-400" />
                     <span className="whitespace-nowrap text-xs">
@@ -331,10 +353,6 @@ const BlogDetailView = () => {
                   <div className={`flex items-center gap-1.5 text-xs lg:text-sm font-medium px-2.5 lg:px-4 py-1.5 lg:py-2 rounded-lg flex-shrink-0 ${isLight ? "text-slate-600 bg-slate-100 border border-slate-200" : "text-white/60 bg-white/5 border border-white/10"}`}>
                     <Clock size={14} className="text-blue-400" />
                     <span className="whitespace-nowrap text-xs">{blog.readTime}</span>
-                  </div>
-                  <div className={`flex items-center gap-1.5 text-xs lg:text-sm font-medium px-2.5 lg:px-4 py-1.5 lg:py-2 rounded-lg flex-shrink-0 ${isLight ? "text-slate-600 bg-slate-100 border border-slate-200" : "text-white/60 bg-white/5 border border-white/10"}`}>
-                    <Eye size={14} className="text-blue-400" />
-                    <span className="whitespace-nowrap text-xs">{blog.views}</span>
                   </div>
                   
                   {/* Like Button */}
@@ -359,49 +377,42 @@ const BlogDetailView = () => {
                     )}
                     <span className="whitespace-nowrap">{likesCount}</span>
                   </button>
-                </div>
-              {/* Bottom - Author & Admin Actions */}
-              <div className="flex flex-row items-center justify-between gap-3 w-full md:max-w-lg">
-                {/* Author */}
-                <div className="flex items-center gap-2">
-                  <div className="w-9 lg:w-10 h-9 lg:h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg lg:rounded-xl flex items-center justify-center text-white font-bold text-xs lg:text-sm shadow-md flex-shrink-0">
-                    {blog.author.name.charAt(0)}
-                  </div>
-                  <div className="min-w-0">
-                    <p className={`font-bold text-xs lg:text-sm truncate ${isLight ? "text-slate-800" : "text-white"}`}>
-                      {blog.author.name}
+
+                  {/* Author name - on same line, pushed to right */}
+                  <div className="ml-auto flex items-center gap-2">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-md flex-shrink-0">
+                      {blog.author.name.charAt(0)}
+                    </div>
+                    <p className={`font-bold text-sm ${isLight ? "text-slate-800" : "text-white"}`}>
+                      {['admin@example.com', 'superadmin@example.com'].includes(blog.author.email?.toLowerCase()) ? 'InvestBeans' : blog.author.name}
                     </p>
-                    <p className={`text-xs truncate ${isLight ? "text-slate-400" : "text-white/40"}`}>{blog.author.email}</p>
                   </div>
                 </div>
 
-                {/* Admin Buttons - Right side */}
-                {isAdmin && (
-                  <div className="flex gap-2 flex-shrink-0">
-                    <button
-                      onClick={handleEdit}
-                      className={`px-2.5 lg:px-4 py-1.5 lg:py-2 rounded-lg transition-all flex items-center gap-1 text-xs lg:text-sm font-bold ${isLight ? "bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200" : "bg-white/10 border border-white/20 text-white hover:bg-white/20"}`}
-                    >
-                      <Edit2 size={13} />
-                      <span className="hidden lg:inline">Edit</span>
-                    </button>
-                    <button
-                      onClick={handleDelete}
-                      disabled={deleteLoading}
-                      className="bg-red-500/20 border border-red-500/30 text-red-500 px-2.5 lg:px-4 py-1.5 lg:py-2 rounded-lg hover:bg-red-500/30 transition-all flex items-center gap-1 text-xs lg:text-sm font-bold disabled:opacity-50"
-                    >
-                      {deleteLoading ? (
-                        <Loader2 className="animate-spin" size={13} />
-                      ) : (
-                        <Trash2 size={13} />
-                      )}
-                      <span className="hidden lg:inline">Delete</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-              </div>
-
+              {/* Admin Buttons */}
+              {isAdmin && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleEdit}
+                    className={`px-2.5 lg:px-4 py-1.5 lg:py-2 rounded-lg transition-all flex items-center gap-1 text-xs lg:text-sm font-bold ${isLight ? "bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200" : "bg-white/10 border border-white/20 text-white hover:bg-white/20"}`}
+                  >
+                    <Edit2 size={13} />
+                    <span className="hidden lg:inline">Edit</span>
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleteLoading}
+                    className="bg-red-500/20 border border-red-500/30 text-red-500 px-2.5 lg:px-4 py-1.5 lg:py-2 rounded-lg hover:bg-red-500/30 transition-all flex items-center gap-1 text-xs lg:text-sm font-bold disabled:opacity-50"
+                  >
+                    {deleteLoading ? (
+                      <Loader2 className="animate-spin" size={13} />
+                    ) : (
+                      <Trash2 size={13} />
+                    )}
+                    <span className="hidden lg:inline">Delete</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Description */}
@@ -417,7 +428,44 @@ const BlogDetailView = () => {
               </div>
             )}
 
-            {/* Tags */}
+            {/* As It Unfolds - Article Content */}
+            <div className={`mb-10 rounded-2xl p-6 sm:p-8 ${isLight ? "border border-slate-200 bg-white shadow-sm" : "border border-white/10 bg-white/5 backdrop-blur-sm"}`}>
+              <h2 className={`text-3xl font-bold mb-6 flex items-center gap-3 ${isLight ? "text-slate-800" : "text-white"}`}>
+                <div className="w-1.5 h-8 bg-gradient-to-b from-blue-500 via-indigo-500 to-purple-500 rounded-full" />
+                As It Unfolds
+              </h2>
+              
+              <div className={`prose max-w-none ${isLight ? "prose-slate" : "prose-invert"}`}>
+                {/* Main Content */}
+                <div
+                  className={`leading-relaxed text-base mb-6 ${isLight ? "text-slate-600" : "text-white/70"}`}
+                  style={{ lineHeight: '1.8', fontSize: '1rem' }}
+                  dangerouslySetInnerHTML={{
+                    __html: blog.content.replace(/\n/g, "<br />")
+                  }}
+                />
+
+                {/* Header Sections integrated as part of article */}
+                {blog.headerSections && blog.headerSections.length > 0 && (
+                  <div className="mt-8 space-y-8">
+                    {blog.headerSections.map(
+                      (section: HeaderSection, index: number) => (
+                        <div key={index} className="space-y-3">
+                          <h2 className={`font-bold leading-tight ${isLight ? "text-slate-800" : "text-white"}`} style={{ fontSize: '1.375rem' }}>
+                            {section.header}
+                          </h2>
+                          <p className={`leading-relaxed text-base ${isLight ? "text-slate-600" : "text-white/70"}`} style={{ lineHeight: '1.8', fontSize: '1rem' }}>
+                            {section.subHeader}
+                          </p>
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Topics - after article content */}
             {blog.tags && blog.tags.length > 0 && (
               <div className="mb-8">
                 <h3 className={`text-base font-bold mb-3 flex items-center gap-2 ${isLight ? "text-slate-800" : "text-white"}`}>
@@ -438,55 +486,27 @@ const BlogDetailView = () => {
               </div>
             )}
 
-            {/* Full Article with Integrated Header Sections */}
-            <div className={`mb-10 rounded-2xl p-6 sm:p-8 ${isLight ? "border border-slate-200 bg-white shadow-sm" : "border border-white/10 bg-white/5 backdrop-blur-sm"}`}>
-              <h2 className={`text-2xl font-bold mb-6 flex items-center gap-3 ${isLight ? "text-slate-800" : "text-white"}`}>
-                <div className="w-1.5 h-8 bg-gradient-to-b from-blue-500 via-indigo-500 to-purple-500 rounded-full" />
-                Full Article
-              </h2>
-              
-              <div className={`prose prose-sm sm:prose-base lg:prose-lg max-w-none ${isLight ? "prose-slate" : "prose-invert"}`}>
-                {/* Main Content */}
-                <div
-                  className={`leading-relaxed text-base sm:text-lg mb-6 ${isLight ? "text-slate-600" : "text-white/70"}`}
-                  style={{ lineHeight: '1.8' }}
-                  dangerouslySetInnerHTML={{
-                    __html: blog.content.replace(/\n/g, "<br />")
-                  }}
-                />
+            {/* Previous / Next Blog Navigation */}
+            <div className="flex items-center justify-between gap-4 mb-8">
+              {prevBlogId ? (
+                <button
+                  onClick={() => handleNavigateBlog(prevBlogId)}
+                  className={`inline-flex items-center gap-2 transition-colors group px-5 py-3 rounded-xl text-sm font-semibold ${isLight ? "text-slate-500 hover:text-slate-800 bg-slate-100 border border-slate-200 hover:bg-slate-200" : "text-white/60 hover:text-white bg-white/5 border border-white/10 hover:bg-white/10"}`}
+                >
+                  <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                  Previous Blog
+                </button>
+              ) : <div />}
 
-                {/* Header Sections integrated as part of article */}
-                {blog.headerSections && blog.headerSections.length > 0 && (
-                  <div className="mt-8 space-y-8">
-                    {blog.headerSections.map(
-                      (section: HeaderSection, index: number) => (
-                        <div key={index} className="space-y-3">
-                          <h2 className={`text-xl sm:text-2xl font-bold leading-tight ${isLight ? "text-slate-800" : "text-white"}`}>
-                            {section.header}
-                          </h2>
-                          <p className={`leading-relaxed text-base ${isLight ? "text-slate-600" : "text-white/70"}`} style={{ lineHeight: '1.8' }}>
-                            {section.subHeader}
-                          </p>
-                        </div>
-                      )
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Back Button at Bottom */}
-            <div className="mb-8">
-              <button
-                onClick={() => navigate("/blogs")}
-                className={`inline-flex items-center gap-2 transition-colors group px-5 py-3 rounded-xl ${isLight ? "text-slate-500 hover:text-slate-800 bg-slate-100 border border-slate-200 hover:bg-slate-200" : "text-white/60 hover:text-white bg-white/5 border border-white/10 hover:bg-white/10"}`}
-              >
-                <ArrowLeft
-                  size={18}
-                  className="group-hover:-translate-x-1 transition-transform"
-                />
-                <span className="text-sm font-semibold">Back to Blogs</span>
-              </button>
+              {nextBlogId ? (
+                <button
+                  onClick={() => handleNavigateBlog(nextBlogId)}
+                  className={`inline-flex items-center gap-2 transition-colors group px-5 py-3 rounded-xl text-sm font-semibold ${isLight ? "text-slate-500 hover:text-slate-800 bg-slate-100 border border-slate-200 hover:bg-slate-200" : "text-white/60 hover:text-white bg-white/5 border border-white/10 hover:bg-white/10"}`}
+                >
+                  Next Blog
+                  <ArrowLeft size={16} className="rotate-180 group-hover:translate-x-1 transition-transform" />
+                </button>
+              ) : <div />}
             </div>
           </article>
 

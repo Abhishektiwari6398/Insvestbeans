@@ -356,12 +356,30 @@ router.get("/markets/history/:symbol", async (req, res) => {
       x: new Date(time).getTime(), y: [open, high, low, close], volume,
     }));
 
-    // For 1D: filter to only the last trading session (most recent date)
+    // For 1D: filter to only the last trading session (most recent date) using IST
+    // IST = UTC+5:30 (330 minutes ahead of UTC)
+    // Zerodha timestamps are IST — comparing via UTC .toISOString() gives wrong dates
     let candles = rawCandles;
     if (period === "1D" && rawCandles.length > 0) {
-      const lastTs   = rawCandles[rawCandles.length - 1].x;
-      const lastDate = new Date(lastTs).toISOString().slice(0, 10);
-      candles = rawCandles.filter(c => new Date(c.x).toISOString().slice(0, 10) === lastDate);
+      const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // 5h30m in ms
+
+      // Helper: get "YYYY-MM-DD" in IST for a given UTC epoch ms
+      const toISTDate = (ms) => new Date(ms + IST_OFFSET_MS).toISOString().slice(0, 10);
+
+      // Find the most recent trading date present in the data
+      const lastDate = toISTDate(rawCandles[rawCandles.length - 1].x);
+
+      // Market hours: 9:15 AM IST = 03:45 UTC, 3:30 PM IST = 10:00 UTC
+      const MARKET_OPEN_IST_MINUTES  = 9  * 60 + 15; // 555 min from midnight IST
+      const MARKET_CLOSE_IST_MINUTES = 15 * 60 + 30; // 930 min from midnight IST
+
+      candles = rawCandles.filter(c => {
+        if (toISTDate(c.x) !== lastDate) return false;
+        // Candle time in minutes from midnight IST
+        const istMs      = c.x + IST_OFFSET_MS;
+        const istMinutes = ((istMs / 60000) % (24 * 60) + 24 * 60) % (24 * 60); // 0–1439
+        return istMinutes >= MARKET_OPEN_IST_MINUTES && istMinutes <= MARKET_CLOSE_IST_MINUTES;
+      });
     }
 
     res.json({ status: "success", candles });
@@ -2083,6 +2101,192 @@ router.get("/macro", async (req, res) => {
   _macroCache.data = results;
   _macroCache.ts   = Date.now();
   return res.json({ status: "success", data: results });
+});
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INDIA TRADING HOLIDAYS
+// GET /api/v1/kite/holidays?year=YYYY
+//
+// Primary:  Kite Connect API  /api/holidays/:year  (requires valid access token)
+// Fallback: Hardcoded NSE/BSE static list for 2025 and 2026
+// Cache:    15 minutes
+// ─────────────────────────────────────────────────────────────────────────────
+
+const INDIA_HOLIDAYS_STATIC_2025 = [
+  { date: "2025-01-26", reason: "Republic Day" },
+  { date: "2025-02-26", reason: "Mahashivratri" },
+  { date: "2025-03-14", reason: "Holi" },
+  { date: "2025-03-31", reason: "Id-Ul-Fitr (Eid)" },
+  { date: "2025-04-10", reason: "Shri Ram Navami" },
+  { date: "2025-04-14", reason: "Dr. Ambedkar Jayanti" },
+  { date: "2025-04-18", reason: "Good Friday" },
+  { date: "2025-05-01", reason: "Maharashtra Day" },
+  { date: "2025-08-15", reason: "Independence Day" },
+  { date: "2025-08-27", reason: "Ganesh Chaturthi" },
+  { date: "2025-10-02", reason: "Gandhi Jayanti / Dussehra" },
+  { date: "2025-10-20", reason: "Diwali — Laxmi Puja" },
+  { date: "2025-10-21", reason: "Diwali — Balipratipada" },
+  { date: "2025-11-05", reason: "Guru Nanak Jayanti" },
+  { date: "2025-12-25", reason: "Christmas" },
+];
+
+const INDIA_HOLIDAYS_STATIC_2026 = [
+  { date: "2026-01-26", reason: "Republic Day" },
+  { date: "2026-02-14", reason: "Maha Shivratri" },
+  { date: "2026-03-04", reason: "Holi" },
+  { date: "2026-03-20", reason: "Id-Ul-Fitr (Eid) — tentative" },
+  { date: "2026-03-30", reason: "Ram Navami" },
+  { date: "2026-04-03", reason: "Good Friday" },
+  { date: "2026-04-14", reason: "Dr. Ambedkar Jayanti" },
+  { date: "2026-05-01", reason: "Maharashtra Day" },
+  { date: "2026-08-15", reason: "Independence Day" },
+  { date: "2026-09-15", reason: "Ganesh Chaturthi" },
+  { date: "2026-10-02", reason: "Gandhi Jayanti / Dussehra" },
+  { date: "2026-11-08", reason: "Diwali — Laxmi Puja" },
+  { date: "2026-11-09", reason: "Diwali — Balipratipada" },
+  { date: "2026-11-24", reason: "Guru Nanak Jayanti" },
+  { date: "2026-12-25", reason: "Christmas" },
+];
+
+const INDIA_HOL_BY_YEAR  = { 2025: INDIA_HOLIDAYS_STATIC_2025,  2026: INDIA_HOLIDAYS_STATIC_2026  };
+const _indiaHolCache     = {};
+
+router.get("/holidays", async (req, res) => {
+  const year = parseInt(req.query.year) || new Date().getFullYear();
+
+  // Serve from cache (15 min)
+  if (_indiaHolCache[year] && Date.now() - _indiaHolCache[year].ts < 15 * 60_000) {
+    return res.json({ status: "success", data: _indiaHolCache[year].data, cached: true });
+  }
+
+  // Try Kite API first (needs valid access token)
+  const token = getToken();
+  if (token && API_KEY) {
+    try {
+      const r = await axios.get(
+        `https://api.kite.trade/api/holidays/${year}`,
+        { headers: headers(), timeout: 8000 }
+      );
+      const tradingHols = r.data?.data?.trading ?? [];
+      if (Array.isArray(tradingHols) && tradingHols.length > 0) {
+        const mapped = tradingHols.map(h => ({
+          date:   h.date,
+          reason: h.description ?? h.reason ?? h.name ?? "Market Holiday",
+        }));
+        _indiaHolCache[year] = { data: mapped, ts: Date.now() };
+        console.log(`[IndiaHolidays] Kite API: ${mapped.length} holidays for ${year}`);
+        return res.json({ status: "success", data: mapped });
+      }
+    } catch (err) {
+      console.warn(`[IndiaHolidays] Kite API failed (${err?.response?.status ?? err.message}) — using static`);
+    }
+  }
+
+  // Static fallback
+  const staticList = INDIA_HOL_BY_YEAR[year] ?? [];
+  _indiaHolCache[year] = { data: staticList, ts: Date.now() };
+  console.log(`[IndiaHolidays] Static: ${staticList.length} holidays for ${year}`);
+  return res.json({ status: "success", data: staticList, source: "static" });
+});
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GLOBAL MARKET HOLIDAYS
+// GET /api/v1/kite/global-holidays?year=YYYY
+//
+// Primary:  Nager.Date free public API (no key needed) — US + UK holidays
+// Fallback: Hardcoded static list for 2025 and 2026
+// Cache:    6 hours
+// ─────────────────────────────────────────────────────────────────────────────
+
+const GLOBAL_HOLIDAYS_STATIC_2025 = [
+  { date: "2025-01-01", name: "New Year's Day",             description: "NYSE, NASDAQ, LSE, Euronext all closed." },
+  { date: "2025-01-20", name: "Martin Luther King Jr. Day", description: "NYSE & NASDAQ closed." },
+  { date: "2025-02-17", name: "Presidents' Day (US)",       description: "NYSE & NASDAQ closed." },
+  { date: "2025-04-18", name: "Good Friday",                description: "NYSE, NASDAQ, LSE, Euronext all closed." },
+  { date: "2025-04-21", name: "Easter Monday",              description: "LSE & Euronext closed. NYSE open." },
+  { date: "2025-05-05", name: "Early May Bank Holiday (UK)",description: "LSE closed." },
+  { date: "2025-05-26", name: "Memorial Day (US)",          description: "NYSE & NASDAQ closed." },
+  { date: "2025-07-04", name: "US Independence Day",        description: "NYSE & NASDAQ closed." },
+  { date: "2025-09-01", name: "Labor Day (US)",             description: "NYSE & NASDAQ closed." },
+  { date: "2025-11-27", name: "Thanksgiving Day (US)",      description: "NYSE & NASDAQ closed." },
+  { date: "2025-12-25", name: "Christmas Day",              description: "NYSE, NASDAQ, LSE, Euronext all closed." },
+  { date: "2025-12-26", name: "Boxing Day",                 description: "LSE & Euronext closed." },
+];
+
+const GLOBAL_HOLIDAYS_STATIC_2026 = [
+  { date: "2026-01-01", name: "New Year's Day",             description: "All major global exchanges closed." },
+  { date: "2026-01-19", name: "Martin Luther King Jr. Day", description: "NYSE & NASDAQ closed." },
+  { date: "2026-02-16", name: "Presidents' Day (US)",       description: "NYSE & NASDAQ closed." },
+  { date: "2026-04-03", name: "Good Friday",                description: "NYSE, NASDAQ, LSE, Euronext all closed." },
+  { date: "2026-04-06", name: "Easter Monday",              description: "LSE & Euronext closed." },
+  { date: "2026-05-04", name: "Early May Bank Holiday (UK)",description: "LSE closed." },
+  { date: "2026-05-25", name: "Memorial Day (US)",          description: "NYSE & NASDAQ closed." },
+  { date: "2026-07-04", name: "US Independence Day",        description: "NYSE & NASDAQ closed." },
+  { date: "2026-09-07", name: "Labor Day (US)",             description: "NYSE & NASDAQ closed." },
+  { date: "2026-11-26", name: "Thanksgiving Day (US)",      description: "NYSE & NASDAQ closed." },
+  { date: "2026-12-25", name: "Christmas Day",              description: "NYSE, NASDAQ, LSE, Euronext all closed." },
+  { date: "2026-12-28", name: "Boxing Day (observed)",      description: "LSE & Euronext closed." },
+];
+
+const GLOBAL_HOL_BY_YEAR = { 2025: GLOBAL_HOLIDAYS_STATIC_2025, 2026: GLOBAL_HOLIDAYS_STATIC_2026 };
+const _globalHolCache    = {};
+
+router.get("/global-holidays", async (req, res) => {
+  const year = parseInt(req.query.year) || new Date().getFullYear();
+
+  // Serve from cache (6 hours)
+  if (_globalHolCache[year] && Date.now() - _globalHolCache[year].ts < 6 * 60 * 60_000) {
+    return res.json({ status: "success", data: _globalHolCache[year].data, cached: true });
+  }
+
+  // Try Nager.Date free public API — fetches US + UK public holidays, no API key needed
+  try {
+    const [usRes, gbRes] = await Promise.allSettled([
+      axios.get(`https://date.nager.at/api/v3/PublicHolidays/${year}/US`, { timeout: 8000 }),
+      axios.get(`https://date.nager.at/api/v3/PublicHolidays/${year}/GB`, { timeout: 8000 }),
+    ]);
+
+    const seen   = new Set();
+    const merged = [];
+
+    // Major US market holidays we care about
+    const US_KEYS = [
+      "New Year", "Martin Luther King", "Presidents", "Memorial",
+      "Independence", "Labor Day", "Thanksgiving", "Christmas",
+    ];
+    // Major UK/global holidays
+    const GB_KEYS = ["New Year", "Good Friday", "Easter Monday", "Early May", "Christmas", "Boxing"];
+
+    for (const [res, keys] of [[usRes, US_KEYS], [gbRes, GB_KEYS]]) {
+      if (res.status !== "fulfilled") continue;
+      const hols = Array.isArray(res.value?.data) ? res.value.data : [];
+      for (const h of hols) {
+        if (!h.date || seen.has(h.date)) continue;
+        const name = h.name || h.localName || "";
+        const isRelevant = keys.some(k => name.toLowerCase().includes(k.toLowerCase()));
+        if (!isRelevant) continue;
+        seen.add(h.date);
+        merged.push({ date: h.date, name });
+      }
+    }
+
+    if (merged.length > 0) {
+      merged.sort((a, b) => a.date.localeCompare(b.date));
+      _globalHolCache[year] = { data: merged, ts: Date.now() };
+      console.log(`[GlobalHolidays] Nager.Date API: ${merged.length} holidays for ${year}`);
+      return res.json({ status: "success", data: merged });
+    }
+  } catch (err) {
+    console.warn(`[GlobalHolidays] Nager.Date API failed (${err.message}) — using static`);
+  }
+
+  // Static fallback
+  const staticList = GLOBAL_HOL_BY_YEAR[year] ?? [];
+  _globalHolCache[year] = { data: staticList, ts: Date.now() };
+  console.log(`[GlobalHolidays] Static: ${staticList.length} holidays for ${year}`);
+  return res.json({ status: "success", data: staticList, source: "static" });
 });
 
 

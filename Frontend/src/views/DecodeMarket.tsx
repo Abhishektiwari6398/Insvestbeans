@@ -151,7 +151,7 @@ const DecodeMarket = ({ activeTab }: DecodeMarketProps) => {
     domestic: {
       badge: { color: "#34d399", bg: "rgba(52,211,153,0.07)", border: "rgba(52,211,153,0.18)" },
       label: "Domestic Market Insights", heading: "Indian Markets",
-      sub: "Analysis of NSE, BSE, and sectoral performance",
+      sub: "Overview of Indian markets and sectoral performance ",
     },
     global: {
       badge: { color: "#7fb1cf", bg: "rgba(127,177,207,0.10)", border: "rgba(127,177,207,0.24)" },

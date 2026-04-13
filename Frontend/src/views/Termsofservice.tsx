@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Layout from '@/components/Layout';
 import { useTheme } from '@/controllers/Themecontext';
+import { Link } from 'react-router-dom';
 
 /* ─────────────────────────────────────────────
    Reveal helper
@@ -346,13 +347,13 @@ export default function TermsOfService() {
                   By using InvestBeans, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service and Risk Disclosure. We recommend saving a copy of these documents for your records.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-                  <a href="/help-center"
+                  <Link to="/help-center"
                     className={`inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium transition-all ${isLight ? 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 shadow-sm' : 'bg-white/8 border border-white/15 text-white/80 hover:bg-white/12'}`}>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     Help Center
-                  </a>
+                  </Link>
                   <a href="mailto:legal@investbeans.com"
                     className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm font-semibold hover:scale-[1.02] transition-all shadow-lg shadow-blue-500/25">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

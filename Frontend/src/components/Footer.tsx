@@ -1,5 +1,6 @@
 import { Facebook, Twitter, Linkedin, Instagram } from "lucide-react";
 import { useTheme } from "@/controllers/Themecontext"
+import { Link } from "react-router-dom";
 
 const Footer = () => {
   const { theme } = useTheme();
@@ -104,10 +105,10 @@ const Footer = () => {
           <div>
             <h3 className={sectionHeadingCls}>Resources</h3>
             <ul className="space-y-3 text-sm">
-              <li><a href="/blogs" className={linkCls}>Blog</a></li>
-              <li><a href="/help-center" className={linkCls}>Help Center</a></li>
-              <li><a href="/privacy-policy" className={linkCls}>Privacy Policy</a></li>
-              <li><a href="/terms-of-service" className={linkCls}>Terms of Service</a></li>
+            
+              <li><Link to="/help-center" className={linkCls}>Help Center</Link></li>
+              <li><Link to="/privacy-policy" className={linkCls}>Privacy Policy</Link></li>
+            
             </ul>
           </div>
         </div>

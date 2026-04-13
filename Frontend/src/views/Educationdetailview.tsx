@@ -776,10 +776,10 @@ const EducationDetailView: React.FC = () => {
                 <h1 className="text-3xl font-bold mb-2" style={{ color: textPrimary }}>{data.title}</h1>
                 <p className="text-sm leading-relaxed mb-4" style={{ color: textMuted }}>{data.description}</p>
                 <div className="flex flex-wrap items-center gap-4 text-sm">
-                  <span className="flex items-center gap-1" style={{ color: textMuted }}>
+                  {/* <span className="flex items-center gap-1" style={{ color: textMuted }}>
                     <SvgStar /> <b style={{ color: textPrimary }}>{data.stats.rating}</b>
                     <span style={{ color: textFaint }}>({data.stats.reviews} reviews)</span>
-                  </span>
+                  </span> */}
                   <span className="flex items-center gap-1" style={{ color: textMuted }}>
                     <SvgClock /> {data.stats.duration}
                   </span>
