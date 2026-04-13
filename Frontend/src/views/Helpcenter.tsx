@@ -38,7 +38,7 @@ const GlobalStyles = () => (
     .ib-revealed { opacity: 1 !important; transform: translateY(0) !important; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    header, nav.site-header, .site-header { display: none !important; }
+    header, nav.site-header, 
     @media (prefers-reduced-motion: reduce) {
       .ib-reveal { opacity: 1 !important; transform: none !important; }
     }

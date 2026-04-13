@@ -2446,12 +2446,12 @@ export default function DomesticView() {
             </div>
             {/* Right side — clock on sm+, connection on md+ */}
             <div className="flex items-center gap-1.5 shrink-0">
-              {connected && instrCount > 0 && (
+              {/* {connected && instrCount > 0 && (
                 <div className={`hidden md:flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md border ${l ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"}`}>
                   <Activity className="w-3 h-3" />
                   <span>{instrCount}</span>
                 </div>
-              )}
+              )} */}
               {!connected && (
                 <div className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-1 rounded-md border ${l ? "bg-red-50 border-red-200 text-red-600" : "bg-red-500/10 border-red-500/20 text-red-400"}`}>
                   <WifiOff className="w-3 h-3" />

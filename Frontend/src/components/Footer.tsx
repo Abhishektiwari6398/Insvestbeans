@@ -83,7 +83,7 @@ const Footer = () => {
               Empowering investors with data-driven decisions since 2024.
             </p>
             <div className="flex gap-4">
-              
+
               <a href="#" className={socialBtnCls}><Twitter className="w-5 h-5" /></a>
               <a href="https://www.linkedin.com/company/investbeans/?viewAsMember=true" className={socialBtnCls}><Linkedin className="w-5 h-5" /></a>
               <a href="https://www.instagram.com/investbeans?igsh=emowanMybzRyN2tm" className={socialBtnCls}><Instagram className="w-5 h-5" /></a>
@@ -93,40 +93,39 @@ const Footer = () => {
           <div>
             <h3 className={sectionHeadingCls}>Quick Links</h3>
             <ul className="space-y-3 text-sm">
-              <li><a href="/" className={linkCls}>Home</a></li>
-              <li><a href="/markets" className={linkCls}>Segments</a></li>
-              <li><a href="/dashboard" className={linkCls}>Dashboard</a></li>
-              <li><a href="/global" className={linkCls}>Global</a></li>
-              <li><a href="/domestic" className={linkCls}>Domestics</a></li>
-              <li><a href="/pricing" className={linkCls}>Pricing</a></li>
+              <li><Link to="/" className={linkCls}>Home</Link></li>
+              <li><Link to="/pricing" className={linkCls}>Pricing</Link></li>
+              <li><Link to="/team" className={linkCls}>About</Link></li>
+              <li><Link to="/ipos" className={linkCls}>Ipo</Link></li>
+              <li><Link to="/blogs" className={linkCls}>Blogs</Link></li>
             </ul>
           </div>
 
           <div>
             <h3 className={sectionHeadingCls}>Resources</h3>
             <ul className="space-y-3 text-sm">
-            
+
               <li><Link to="/help-center" className={linkCls}>Help Center</Link></li>
               <li><Link to="/privacy-policy" className={linkCls}>Privacy Policy</Link></li>
-            
+
             </ul>
           </div>
         </div>
 
         <div className={borderTopCls}>
-  <p className={copyrightCls}>
-    © 2024 InvestBeans. All rights reserved. 
-    Crafted and powered by{" "}
-    <a
-      href="https://www.strategixworks.com/"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="font-bold tracking-wide hover:underline transition-all duration-200 text-[#0A3656] dark:text-[#74A8C9] "
-    >
-      Strategix
-    </a> — Delivering intelligent digital solutions.
-  </p>
-</div>
+          <p className={copyrightCls}>
+            © 2024 InvestBeans. All rights reserved.
+            Crafted and powered by{" "}
+            <a
+              href="https://www.strategixworks.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-bold tracking-wide hover:underline transition-all duration-200 text-[#0A3656] dark:text-[#74A8C9] "
+            >
+              Strategix
+            </a> — Delivering intelligent digital solutions.
+          </p>
+        </div>
       </div>
     </footer>
   );
