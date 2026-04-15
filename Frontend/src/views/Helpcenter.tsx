@@ -49,15 +49,15 @@ const GlobalStyles = () => (
    DATA — from FAQs document
 ───────────────────────────────────────────── */
 const categories = [
-  { id: 'org',      label: 'Organisation & Regulatory', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
-  { id: 'research', label: 'Research & Advisory',        icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
-  { id: 'risk',     label: 'Risk Management',            icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
-  { id: 'data',     label: 'Data & Technology',          icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4' },
-  { id: 'insights', label: 'Portfolio & Insights',       icon: 'M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z' },
-  { id: 'edu',      label: 'Education',                  icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253' },
-  { id: 'payment',  label: 'Payment & Subscriptions',    icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
-  { id: 'privacy',  label: 'Privacy & Security',         icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' },
-  { id: 'reg',      label: 'Regulatory Disclosures',     icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
+  { id: 'org', label: 'Organisation & Regulatory', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
+  { id: 'research', label: 'Research & Advisory', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+  { id: 'risk', label: 'Risk Management', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
+  { id: 'data', label: 'Data & Technology', icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4' },
+  { id: 'insights', label: 'Portfolio & Insights', icon: 'M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z' },
+  { id: 'edu', label: 'Education', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253' },
+  { id: 'payment', label: 'Payment & Subscriptions', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
+  { id: 'privacy', label: 'Privacy & Security', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' },
+  { id: 'reg', label: 'Regulatory Disclosures', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
 ];
 
 const faqs: Record<string, { id: string; q: string; a: string; disclaimer?: string }[]> = {
@@ -118,14 +118,14 @@ export default function HelpCenter() {
 
   const searchResults = searchQuery.trim().length > 1
     ? allFaqs.filter((f) => {
-        const q = searchQuery.toLowerCase();
-        const catLabel = categories.find(c => c.id === f.catId)?.label?.toLowerCase() || '';
-        return (
-          f.q.toLowerCase().includes(q) ||
-          f.a.toLowerCase().includes(q) ||
-          catLabel.includes(q)
-        );
-      })
+      const q = searchQuery.toLowerCase();
+      const catLabel = categories.find(c => c.id === f.catId)?.label?.toLowerCase() || '';
+      return (
+        f.q.toLowerCase().includes(q) ||
+        f.a.toLowerCase().includes(q) ||
+        catLabel.includes(q)
+      );
+    })
     : null;
 
   const activeFaqs = searchResults ?? faqs[activeCategory] ?? [];
@@ -173,7 +173,12 @@ export default function HelpCenter() {
 
             {/* Search bar */}
             <div className="relative max-w-xl mx-auto">
-            <svg className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none ${isLight ? "text-gray-400" : "text-white"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 z-10 pointer-events-none ${isLight ? "text-gray-400" : "text-blue-200"}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
@@ -265,13 +270,12 @@ export default function HelpCenter() {
                           key={cat.id}
                           type="button"
                           onClick={() => { setActiveCategory(cat.id); setOpenFaq(null); }}
-                          className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                            activeCategory === cat.id
+                          className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${activeCategory === cat.id
                               ? 'bg-blue-500/20 border border-blue-400/40 text-blue-300'
                               : isLight
-                            ? 'bg-white border border-gray-200 text-gray-500 hover:text-gray-800 hover:border-gray-300 shadow-sm'
-                            : 'bg-white/5 border border-white/10 text-white/60 hover:text-white/90 hover:bg-white/8'
-                          }`}
+                                ? 'bg-white border border-gray-200 text-gray-500 hover:text-gray-800 hover:border-gray-300 shadow-sm'
+                                : 'bg-white/5 border border-white/10 text-white/60 hover:text-white/90 hover:bg-white/8'
+                            }`}
                         >
                           <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={cat.icon} />
@@ -288,11 +292,10 @@ export default function HelpCenter() {
                           key={cat.id}
                           type="button"
                           onClick={() => { setActiveCategory(cat.id); setOpenFaq(null); }}
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left ${
-                            activeCategory === cat.id
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left ${activeCategory === cat.id
                               ? isLight ? 'bg-blue-50 border border-blue-200 text-blue-600' : 'bg-blue-500/20 border border-blue-400/30 text-blue-300'
                               : isLight ? 'text-gray-500 hover:text-gray-800 hover:bg-gray-100' : 'text-white/55 hover:text-white/90 hover:bg-white/5'
-                          }`}
+                            }`}
                         >
                           <svg className={`w-4 h-4 flex-shrink-0 ${activeCategory === cat.id ? 'text-blue-400' : 'text-white/30'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={cat.icon} />
@@ -308,11 +311,10 @@ export default function HelpCenter() {
                       <div className={`mt-4 pt-4 border-t ${isLight ? 'border-gray-200' : 'border-white/10'}`}>
                         <Link
                           to="/privacy-policy"
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left ${
-                            isLight
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left ${isLight
                               ? 'text-gray-500 hover:text-blue-600 hover:bg-blue-50 border border-dashed border-gray-200 hover:border-blue-200'
                               : 'text-white/50 hover:text-blue-300 hover:bg-blue-500/10 border border-dashed border-white/10 hover:border-blue-400/30'
-                          }`}
+                            }`}
                         >
                           <svg className="w-4 h-4 flex-shrink-0 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -352,11 +354,10 @@ export default function HelpCenter() {
               <div className="space-y-3">
                 {(activeFaqs as any[]).map((faq, idx) => (
                   <Reveal key={faq.id} delay={idx * 60}>
-                    <div className={`rounded-2xl border transition-all duration-300 overflow-hidden ${
-                      openFaq === faq.id
+                    <div className={`rounded-2xl border transition-all duration-300 overflow-hidden ${openFaq === faq.id
                         ? isLight ? 'border-blue-300 bg-blue-50' : 'border-blue-400/30 bg-white/7'
                         : isLight ? 'border-gray-200 bg-white hover:border-gray-300 shadow-sm' : 'border-white/10 bg-white/4 hover:border-white/20 hover:bg-white/6'
-                    }`}>
+                      }`}>
                       <button
                         type="button"
                         onClick={() => setOpenFaq(openFaq === faq.id ? null : faq.id)}
@@ -365,9 +366,8 @@ export default function HelpCenter() {
                         <span className={`text-sm sm:text-base font-medium leading-snug transition-colors ${openFaq === faq.id ? (isLight ? "text-gray-900" : "text-white") : (isLight ? "text-gray-700" : "text-white/80")}`}>
                           {faq.q}
                         </span>
-                        <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-all mt-0.5 ${
-                          openFaq === faq.id ? (isLight ? 'bg-blue-100 rotate-180' : 'bg-blue-500/30 rotate-180') : (isLight ? 'bg-gray-100' : 'bg-white/8')
-                        }`}>
+                        <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-all mt-0.5 ${openFaq === faq.id ? (isLight ? 'bg-blue-100 rotate-180' : 'bg-blue-500/30 rotate-180') : (isLight ? 'bg-gray-100' : 'bg-white/8')
+                          }`}>
                           <svg className={`w-3.5 h-3.5 ${isLight ? "text-gray-400" : "text-white/60"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                           </svg>
