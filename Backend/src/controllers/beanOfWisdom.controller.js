@@ -46,7 +46,7 @@ const updateBeanOfWisdom = asyncHandler(async (req, res) => {
 
     const fields = [
         'avatarText', 'title', 'subtitle', 'sectionTitle',
-        'description', 'keyPrinciple', 'quote', 'insightTag', 'insightText'
+        'description', 'keyPrinciple', 'quote', 'insightTag', 'insightText', 'weekLabel'
     ];
 
     fields.forEach(field => {
@@ -109,11 +109,12 @@ const getFieldLimits = asyncHandler(async (req, res) => {
         title: 200,
         subtitle: 300,
         sectionTitle: 150,
-        description: 500,
+        description: 600,
         keyPrinciple: 120,
         quote: 200,
         insightTag: 50,
-        insightText: 250,
+        insightText: 350,
+        weekLabel: 30,
         tags: 30, 
     };
 

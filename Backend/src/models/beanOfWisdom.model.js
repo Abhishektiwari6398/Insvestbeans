@@ -31,7 +31,7 @@ const beanOfWisdomSchema = new mongoose.Schema(
             type: String,
             required: [true, "Description is required"],
             trim: true,
-            maxlength: [500, "Description cannot exceed 500 characters"],
+            maxlength: [600, "Description cannot exceed 600 characters"],
         },
         keyPrinciple: {
             type: String,
@@ -56,6 +56,11 @@ const beanOfWisdomSchema = new mongoose.Schema(
             required: [true, "Insight text is required"],
             trim: true,
             maxlength: [350, "Insight text cannot exceed 350 characters"],
+        },
+        weekLabel: {
+            type: String,
+            trim: true,
+            maxlength: [30, "Week label cannot exceed 30 characters"],
         },
         tags: [
             {

@@ -115,13 +115,13 @@ const financialItems = [
     title: 'Tutorials',
     tag: 'Financial',
     description: 'Step-by-step video walkthroughs on reading charts, fundamental analysis, options strategies, and more.',
-    isPaid: true,        // ← tutorials bhi ab gated hain (sirf 2 free)
-    freeCount: 2,
+    isPaid: false,       // ← tutorials sabke liye free/open
+    freeCount: 5,
     totalCount: 5,
     items: [
       { title: 'How to Read a Balance Sheet',    meta: '18 min', level: 'Beginner',     isFreePreview: true  },
       { title: 'Technical Analysis Masterclass', meta: '45 min', level: 'Intermediate', isFreePreview: true  },
-      { title: 'Options Trading Explained',      meta: '32 min', level: 'Advanced',     isFreePreview: false },
+      { title: 'Options Trading Explained',      meta: '32 min', level: 'Advanced',     isFreePreview: true  },
     ],
     accent: 'from-emerald-500 to-teal-600', accentRaw: '#10B981', iconColor: '#34D399',
     detailId: 'financial-tutorials',
@@ -169,13 +169,13 @@ const nonFinancialItems = [
     title: 'Tutorials',
     tag: 'Non-Financial',
     description: 'Video tutorials on mindset, time management, productivity tools, and life skills that complement your investing journey.',
-    isPaid: true,
-    freeCount: 2,
+    isPaid: false,       // ← tutorials sabke liye free/open
+    freeCount: 5,
     totalCount: 5,
     items: [
       { title: 'Building an Investor Mindset',  meta: '22 min', level: 'Beginner',     isFreePreview: true  },
       { title: 'Managing Risk Psychologically', meta: '30 min', level: 'Intermediate', isFreePreview: true  },
-      { title: 'Productivity for Traders',      meta: '20 min', level: 'All Levels',   isFreePreview: false },
+      { title: 'Productivity for Traders',      meta: '20 min', level: 'All Levels',   isFreePreview: true  },
     ],
     accent: 'from-rose-500 to-pink-600', accentRaw: '#F43F5E', iconColor: '#FB7185',
     detailId: 'nonfinancial-tutorials',

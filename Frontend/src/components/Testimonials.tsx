@@ -487,10 +487,10 @@ export default function TestimonialsPage() {
           <span style={{ fontSize: "11px", fontWeight: 600, color: "#1F5F89", letterSpacing: "0.06em", textTransform: "uppercase" }}>User Reviews</span>
         </div>
         <h2 style={{ margin: "0 0 8px", fontSize: isMobile ? "22px" : "clamp(24px,3.5vw,36px)", fontWeight: 800, color: headingColor, letterSpacing: "-0.02em", lineHeight: 1.15 }}>
-          What Our Users are Saying
+        The InvestBeans Experience, in Their Words
         </h2>
         <p style={{ margin: "0 auto 16px", fontSize: isMobile ? "13px" : "15px", color: subHeadingColor, maxWidth: "420px", lineHeight: 1.6 }}>
-          Trusted by thousands of investors and professionals across India
+        Why Investors Trust InvestBeans
         </p>
 
         {/* Auth-aware CTA */}

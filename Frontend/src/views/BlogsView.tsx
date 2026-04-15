@@ -449,7 +449,7 @@ useEffect(() => {
                 Categories
               </h3>
               <div className="relative">
-                <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide scroll-smooth snap-x snap-mandatory -mx-2 px-2">
+                <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide scroll-smooth snap-x snap-mandatory -mx-2 px-2">
                   {categories.map((category) => (
                     <button
                       key={category}

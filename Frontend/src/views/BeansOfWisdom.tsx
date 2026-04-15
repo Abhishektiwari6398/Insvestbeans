@@ -108,8 +108,8 @@ export default function BeansOfWisdomView() {
   const spinClr = accentLight;
   const emptyClr = isLight ? "#94a3b8"                   : "rgba(148,163,184,1)";
 
-  const pubFont  = "'Georgia','Times New Roman',serif";
-  const sansFont = "system-ui,-apple-system,sans-serif";
+  const pubFont  = "'Cambria','Cochin','Palatino Linotype',serif";
+  const sansFont = "'Inter','Segoe UI',system-ui,-apple-system,sans-serif";
 
   /* ── Loading ── */
   if (authLoading || loading) return (
@@ -165,7 +165,7 @@ export default function BeansOfWisdomView() {
           </h2>
 
           <p className="text-sm mt-2 max-w-md mx-auto" style={{ color: subClr }}>
-            Curated market insight, delivered every week.
+            Plant the Right Thoughts. Grow Real Wealth.
           </p>
 
           {isAdmin && (
@@ -216,11 +216,11 @@ export default function BeansOfWisdomView() {
             <div className="flex items-center gap-2">
               <span className="bow-dot inline-block w-1.5 h-1.5 rounded-full" style={{ background: accentLight }} />
               <span className="text-[9px] font-bold tracking-[0.22em] uppercase" style={{ color: inkMid }}>
-                Today's Wisdom
+                This Week's Wisdom
               </span>
             </div>
             <span className="text-[9px] tracking-[0.14em] uppercase" style={{ color: inkMid, opacity: .5 }}>
-              {weekLabel()}
+              {bean.weekLabel || weekLabel()}
             </span>
           </div>
 
@@ -463,7 +463,7 @@ export default function BeansOfWisdomView() {
             style={{ borderTop: `1px solid ${rule}`, fontFamily: sansFont }}
           >
             <span className="text-[9px] tracking-[.15em] uppercase" style={{ color: inkMid, opacity: .45 }}>
-              Curated market insight
+              The InvestBeans Wisdom Desk
             </span>
 
             {/* {isAdmin && (

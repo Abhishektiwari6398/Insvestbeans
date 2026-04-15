@@ -27,6 +27,7 @@ export default function BeansOfWisdomForm({ isOpen, onClose, bean, onSuccess }: 
     quote: "",
     insightTag: "",
     insightText: "",
+    weekLabel: "",
     tags: [],
   });
 
@@ -56,6 +57,7 @@ export default function BeansOfWisdomForm({ isOpen, onClose, bean, onSuccess }: 
           quote: bean.quote || "",
           insightTag: bean.insightTag || "",
           insightText: bean.insightText || "",
+          weekLabel: (bean as any).weekLabel || "",
           tags: bean.tags || [],
         });
       }
@@ -209,7 +211,7 @@ export default function BeansOfWisdomForm({ isOpen, onClose, bean, onSuccess }: 
             <h2 className="text-xl md:text-2xl font-bold" style={{ color: isLight ? "#0f172a" : "#ffffff" }}>
               Edit Bean of Wisdom
             </h2>
-            <p className="text-sm mt-0.5" style={{ color: isLight ? "#64748b" : "rgba(148,163,184,0.8)" }}>Update your daily investment insight</p>
+            <p className="text-sm mt-0.5" style={{ color: isLight ? "#64748b" : "rgba(148,163,184,0.8)" }}>Update this week's investment insight</p>
           </div>
           <button onClick={onClose}
             className="w-9 h-9 flex items-center justify-center rounded-lg transition-all"
@@ -379,6 +381,22 @@ export default function BeansOfWisdomForm({ isOpen, onClose, bean, onSuccess }: 
                   />
                 </div>
               </div>
+
+              {/* Week Label */}
+              {fieldLimits.weekLabel && (
+                <FormField
+                  label="Week Label (e.g. Week 16 · 2026)"
+                  name="weekLabel"
+                  value={(formData as any).weekLabel || ''}
+                  onChange={handleInputChange}
+                  maxLength={fieldLimits.weekLabel}
+                  current={((formData as any).weekLabel || '').length}
+                  max={fieldLimits.weekLabel}
+                  error={fieldErrors.weekLabel}
+                  placeholder="e.g., Week 16 · 2026"
+                  isLight={isLight}
+                />
+              )}
 
               {/* Tags */}
               <div>
