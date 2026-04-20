@@ -11,7 +11,7 @@
  * Place in: src/api/educationApi.ts  (or src/services/api/educationApi.ts)
  */
 
-const BASE           = import.meta.env.VITE_API_URL || "";
+const BASE           = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 const ADMIN_SEGMENT  = import.meta.env.VITE_ADMIN_SEGMENT || "xp-insights-42";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -48,24 +48,24 @@ async function apiFetchForm(url: string, body: FormData, method = "POST") {
 
 /** List all category meta (no modules). Used by EducationView listing page. */
 export const fetchCategories = () =>
-  apiFetch("/api/v1/education/categories");
+  apiFetch("/education/categories");
 
 /** Get one full category including all modules. Used by EducationDetailView. */
 export const fetchCategory = (categoryId: string) =>
-  apiFetch(`/api/v1/education/categories/${categoryId}`);
+  apiFetch(`/education/categories/${categoryId}`);
 
 // ── ADMIN ─────────────────────────────────────────────────────────────────────
 
 /** Seed the DB from the static CATEGORY_DATA object (one-time import). */
 export const seedEducation = (categories: Record<string, any>) =>
-  apiFetch(`/api/v1/${ADMIN_SEGMENT}/education/seed`, {
+  apiFetch(`/${ADMIN_SEGMENT}/education/seed`, {
     method: "POST",
     body: JSON.stringify({ categories }),
   });
 
 /** Update category meta fields (title, description, accent, etc.). */
 export const updateCategoryMeta = (categoryId: string, fields: Record<string, any>) =>
-  apiFetch(`/api/v1/${ADMIN_SEGMENT}/education/categories/${categoryId}`, {
+  apiFetch(`/${ADMIN_SEGMENT}/education/categories/${categoryId}`, {
     method: "PATCH",
     body: JSON.stringify(fields),
   });
@@ -102,7 +102,7 @@ export const addModule = (
   }
 
   return apiFetchForm(
-    `/api/v1/${ADMIN_SEGMENT}/education/categories/${categoryId}/modules`,
+    `/${ADMIN_SEGMENT}/education/categories/${categoryId}/modules`,
     form,
     "POST"
   );
