@@ -138,7 +138,7 @@ export const updateModule = (
   }
 
   return apiFetchForm(
-    `/api/v1/${ADMIN_SEGMENT}/education/categories/${categoryId}/modules/${moduleId}`,
+    `/${ADMIN_SEGMENT}/education/categories/${categoryId}/modules/${moduleId}`,
     form,
     "PATCH"
   );
@@ -153,7 +153,7 @@ export const uploadModulePdf = (
   const form = new FormData();
   form.append("pdf", pdfFile, pdfFile.name);
   return apiFetchForm(
-    `/api/v1/${ADMIN_SEGMENT}/education/categories/${categoryId}/modules/${moduleId}/pdf`,
+    `/${ADMIN_SEGMENT}/education/categories/${categoryId}/modules/${moduleId}/pdf`,
     form,
     "POST"
   );
@@ -162,20 +162,20 @@ export const uploadModulePdf = (
 /** Delete a module's PDF from Cloudinary (clears pdfUrl on the module). */
 export const deleteModulePdf = (categoryId: string, moduleId: string) =>
   apiFetch(
-    `/api/v1/${ADMIN_SEGMENT}/education/categories/${categoryId}/modules/${moduleId}/pdf`,
+    `/${ADMIN_SEGMENT}/education/categories/${categoryId}/modules/${moduleId}/pdf`,
     { method: "DELETE" }
   );
 
 /** Delete a module. */
 export const deleteModule = (categoryId: string, moduleId: string) =>
   apiFetch(
-    `/api/v1/${ADMIN_SEGMENT}/education/categories/${categoryId}/modules/${moduleId}`,
+    `/${ADMIN_SEGMENT}/education/categories/${categoryId}/modules/${moduleId}`,
     { method: "DELETE" }
   );
 
 /** Reorder modules — pass array of _id strings in desired order. */
 export const reorderModules = (categoryId: string, orderedIds: string[]) =>
   apiFetch(
-    `/api/v1/${ADMIN_SEGMENT}/education/categories/${categoryId}/modules/reorder`,
+    `/${ADMIN_SEGMENT}/education/categories/${categoryId}/modules/reorder`,
     { method: "PATCH", body: JSON.stringify({ orderedIds }) }
   );
