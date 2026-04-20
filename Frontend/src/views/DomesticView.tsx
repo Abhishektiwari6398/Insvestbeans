@@ -2747,13 +2747,13 @@ function MacroSection() {
           <button onClick={refresh} className="ml-auto underline">Retry</button>
         </div>
       )}
-
+{/* 
       <div className={`mt-1 text-[10px] flex items-center gap-1 ${tx.t3(l)}`}>
         INR/USD: live (Yahoo). Bond yield &amp; RBI rate: live when available, fallback to last known values. CPI/GDP: MOSPI/NSO annual data.
         <button onClick={refresh} className={`ml-auto flex items-center gap-1 px-2 py-0.5 rounded border text-[9px] font-bold transition-colors ${l ? "bg-white border-slate-200 text-slate-500 hover:border-slate-300" : "bg-[#0c1a2e] border-[#1e3a5f]/50 text-slate-500 hover:text-slate-400"}`}>
           <RefreshCw className={`w-2.5 h-2.5 ${loading ? "animate-spin" : ""}`} />Refresh
         </button>
-      </div>
+      </div> */}
     </section>
   );
 }
