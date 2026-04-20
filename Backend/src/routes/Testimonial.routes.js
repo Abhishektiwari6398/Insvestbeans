@@ -36,11 +36,9 @@ const requireLogin = (req, res, next) => {
 router.route("/").get(getAllTestimonials);
 router.route("/my").get(requireLogin, getMyTestimonial);
 
-// Authenticated user (Google session OR JWT)
-router.route("/").post(requireLogin, createTestimonial);
-router.route("/:id").put(requireLogin, updateTestimonial);
-
-// Admin only (JWT + verifyAdmin — same as beans of wisdom)
+// Admin only (JWT + verifyAdmin)
+router.route("/").post(verifyJWT, verifyAdmin, createTestimonial);
+router.route("/:id").put(verifyJWT, verifyAdmin, updateTestimonial);
 router.route("/:id").delete(verifyJWT, verifyAdmin, deleteTestimonial);
 
 export default router;

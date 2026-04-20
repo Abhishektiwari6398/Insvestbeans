@@ -300,7 +300,52 @@ router.patch("/:id", verifyJWT, verifyAdmin, async (req, res) => {
   }
 });
 
-// ─── DELETE /api/v1/admin/events/:id ─── Soft delete (isActive=false) ─────────
+// ─── PUT /api/v1/admin/events/:id ─── Full update (admin edits all fields) ────
+router.put("/:id", verifyJWT, verifyAdmin, async (req, res) => {
+  try {
+    const errors = validateEventBody(req.body, true);
+    if (errors.length) return res.status(400).json({ success: false, message: errors.join("; ") });
+
+    // Validate enrichment fields too
+    const enrichErrors = validateEnrichmentBody(req.body);
+    if (enrichErrors.length) return res.status(400).json({ success: false, message: enrichErrors.join("; ") });
+
+    const update = {
+      title:              req.body.title.trim(),
+      date:               req.body.date,
+      region:             req.body.region             || "india",
+      impact:             req.body.impact             || "Medium",
+      description:        req.body.description        || "",
+      marketImpact:       req.body.marketImpact       || "",
+      impactTerm:         req.body.impactTerm         || "",
+      whatHappened:       req.body.whatHappened       || "",
+      investbeansInsight: req.body.investbeansInsight || "",
+      sourceUrl:          req.body.sourceUrl          || "",
+      whoAffected: {
+        assets:  Array.isArray(req.body.whoAffected?.assets)
+                   ? req.body.whoAffected.assets.slice(0, 1)
+                   : [],
+        sectors: parseSectors(req.body.whoAffected?.sectors),
+      },
+      updatedBy: req.user._id,
+    };
+
+    const event = await MarketEvent.findByIdAndUpdate(
+      req.params.id,
+      { $set: update },
+      { new: true, runValidators: true }
+    );
+    if (!event) return res.status(404).json({ success: false, message: "Event not found" });
+
+    console.log(`[AdminEvents] Full-updated event "${event.title}" by ${req.user.email}`);
+    res.json({ success: true, data: event });
+  } catch (err) {
+    console.error("[AdminEvents] PUT error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+
 router.delete("/:id", verifyJWT, verifyAdmin, async (req, res) => {
   try {
     const hard = req.query.hard === "true"; // ?hard=true for permanent delete

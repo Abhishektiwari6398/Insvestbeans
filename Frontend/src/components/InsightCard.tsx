@@ -203,7 +203,7 @@ const InsightCard = ({
         {/* Stats + Actions */}
         <div className="flex flex-col gap-2 flex-shrink-0">
           {/* Views & Likes */}
-          <div className="flex items-center gap-3 text-[11px]" style={{ color: statsColor }}>
+          {/* <div className="flex items-center gap-3 text-[11px]" style={{ color: statsColor }}>
             <div className="flex items-center gap-1">
               <Eye className="w-3.5 h-3.5" />
               <span>{views.toLocaleString()} views</span>
@@ -216,7 +216,7 @@ const InsightCard = ({
               <ThumbsUp className={`w-3.5 h-3.5 ${liked ? "fill-current" : ""}`} />
               <span>{likeCount.toLocaleString()} likes</span>
             </button>
-          </div>
+          </div> */}
 
           {/* Buttons */}
           <div className="flex gap-2">

@@ -31,6 +31,28 @@ const DELAY_LABEL: Record<Period, string> = {
   '1Y': 'Zerodha · daily bars',
 };
 
+// ── IST Time Formatter helpers ────────────────────────────────────
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // UTC+5:30
+
+function toISTDate(utcSeconds: number) {
+  return new Date(utcSeconds * 1000 + IST_OFFSET_MS);
+}
+
+/** Format intraday bar timestamps in IST (HH:MM) */
+function formatISTTime(utcSeconds: number): string {
+  const d = toISTDate(utcSeconds);
+  const hh = d.getUTCHours().toString().padStart(2, '0');
+  const mm = d.getUTCMinutes().toString().padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+/** Format daily bar timestamps as DD MMM */
+function formatISTDay(utcSeconds: number): string {
+  const d = toISTDate(utcSeconds);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${d.getUTCDate()} ${months[d.getUTCMonth()]}`;
+}
+
 // Domestic symbols available from Kite (matching kite_routes.js TOKEN_MAP)
 export interface KiteSymbolConfig {
   key: string;       // API symbol key e.g. "NIFTY 50"
@@ -63,6 +85,9 @@ export const DOMESTIC_SYMBOLS: KiteSymbolConfig[] = [
   { key: 'HDFCBANK',          label: 'HDFC Bank',       exchange: 'NSE' },
   { key: 'INFY',              label: 'Infosys',         exchange: 'NSE' },
 ];
+
+// ── Default symbol: SENSEX ────────────────────────────────────────
+const DEFAULT_SYMBOL = DOMESTIC_SYMBOLS.find(s => s.key === 'SENSEX') ?? DOMESTIC_SYMBOLS[0];
 
 const AUTO_REFRESH_MS = 5 * 60 * 1000; // 5 min for intraday
 
@@ -124,12 +149,20 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
   const abortRef     = useRef<AbortController | null>(null);
 
   const [period,    setPeriod]    = useState<Period>('1D');
-  const [symbol,    setSymbol]    = useState<KiteSymbolConfig>(DOMESTIC_SYMBOLS[0]);
+  const [symbol,    setSymbol]    = useState<KiteSymbolConfig>(DEFAULT_SYMBOL);
   const [candles,   setCandles]   = useState<CandlePoint[]>([]);
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState<string | null>(null);
   const [lastFetch, setLastFetch] = useState<Date | null>(null);
   const [stats,     setStats]     = useState({ change: 0, changePct: 0, high: 0, low: 0, price: 0 });
+
+  // ── Search state ─────────────────────────────────────────────────
+  const [searchQ,       setSearchQ]       = useState('');
+  const [searchResults, setSearchResults] = useState<KiteSymbolConfig[]>([]);
+  const [searchOpen,    setSearchOpen]    = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Fetch candles from Kite backend ─────────────────────────────
   const fetchCandles = useCallback(async (sym: KiteSymbolConfig, p: Period) => {
@@ -174,6 +207,43 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
 
   useEffect(() => { fetchCandles(symbol, period); }, [symbol, period, fetchCandles]);
 
+  // ── Search: debounced fetch from /kite/search-instruments ───────
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (!searchOpen) return;
+    if (!searchQ.trim()) {
+      // No query → fetch popular symbols
+      setSearchLoading(true);
+      fetch(`${API_BASE}/api/v1/kite/search-instruments`)
+        .then(r => r.json())
+        .then(d => setSearchResults(d.results ?? []))
+        .catch(() => setSearchResults([]))
+        .finally(() => setSearchLoading(false));
+      return;
+    }
+    searchTimerRef.current = setTimeout(() => {
+      setSearchLoading(true);
+      fetch(`${API_BASE}/api/v1/kite/search-instruments?q=${encodeURIComponent(searchQ.toUpperCase())}`)
+        .then(r => r.json())
+        .then(d => setSearchResults(d.results ?? []))
+        .catch(() => setSearchResults([]))
+        .finally(() => setSearchLoading(false));
+    }, 280);
+    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
+  }, [searchQ, searchOpen]);
+
+  // ── Close search dropdown on outside click ───────────────────────
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchOpen(false);
+        setSearchQ('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   // ── Auto-refresh for intraday ────────────────────────────────────
   useEffect(() => {
     if (period !== '1D' && period !== '1W') return;
@@ -191,7 +261,7 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
         background: { type: ColorType.Solid, color: col.bg },
         textColor:  col.text,
         fontFamily: "'Inter', system-ui, sans-serif",
-        fontSize:   12,
+        fontSize:   11,
       },
       grid: {
         vertLines: { visible: false },
@@ -202,15 +272,33 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
         vertLine: { color: col.cross, labelBackgroundColor: col.crossLbl, width: 1, style: 1 },
         horzLine: { color: col.cross, labelBackgroundColor: col.crossLbl, width: 1, style: 1 },
       },
-      rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.06, bottom: 0.04 }, minimumWidth: 72 },
+      rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.08, bottom: 0.06 }, minimumWidth: 62 },
       timeScale: {
-        borderVisible: false,
-        timeVisible:   period === '1D' || period === '1W',
-        secondsVisible: false,
-        fixLeftEdge:   true,
-        fixRightEdge:  true,
-        barSpacing:    period === '1Y' ? 18 : 10,
-        rightOffset:   3,
+        borderVisible:   false,
+        timeVisible:     period === '1D' || period === '1W',
+        secondsVisible:  false,
+        fixLeftEdge:     true,
+        fixRightEdge:    true,
+        barSpacing:      period === '1Y' ? 14 : period === '1D' ? 5 : 8,
+        rightOffset:     2,
+        minimumBarSpacing: 3,
+        // ✅ FIX Issue 4: IST tick labels — lightweight-charts uses UTC internally,
+        // so we manually offset by +5:30 to display the correct Indian market time
+        tickMarkFormatter: (utcSec: number) => {
+          if (period === '1D' || period === '1W') return formatISTTime(utcSec);
+          return formatISTDay(utcSec);
+        },
+      },
+      // ✅ FIX Issue 4: Crosshair tooltip also shows IST
+      localization: {
+        timeFormatter: (utcSec: number) => {
+          if (period === '1D' || period === '1W') {
+            const d = toISTDate(utcSec);
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${formatISTTime(utcSec)} IST`;
+          }
+          return formatISTDay(utcSec);
+        },
       },
       handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true },
       handleScale:  { mouseWheel: false, pinch: false },
@@ -301,27 +389,97 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
         .lwc-wrap > div > div:last-child { display: none !important; }
       `}</style>
 
-      {/* ── Symbol selector — horizontal scroll on mobile ─────── */}
-      <div className="px-4 sm:px-5 pt-4 pb-0">
-        <div
-          className="flex gap-1.5 mb-3 overflow-x-auto pb-1"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          {DOMESTIC_SYMBOLS.map(s => (
-            <button
-              key={s.key}
-              onClick={() => setSymbol(s)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex-shrink-0 ${symbol.key === s.key ? symActive : symDefault}`}
-            >
-              {s.label}
-            </button>
-          ))}
+      {/* ── Symbol search bar — replaces scroll-pill buttons ─────── */}
+      <div className="px-3 sm:px-5 pt-3 pb-0">
+        <div className="relative mb-3" ref={searchRef}>
+          {/* Search input */}
+          <div
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-text ${
+              dark
+                ? 'bg-white/5 border-white/10 text-slate-200'
+                : 'bg-slate-50 border-slate-200 text-slate-800'
+            }`}
+            onClick={() => setSearchOpen(true)}
+          >
+            {/* Search icon */}
+            <svg className="w-3.5 h-3.5 flex-shrink-0 opacity-50" fill="none" viewBox="0 0 16 16">
+              <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M11 11l2.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            <input
+              className="flex-1 bg-transparent outline-none text-xs font-medium placeholder-current opacity-60 min-w-0"
+              placeholder={`Search — ${symbol.label}`}
+              value={searchQ}
+              onChange={e => { setSearchQ(e.target.value); setSearchOpen(true); }}
+              onFocus={() => setSearchOpen(true)}
+            />
+            {/* Current active symbol badge */}
+            <span className={`flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded ${symActive}`}>
+              {symbol.exchange}
+            </span>
+          </div>
+
+          {/* Dropdown */}
+          {searchOpen && (
+            <div className={`absolute left-0 right-0 top-full mt-1 rounded-xl border shadow-xl z-50 max-h-80 overflow-y-auto ${
+              dark ? 'bg-[#0e2038] border-white/10' : 'bg-white border-slate-200'
+            }`}>
+              {searchLoading && (
+                <div className={`px-3 py-2 text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
+                  Searching…
+                </div>
+              )}
+              {!searchLoading && searchResults.length === 0 && (
+                <div className={`px-3 py-2 text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
+                  No results
+                </div>
+              )}
+              {!searchLoading && searchResults.length > 0 && (
+                <>
+                  <div className={`sticky top-0 px-3 pt-2 pb-1 text-[9px] font-bold uppercase tracking-wider flex justify-between ${
+                    dark ? 'bg-[#0e2038] text-slate-500' : 'bg-white text-slate-400'
+                  }`}>
+                    <span>{searchQ ? `Results for "${searchQ}"` : 'Popular'}</span>
+                    <span>{searchResults.length} found</span>
+                  </div>
+                  {searchResults.map(s => (
+                    <button
+                      key={s.key}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-left transition-colors ${
+                        symbol.key === s.key
+                          ? (dark ? 'bg-[#1F5F89]/60' : 'bg-[#0A3656]/10')
+                          : (dark ? 'hover:bg-white/5' : 'hover:bg-slate-50')
+                      }`}
+                      onClick={() => {
+                        setSymbol(s);
+                        setSearchOpen(false);
+                        setSearchQ('');
+                      }}
+                    >
+                      <span className={`text-[9px] font-bold px-1 py-0.5 rounded flex-shrink-0 ${
+                        dark ? 'bg-white/8 text-slate-400' : 'bg-slate-100 text-slate-500'
+                      }`}>{s.exchange}</span>
+                      <span className={`text-xs font-semibold truncate ${dark ? 'text-slate-200' : 'text-slate-800'}`}>
+                        {s.label}
+                      </span>
+                      <span className={`text-[9px] ml-1 flex-shrink-0 ${dark ? 'text-slate-600' : 'text-slate-300'}`}>
+                        {s.key !== s.label ? s.key : ''}
+                      </span>
+                      {symbol.key === s.key && (
+                        <span className="ml-auto text-[9px] text-emerald-400 flex-shrink-0">✓</span>
+                      )}
+                    </button>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       {/* ── Header: name + price + H/L ──────────────────────────── */}
-      <div className="px-4 sm:px-6 pb-0">
-        <h3 className={`text-[11px] font-bold uppercase tracking-widest mb-2 ${nameCls}`}>
+      <div className="px-3 sm:px-6 pb-0">
+        <h3 className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-widest mb-1.5 ${nameCls}`}>
           {symbol.exchange && <span className="mr-1 opacity-60">{symbol.exchange}:</span>}
           {symbol.label}
           <span className="ml-2 text-[9px] font-semibold px-1.5 py-0.5 rounded" style={{
@@ -332,15 +490,15 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
           </span>
         </h3>
 
-        <div className="flex items-start justify-between mb-3">
+        <div className="flex items-start justify-between mb-2">
           <div>
             {stats.price > 0 ? (
               <>
                 {/* Smaller price on mobile so it doesn't overflow */}
-                <div className={`text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-none mb-1.5 ${priceCls}`}>
+                <div className={`text-2xl sm:text-4xl md:text-5xl font-black tracking-tight leading-none mb-1 ${priceCls}`}>
                   {stats.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
-                <div className={`flex items-center gap-1.5 text-sm sm:text-base font-bold ${isPos ? 'text-emerald-500' : 'text-red-500'}`}>
+                <div className={`flex items-center gap-1 text-xs sm:text-base font-bold ${isPos ? 'text-emerald-500' : 'text-red-500'}`}>
                   {isPos ? <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" /> : <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5" />}
                   <span>
                     {stats.change > 0 ? '+' : ''}{stats.change.toFixed(2)}&nbsp;
@@ -356,11 +514,11 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
           </div>
 
           {stats.high > 0 && (
-            <div className="text-right text-xs leading-relaxed space-y-1 ml-2">
-              <div className={`px-2 py-1 rounded border ${hlCls}`}>
+            <div className="text-right text-[10px] sm:text-xs leading-relaxed space-y-1 ml-2 flex-shrink-0">
+              <div className={`px-1.5 py-0.5 rounded border ${hlCls}`}>
                 H: <span className="font-semibold">{stats.high.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
               </div>
-              <div className={`px-2 py-1 rounded border ${hlCls}`}>
+              <div className={`px-1.5 py-0.5 rounded border ${hlCls}`}>
                 L: <span className="font-semibold">{stats.low.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
               </div>
             </div>
@@ -368,20 +526,20 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
         </div>
 
         {/* ── Period buttons ─────────────────────────────────────── */}
-        <div className="flex items-center gap-1.5 mb-3 sm:mb-5">
+        <div className="flex items-center gap-1 mb-2 sm:mb-5">
           {PERIODS.map(p => (
             <button key={p}
               onClick={() => setPeriod(p)}
               disabled={loading}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-60 ${period === p ? btnActive : btnDefault}`}>
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all disabled:opacity-60 ${period === p ? btnActive : btnDefault}`}>
               {p}
             </button>
           ))}
-          {loading && <Loader2 className="w-4 h-4 ml-2 animate-spin text-slate-400" />}
+          {loading && <Loader2 className="w-3.5 h-3.5 ml-1 animate-spin text-slate-400" />}
           <button
             onClick={() => fetchCandles(symbol, period)}
             disabled={loading}
-            className={`ml-auto px-2 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-60 ${btnDefault}`}
+            className={`ml-auto px-2 py-1 rounded-lg text-xs font-bold transition-all disabled:opacity-60 ${btnDefault}`}
             title="Refresh"
           >
             <RefreshCw className="w-3 h-3" />
@@ -402,7 +560,7 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
       ) : (
         <div
           className={`transition-opacity duration-200 ${loading ? 'opacity-30' : 'opacity-100'}`}
-          style={{ height: 'clamp(180px, 45vw, 280px)' }}
+          style={{ height: 'clamp(220px, 55vw, 340px)' }}
         >
           {/* lwc-wrap class used by CSS above to kill watermark anchor */}
           <div ref={containerRef} className="lwc-wrap" style={{ width: '100%', height: '100%' }} />
@@ -410,24 +568,31 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
       )}
 
       {/* ── Footer ──────────────────────────────────────────────── */}
-      <div className={`flex items-center justify-between px-4 sm:px-5 py-2 text-[10px] border-t ${footBg}`}>
-        <span>📊 {DELAY_LABEL[period]}</span>
-        <span className="flex items-center gap-2">
-          {nextRefreshIn && (
-            <span className="flex items-center gap-1 text-amber-500/80">
-              <Clock className="w-2.5 h-2.5" />{nextRefreshIn}
-            </span>
-          )}
-          {lastFetch && !nextRefreshIn && (
-            <span className="flex items-center gap-1">
-              <Clock className="w-2.5 h-2.5" />
-              Updated {Math.round((Date.now() - lastFetch.getTime()) / 60_000)}m ago
-            </span>
-          )}
-          <span className={`ml-1 opacity-60 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
-            Powered by Zerodha
+      <div className={`flex flex-col gap-0.5 px-3 sm:px-5 py-2 text-[10px] border-t ${footBg}`}>
+        {/* Row 1: source label + refresh timer */}
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-1">
+            📊 <span className="hidden xs:inline">{DELAY_LABEL[period]}</span>
+            <span className="xs:hidden">{period === '1D' ? '5m bars · 9:30–15:30' : DELAY_LABEL[period]}</span>
           </span>
-        </span>
+          <span className="flex items-center gap-1.5">
+            {nextRefreshIn && (
+              <span className="flex items-center gap-1 text-amber-500/80">
+                <Clock className="w-2.5 h-2.5" />{nextRefreshIn}
+              </span>
+            )}
+            {lastFetch && !nextRefreshIn && (
+              <span className="flex items-center gap-1">
+                <Clock className="w-2.5 h-2.5" />
+                {Math.round((Date.now() - lastFetch.getTime()) / 60_000)}m ago
+              </span>
+            )}
+          </span>
+        </div>
+        {/* Row 2: powered by */}
+        <div className={`text-[9px] opacity-50 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
+          Powered by Zerodha
+        </div>
       </div>
     </div>
   );

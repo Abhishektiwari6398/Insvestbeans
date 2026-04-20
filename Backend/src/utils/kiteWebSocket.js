@@ -8,6 +8,24 @@ import { KiteTicker } from "kiteconnect";
 import axios from "axios";
 
 // ─────────────────────────────────────────────────────────────────
+// AUTO-LOGIN CALLBACK REGISTRY
+// ─────────────────────────────────────────────────────────────────
+// Circular dependency se bachne ke liye kiteWebSocket KUCH IMPORT
+// nahi karta. kiteAutoLogin.js khud apna function yahan register
+// karta hai after both modules are loaded.
+//
+// Usage in kiteAutoLogin.js (already done):
+//   import { registerAutoLogin } from "./kiteWebSocket.js";
+//   registerAutoLogin(autoLoginKite);
+// ─────────────────────────────────────────────────────────────────
+let _registeredAutoLogin = null;
+
+export function registerAutoLogin(fn) {
+  _registeredAutoLogin = fn;
+  console.log("✅ autoLoginKite registered in KiteWebSocketManager");
+}
+
+// ─────────────────────────────────────────────────────────────────
 // NSE INSTRUMENT TOKEN MAP (static — these never change for indices)
 // ─────────────────────────────────────────────────────────────────
 export const TOKEN_SYMBOL = {
@@ -199,12 +217,13 @@ function getMCXTokenList() {
 // ─────────────────────────────────────────────────────────────────
 export class KiteWebSocketManager {
   constructor() {
-    this.ticker    = null;
-    this.io        = null;
-    this.lastTicks = {};
-    this.connected = false;
-    this.apiKey    = null;
-    this.token     = null;
+    this.ticker      = null;
+    this.io          = null;
+    this.lastTicks   = {};
+    this.connected   = false;
+    this.apiKey      = null;
+    this.token       = null;
+    this._refreshing = false;  // guard against concurrent token refreshes
   }
 
   attachSocketIO(io) {
@@ -227,7 +246,8 @@ export class KiteWebSocketManager {
 
     console.log("🔌 Connecting KiteTicker...");
     this.ticker = new KiteTicker({ api_key: apiKey, access_token: accessToken });
-    this.ticker.autoReconnect(true, 50, 5);
+    // 5 reconnect attempts, 10 second interval — if all fail, noreconnect fires → triggers token refresh
+    this.ticker.autoReconnect(true, 5, 10);
 
     this.ticker.on("connect", async () => {
       console.log("✅ KiteTicker CONNECTED");
@@ -284,10 +304,25 @@ export class KiteWebSocketManager {
       if (this.io) this.io.emit("kite:order_update", order);
     });
 
-    this.ticker.on("error",       (err) => { console.error("❌ KiteTicker error:", err); this.connected = false; });
+    this.ticker.on("error", (err) => {
+      const msg = err?.message || err?.error?.message || String(err);
+      console.error("❌ KiteTicker error:", msg);
+      this.connected = false;
+
+      // 403 = access token expired — trigger auto-refresh immediately
+      if (msg.includes("403") || msg.includes("Unexpected server response: 403")) {
+        console.warn("🔑 KiteTicker got 403 — access token expired. Attempting auto-refresh...");
+        this._handle403();
+      }
+    });
+
     this.ticker.on("disconnect",  ()    => { console.log("🔌 KiteTicker disconnected"); this.connected = false; });
     this.ticker.on("reconnect",   (c)   => { console.log(`🔄 Reconnecting... attempt ${c}`); });
-    this.ticker.on("noreconnect", ()    => { console.error("❌ Max reconnect attempts reached"); });
+    this.ticker.on("noreconnect", ()    => {
+      console.error("❌ Max reconnect attempts reached — triggering token refresh");
+      this.connected = false;
+      this._handle403();
+    });
 
     this.ticker.connect();
   }
@@ -295,6 +330,73 @@ export class KiteWebSocketManager {
   updateToken(accessToken) { this.token = accessToken; this.connect(this.apiKey, accessToken); }
   disconnect()             { try { this.ticker?.disconnect(); } catch(_) {} this.ticker = null; this.connected = false; }
   getLastTicks()           { return this.lastTicks; }
+
+  // ── Auto-refresh token on 403 / noreconnect ───────────────────
+  async _handle403() {
+    if (this._refreshing) return; // prevent concurrent refreshes
+    this._refreshing = true;
+    console.log("🔑 Token refresh triggered...");
+
+    try {
+      if (!_registeredAutoLogin) {
+        console.error("❌ autoLoginKite not registered — manual login required");
+        console.error("   Open: http://localhost:8000/api/v1/kite/login");
+        // Retry in 5 min hoping the registration happens
+        setTimeout(() => { this._refreshing = false; this._handle403(); }, 5 * 60 * 1000);
+        return;
+      }
+
+      const newToken = await _registeredAutoLogin();
+
+      if (newToken) {
+        console.log("✅ Token auto-refreshed — reconnecting WebSocket...");
+        process.env.KITE_ACCESS_TOKEN = newToken;
+        // 2 second delay so Kite registers the new session
+        await new Promise(r => setTimeout(r, 2000));
+        this.connect(this.apiKey, newToken);
+      } else {
+        console.error("❌ autoLoginKite returned null — check TOTP/credentials in .env");
+        // Retry after 5 minutes
+        setTimeout(() => { this._refreshing = false; this._handle403(); }, 5 * 60 * 1000);
+        return;
+      }
+    } catch (err) {
+      console.error("❌ Token refresh error:", err.message);
+      // Retry after 2 minutes on unexpected errors
+      setTimeout(() => { this._refreshing = false; this._handle403(); }, 2 * 60 * 1000);
+      return;
+    }
+
+    this._refreshing = false;
+  }
+
+  // ── Schedule daily token refresh at 6:30 AM IST (before market open) ──
+  scheduleDailyRefresh() {
+    const msUntilNext630IST = () => {
+      const now = new Date();
+      // IST = UTC + 5:30
+      const istOffset = 5.5 * 60 * 60 * 1000;
+      const nowIST = new Date(now.getTime() + istOffset);
+      const target = new Date(nowIST);
+      target.setHours(6, 30, 0, 0); // 6:30 AM IST
+      if (target <= nowIST) target.setDate(target.getDate() + 1); // next day if past
+      return target.getTime() - nowIST.getTime();
+    };
+
+    const scheduleNext = () => {
+      const ms = msUntilNext630IST();
+      const mins = Math.round(ms / 60000);
+      console.log(`⏰ Daily token refresh scheduled in ${mins} minutes (6:30 AM IST)`);
+      setTimeout(async () => {
+        console.log("⏰ Daily token refresh triggered at 6:30 AM IST");
+        this._refreshing = false; // force refresh even if one is in progress
+        await this._handle403();
+        scheduleNext(); // reschedule for the next day
+      }, ms);
+    };
+
+    scheduleNext();
+  }
 
   getMCXTicks() {
     return Object.fromEntries(
@@ -323,3 +425,6 @@ export class KiteWebSocketManager {
 }
 
 export const kiteWS = new KiteWebSocketManager();
+
+// Start daily 6:30 AM IST token refresh automatically
+kiteWS.scheduleDailyRefresh();

@@ -6,7 +6,7 @@ import { useAuth } from "@/controllers/AuthContext";
 import Layout from "@/components/Layout";
 import { useNavigate } from "react-router-dom";
 import {
-  Check, X, Sparkles, BookOpen, BarChart3, Lightbulb,
+  Check, X, Sparkles, BookOpen, Lightbulb,
   GraduationCap, Globe, TrendingUp, Zap, Shield, Star,
   CheckCircle, Clock, RefreshCw,
   ChevronDown, ChevronUp, Phone, MessageCircle,
@@ -66,35 +66,35 @@ const PLANS = [
     ],
     valueNote: "Ideal for beginners starting their financial journey.",
   },
-  {
-    id:              "command",
-    color:           "#3b82f6",
-    colorLight:      "#3b82f6",
-    colorDark:       "#60a5fa",
-    colorDim:        "rgba(59,130,246,0.12)",
-    colorDimDark:    "rgba(96,165,250,0.14)",
-    colorBorder:     "rgba(59,130,246,0.30)",
-    colorBorderDark: "rgba(96,165,250,0.34)",
-    emoji:    "🔵",
-    badge:    "Most Popular",
-    name:     "Command",
-    tagline:  "Take Command of Market Data",
-    quote:    "Monitor markets through exclusive dashboards built for decision clarity",
-    price:    "₹888",
-    unit:     "per month",
-    cta:      "Access Dashboards",
-    icon:     BarChart3,
-    popular:  true,
-    benefits: [
-      "Track Indian and global markets in one unified workspace",
-      "Exclusive equity, commodity, and currency dashboards",
-      "Visual market intelligence for faster understanding",
-      "Bharat, Global & ETF strategic dashboards",
-      "Reduce information noise with structured data views",
-      "Designed for active market participants",
-    ],
-    valueNote: "Best for traders who want clarity without complexity.",
-  },
+  // {
+  //   id:              "command",
+  //   color:           "#3b82f6",
+  //   colorLight:      "#3b82f6",
+  //   colorDark:       "#60a5fa",
+  //   colorDim:        "rgba(59,130,246,0.12)",
+  //   colorDimDark:    "rgba(96,165,250,0.14)",
+  //   colorBorder:     "rgba(59,130,246,0.30)",
+  //   colorBorderDark: "rgba(96,165,250,0.34)",
+  //   emoji:    "🔵",
+  //   badge:    "Most Popular",
+  //   name:     "Command",
+  //   tagline:  "Take Command of Market Data",
+  //   quote:    "Monitor markets through exclusive dashboards built for decision clarity",
+  //   price:    "₹888",
+  //   unit:     "per month",
+  //   cta:      "Access Dashboards",
+  //   icon:     BarChart3,
+  //   popular:  true,
+  //   benefits: [
+  //     "Track Indian and global markets in one unified workspace",
+  //     "Exclusive equity, commodity, and currency dashboards",
+  //     "Visual market intelligence for faster understanding",
+  //     "Bharat, Global & ETF strategic dashboards",
+  //     "Reduce information noise with structured data views",
+  //     "Designed for active market participants",
+  //   ],
+  //   valueNote: "Best for traders who want clarity without complexity.",
+  // },
   {
     id:              "edge",
     color:           "#a855f7",
@@ -133,24 +133,10 @@ const COMPARISON_SECTIONS = [
     title: "Learning & Courses",
     color: "#22c55e",
     rows: [
-      { label: "Financial E-Books",         foundation: true,  command: false, edge: false },
-      { label: "Non-Financial E-Books",      foundation: true,  command: false, edge: false },
-      { label: "Certification Programs",     foundation: true,  command: false, edge: false },
-      { label: "Structured Learning Access", foundation: true,  command: false, edge: false },
-    ],
-  },
-  {
-    icon: BarChart3,
-    title: "Market Dashboards",
-    color: "#3b82f6",
-    rows: [
-      { label: "Equity Dashboard — Domestic", foundation: false, command: true, edge: false },
-      { label: "Equity Dashboard — Global",   foundation: false, command: true, edge: false },
-      { label: "Commodities Dashboard",        foundation: false, command: true, edge: false },
-      { label: "Currency Dashboard",           foundation: false, command: true, edge: false },
-      { label: "Bharat (India) Dashboard",     foundation: false, command: true, edge: false },
-      { label: "Global Markets Dashboard",     foundation: false, command: true, edge: false },
-      { label: "ETF Dashboard",                foundation: false, command: true, edge: false },
+      { label: "Financial E-Books",         foundation: true,  edge: false },
+      { label: "Non-Financial E-Books",      foundation: true,  edge: false },
+      { label: "Certification Programs",     foundation: true,  edge: false },
+      { label: "Structured Learning Access", foundation: true,  edge: false },
     ],
   },
   {
@@ -158,12 +144,12 @@ const COMPARISON_SECTIONS = [
     title: "Research & Insights",
     color: "#a855f7",
     rows: [
-      { label: "Domestic Market Research",    foundation: false, command: true, edge: true },
-      { label: "Global Market Research",       foundation: false, command: true, edge: true },
-      { label: "Event-Based Research Reports", foundation: false, command: true, edge: true },
-      { label: "IPO Research & Insights",      foundation: false, command: true, edge: true },
-      { label: "Research Publications Access", foundation: false, command: true, edge: true },
-      { label: "Early Research Updates",       foundation: false, command: true, edge: true },
+      { label: "Domestic Market Research",    foundation: false, edge: true },
+      { label: "Global Market Research",       foundation: false, edge: true },
+      { label: "Event-Based Research Reports", foundation: false, edge: true },
+      { label: "IPO Research & Insights",      foundation: false, edge: true },
+      { label: "Research Publications Access", foundation: false, edge: true },
+      { label: "Early Research Updates",       foundation: false, edge: true },
     ],
   },
   {
@@ -171,9 +157,9 @@ const COMPARISON_SECTIONS = [
     title: "Member Experience",
     color: "#f59e0b",
     rows: [
-      { label: "Dedicated Member Access",     foundation: true,  command: true,  edge: true  },
-      { label: "Priority Updates", foundation: false, command: true, edge: true, commandLabel: "Standard", edgeLabel: "Priority" },
-      { label: "Platform Enhancements Access", foundation: true, command: true,  edge: true  },
+      { label: "Dedicated Member Access",      foundation: true,  edge: true  },
+      { label: "Priority Updates",             foundation: false, edge: true, edgeLabel: "Priority" },
+      { label: "Platform Enhancements Access", foundation: true,  edge: true  },
     ],
   },
 ];
@@ -524,10 +510,9 @@ function Cell({ value, color = "#22c55e", label }: { value: boolean; color?: str
 // ─────────────────────────────────────────────────────────────────────────────
 const PLAN_KEYS = [
   { key: "foundation", name: "Foundation", color: "#22c55e", icon: BookOpen },
-  { key: "command",    name: "Command",    color: "#3b82f6", icon: BarChart3 },
   { key: "edge",       name: "Edge",       color: "#a855f7", icon: Lightbulb },
 ] as const;
-type PlanKey = "foundation" | "command" | "edge";
+type PlanKey = "foundation" | "edge";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  MOBILE COLLAPSIBLE SECTIONS
@@ -598,8 +583,7 @@ function MobileSections({
             {isOpen && section.rows.map((row, ri) => {
               const val = row[activePlan as keyof typeof row] as boolean;
               const customLabel =
-                activePlan === "command" ? (row as any).commandLabel :
-                activePlan === "edge"    ? (row as any).edgeLabel    : undefined;
+                activePlan === "edge" ? (row as any).edgeLabel : undefined;
 
               return (
                 <div key={ri} style={{
@@ -778,7 +762,7 @@ function CompareTable({ isLight, headingColor, subColor, tableBg, tableBorder, t
           backdropFilter: "blur(12px)",
         }}>
           <div style={{
-            display: "grid", gridTemplateColumns: "1.8fr repeat(3, 1fr)",
+            display: "grid", gridTemplateColumns: "1.8fr repeat(2, 1fr)",
             padding: "18px 28px", background: tableHeadBg,
             borderBottom: isLight ? "1px solid rgba(13,37,64,0.08)" : "1px solid rgba(255,255,255,0.06)",
           }}>
@@ -787,7 +771,6 @@ function CompareTable({ isLight, headingColor, subColor, tableBg, tableBorder, t
             </span>
             {[
               { name: "Foundation", color: "#22c55e" },
-              { name: "Command",    color: "#3b82f6" },
               { name: "Edge",       color: "#a855f7" },
             ].map(p => (
               <div key={p.name} style={{ textAlign: "center" }}>
@@ -853,7 +836,7 @@ function DesktopComparisonSection({ section, isLight }: { section: typeof COMPAR
             <div
               key={i}
               style={{
-                display: "grid", gridTemplateColumns: "1.8fr repeat(3, 1fr)",
+                display: "grid", gridTemplateColumns: "1.8fr repeat(2, 1fr)",
                 alignItems: "center", padding: "13px 16px",
                 background: rowBg,
                 borderTop: i > 0 ? `1px solid ${borderColor}` : "none",
@@ -864,7 +847,6 @@ function DesktopComparisonSection({ section, isLight }: { section: typeof COMPAR
             >
               <span style={{ fontSize: "13px", color: labelColor }}>{row.label}</span>
               <Cell value={row.foundation} color="#22c55e" label={(row as any).foundationLabel} />
-              <Cell value={row.command}    color="#3b82f6" label={(row as any).commandLabel} />
               <Cell value={row.edge}       color="#a855f7" label={(row as any).edgeLabel} />
             </div>
           ))}
@@ -1053,8 +1035,7 @@ export default function PricingPlan() {
               Not Sure Which Plan to Pick?
             </h3>
             <p style={{ margin: "0 0 28px", fontSize: "14px", color: "rgba(203,213,225,0.8)", lineHeight: 1.7 }}>
-              Start with Foundation to build your knowledge base, upgrade to Command for live dashboards,
-              or get Edge for deep research insights. You can switch anytime.
+              Start with Foundation to build your knowledge base, or get Edge for deep research insights and early market intelligence. You can switch anytime.
             </p>
 
             <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>

@@ -1,3 +1,14 @@
+/**
+ * app.js — CHANGED LINES MARKED WITH ← CHANGED
+ *
+ * Fix: "413 Payload Too Large" on seed
+ *   The seed endpoint sends the entire CATEGORY_DATA (~500KB JSON).
+ *   express.json({ limit: "20kb" }) was rejecting it.
+ *
+ * Solution: raise global JSON limit to 5mb.
+ *   (Seed is admin-only behind rate-limiting — no security risk)
+ */
+
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
@@ -7,7 +18,7 @@ import MongoStore from "connect-mongo";
 import passport from "passport";
 import { configurePassport } from "./config/passport.config.js";
 import { errorHandler, notFound } from "./middlewares/errorHandler.middleware.js";
-import { adminLimiter, authLimiter,} from "./middlewares/Ratelimit.middleware.js";
+import { adminLimiter, authLimiter } from "./middlewares/Ratelimit.middleware.js";
 
 const app = express();
 
@@ -25,6 +36,7 @@ if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
 }
 
 if (IS_PRODUCTION) { app.set("trust proxy", 1); console.log("✅ Trust proxy enabled"); }
+
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
@@ -32,13 +44,14 @@ app.use((req, res, next) => {
   res.removeHeader("X-Powered-By");
   next();
 });
+
 const allowedOrigins = [
   "http://localhost:8080",
-  "http://127.0.0.1:8080", 
+  "http://127.0.0.1:8080",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
-  "https://investbeans.com",        // ✅ Custom domain
-  "https://api.investbeans.com",    // ✅ Backend API domain
+  "https://investbeans.com",
+  "https://api.investbeans.com",
 ].filter(Boolean);
 const uniqueOrigins = [...new Set(allowedOrigins)];
 console.log("✅ Allowed CORS origins:", uniqueOrigins);
@@ -65,14 +78,10 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: "20kb" }));
-
-
-app.use(express.urlencoded({ extended: true, limit: "20kb" }));
+// ← CHANGED: raised from "20kb" to "5mb" to support education seed payload
+app.use(express.json({ limit: "5mb" }));
+app.use(express.urlencoded({ extended: true, limit: "5mb" })); // ← CHANGED
 app.use(cookieParser());
-
-
-
 
 const sessionStore = MongoStore.create({
   mongoUrl: MONGODB_URI, collectionName: "sessions",
@@ -82,19 +91,6 @@ sessionStore.on("create",  id  => console.log("✅ Session created:", id));
 sessionStore.on("destroy", id  => console.log("🗑️  Session destroyed:", id));
 sessionStore.on("error",   err => console.error("❌ Session store error:", err));
 
-// const sessionConfig = {
-//   secret: process.env.SESSION_SECRET,
-//   name: "investbeans.sid",
-//   store: sessionStore,
-//   resave: false,
-//   saveUninitialized: false,
-//   rolling: true,
-//   proxy: IS_PRODUCTION,
-//   cookie: {
-//     httpOnly: true, secure: false, sameSite: "lax",
-//     maxAge: 7 * 24 * 60 * 60 * 1000, path: "/", domain: undefined,
-//   },
-// };
 const sessionConfig = {
   secret: process.env.SESSION_SECRET,
   name: "investbeans.sid",
@@ -105,15 +101,14 @@ const sessionConfig = {
   proxy: IS_PRODUCTION,
   cookie: {
     httpOnly: true,
-    secure: IS_PRODUCTION,      // ✅ Production mein true, dev mein false
-    sameSite: IS_PRODUCTION ? "none" : "lax",  // ✅ Cross-site OAuth ke liye
+    secure: IS_PRODUCTION,
+    sameSite: IS_PRODUCTION ? "none" : "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: "/",
     domain: undefined,
   },
 };
 
-// ✅ Socket.IO paths ke liye session + passport SKIP karo
 app.use((req, res, next) => {
   if (req.path.startsWith("/socket.io")) return next();
   session(sessionConfig)(req, res, next);
@@ -130,7 +125,6 @@ app.use((req, res, next) => {
   passport.session()(req, res, next);
 });
 
-// Logger — Socket.IO requests skip
 if (!IS_PRODUCTION) {
   app.use((req, res, next) => {
     if (req.path.startsWith("/socket.io")) return next();
@@ -164,25 +158,23 @@ import ipoRouter           from "./routes/Ipo.routes.js";
 import testimonialRouter   from "./routes/Testimonial.routes.js";
 import subscriberRouter    from "./routes/Subscriber.routes.js";
 import KiteRouter          from "./routes/kite.routes.js";
-import commoditiesRouter   from "./routes/Commodities.routes.js";   // ← COMMODITIES (NEW)
+import commoditiesRouter   from "./routes/Commodities.routes.js";
 import paymentRouter       from "./routes/Payment.routes.js";
 import kiteTestRouter      from "./routes/Kite_test.js";
-import adminRouter from "./routes/Admin.routes.js";
-import subscriptionRouter from "./routes/Subscription.routes.js";
-import adminEventsRouter from "./routes/adminEvents_routes.js";
-app.use("/api/v1/admin/events", adminEventsRouter);
+import adminRouter         from "./routes/Admin.routes.js";
+import subscriptionRouter  from "./routes/Subscription.routes.js";
+import adminEventsRouter   from "./routes/adminEvents_routes.js";
+import educationRouter       from "./routes/education.routes.js";
+import adminEducationRouter  from "./routes/adminEducation.routes.js";
 
+app.use("/api/v1/admin/events", adminEventsRouter);
 
 // ══════════════════════════════════════════════════════════════════════
 // Route registration
 // ══════════════════════════════════════════════════════════════════════
-
-app.use("/api/v1/kite",            kiteTestRouter);     // kite test (keep first)
-
-// app.use("/api/v1/users",           userRouter);
-// app.use("/auth",                   googleAuthRouter);
-app.use("/api/v1/users", authLimiter, userRouter);
-app.use("/auth",         authLimiter, googleAuthRouter);
+app.use("/api/v1/kite",            kiteTestRouter);
+app.use("/api/v1/users",           authLimiter, userRouter);
+app.use("/auth",                   authLimiter, googleAuthRouter);
 app.use("/api/v1/blogs",           blogRouter);
 app.use("/api/v1/beans-of-wisdom", beansOfWisdom);
 app.use("/api/v1/insights",        insightRouter);
@@ -190,21 +182,22 @@ app.use("/api/v1",                 paymentRouter);
 app.use("/api/v1/markets",         globalMarketsRouter);
 app.use("/api/v1/markets",         marketHistoryRouter);
 app.use("/api/v1/kite",            KiteRouter);
-app.use("/api/v1/subscriptions", subscriptionRouter);
-// ── Commodities & ETFs — Full integration (MCX, AMFI, COT, EIA) ───────────
-// Endpoints:
-//   GET /api/v1/commodities/all            → Full data (5-min cache)
-//   GET /api/v1/commodities/oi/:commodity  → OI + PCR + COT for one commodity
-//   GET /api/v1/commodities/nav/:keyword   → AMFI NAV lookup
-//   GET /api/v1/commodities/eia            → EIA crude inventory + rig count
-//   GET /api/v1/commodities/cot            → CFTC COT report all commodities
-//   GET /api/v1/commodities/silver-inflows → Silver ETF monthly inflow history
+app.use("/api/v1/subscriptions",   subscriptionRouter);
 app.use("/api/v1/commodities",     commoditiesRouter);
-
 app.use("/api/v1/subscribe",       subscriberRouter);
 app.use("/api/v1/ipo",             ipoRouter);
 app.use("/api/v1/testimonials",    testimonialRouter);
 app.use(`/api/v1/${process.env.ADMIN_API_SEGMENT || "xp-insights-42"}`, adminLimiter, adminRouter);
+
+// ── Education (public) ────────────────────────────────────────────────────────
+app.use("/api/v1/education", educationRouter);
+
+// ── Education (admin CRUD — obfuscated segment) ───────────────────────────────
+app.use(
+  `/api/v1/${process.env.ADMIN_API_SEGMENT || "xp-insights-42"}/education`,
+  adminLimiter,
+  adminEducationRouter
+);
 
 app.use(notFound);
 app.use(errorHandler);

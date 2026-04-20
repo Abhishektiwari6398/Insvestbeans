@@ -29,12 +29,14 @@ interface CleanChartProps {
   candles?:      CandlePoint[];
   // period is passed from parent so we can configure axis + delay label correctly
   period?:       string;
-  // timezone offset in hours for correct x-axis time labels (e.g. -5 for EST, 5.5 for IST)
+  // tzOffset in hours from UTC — e.g. -5 for EST (US), +1 for CET (Europe), +8 for CST (Asia)
+  // This is used to convert UTC epoch timestamps → exchange local time on X-axis
   tzOffset?:     number;
+  // when provided, CleanChart fetches its own history when user changes period
+  historyUrl?:   string;
 }
 
 // ── Delay/description label per period ────────────────────────────
-// Matches the Yahoo Finance disclaimer convention exactly.
 const DELAY_LABEL: Record<string, string> = {
   '1D':  '~15 min delayed · 2 min bars',
   '5D':  '~15 min delayed · 15 min bars',
@@ -47,15 +49,6 @@ const DELAY_LABEL: Record<string, string> = {
 };
 
 // ── Bar spacing per period ─────────────────────────────────────────
-// Controls how wide each candle looks. More candles = smaller spacing.
-//   1D  → ~195 bars (2-min candles for 1 day)    → very tight
-//   5D  → ~130 bars                               → tight
-//   1M  → ~21 bars                                → comfy
-//   6M  → ~126 bars                               → tight
-//   YTD → varies                                  → medium
-//   1Y  → ~52 bars (weekly)                       → wide
-//   5Y  → ~260 bars (weekly)                      → tight
-//   MAX → ~120–600 bars (monthly)                 → widest
 const BAR_SPACING: Record<string, number> = {
   '1D':  3,
   '5D':  4,
@@ -67,9 +60,11 @@ const BAR_SPACING: Record<string, number> = {
   'MAX': 18,
 };
 
+// ── Month names for X-axis date labels ────────────────────────────
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
 // ── Helpers ────────────────────────────────────────────────────────
 
-// Derive change/% from first open → last close of the candle set
 function calcChange(candles: CandlePoint[]) {
   if (candles.length < 2) return { change: 0, changePercent: 0 };
   const start = candles[0].y[0];
@@ -78,7 +73,6 @@ function calcChange(candles: CandlePoint[]) {
   return { change: chg, changePercent: (chg / start) * 100 };
 }
 
-// Procedural fallback candles — shown when market is closed or data sparse
 function generateFallback(
   price: number, high: number, low: number,
   changePercent: number, isPositive: boolean, count = 60,
@@ -113,7 +107,6 @@ function generateFallback(
       ],
     });
   }
-  // Pin last candle close to real price
   const last = result[result.length - 1];
   last.y[3] = price;
   last.y[1] = Math.max(last.y[1], price);
@@ -121,7 +114,6 @@ function generateFallback(
   return result;
 }
 
-// Convert CandlePoint[] → lightweight-charts format, dedup + sort timestamps
 function toLWC(candles: CandlePoint[]) {
   const seen = new Set<number>();
   return candles
@@ -167,8 +159,9 @@ const CleanChart = ({
   name, symbol, price, change, changePercent,
   high, low, isPositive,
   candles: propCandles,
-  period = '1D',
+  period: propPeriod = '1D',
   tzOffset = 0,
+  historyUrl,
 }: CleanChartProps) => {
   const { theme } = useTheme();
   const dark = theme === 'dark';
@@ -178,30 +171,65 @@ const CleanChart = ({
   const chartRef     = useRef<IChartApi | null>(null);
   const seriesRef    = useRef<ISeriesApi<'Candlestick'> | null>(null);
 
-  // Derived display values — computed from candles so they match the selected period
+  const [activePeriod, setActivePeriod] = useState(propPeriod);
+  const period = historyUrl ? activePeriod : propPeriod;
+
   const [chartData,  setChartData]  = useState<CandlePoint[]>([]);
   const [isFallback, setFallback]   = useState(false);
   const [pChange,    setPChange]     = useState(change);
   const [pChangePct, setPChangePct]  = useState(changePercent);
   const [pHigh,      setPHigh]       = useState(high);
   const [pLow,       setPLow]        = useState(low);
+  const [fetching,   setFetching]    = useState(false);
 
-  // ── Sync candles from parent ───────────────────────────────────
-  // Whenever parent fetches a new period, it passes new candles down.
-  // We update chart data here and recompute the header stats.
+  // ── Fetch history when period changes (only if historyUrl provided) ──
   useEffect(() => {
+    if (!historyUrl) return;
+    setFetching(true);
+    fetch(`${historyUrl}?period=${activePeriod}`)
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then((d: any) => {
+        const candles: CandlePoint[] = (d.candles ?? d).map((c: any) => ({
+          x: c.x ?? c.time * 1000,
+          y: c.y ?? [c.open, c.high, c.low, c.close],
+        }));
+        if (candles.length >= 3) {
+          setChartData(candles);
+          setFallback(false);
+          const { change: ch, changePercent: cp } = calcChange(candles);
+          setPChange(ch);
+          setPChangePct(cp);
+          setPHigh(Math.max(...candles.map(k => k.y[1])));
+          setPLow(Math.min(...candles.map(k => k.y[2])));
+        } else {
+          const fb = generateFallback(price, high, low, changePercent, isPositive);
+          setChartData(fb);
+          setFallback(true);
+          setPChange(change); setPChangePct(changePercent); setPHigh(high); setPLow(low);
+        }
+      })
+      .catch(() => {
+        const fb = generateFallback(price, high, low, changePercent, isPositive);
+        setChartData(fb);
+        setFallback(true);
+        setPChange(change); setPChangePct(changePercent); setPHigh(high); setPLow(low);
+      })
+      .finally(() => setFetching(false));
+  }, [activePeriod, historyUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Sync candles from parent (when historyUrl not provided) ──
+  useEffect(() => {
+    if (historyUrl) return;
     const src = propCandles;
     if (src && src.length >= 3) {
       setChartData(src);
       setFallback(false);
-      // Derive period-accurate change from actual candle data
       const { change: ch, changePercent: cp } = calcChange(src);
       setPChange(ch);
       setPChangePct(cp);
       setPHigh(Math.max(...src.map(k => k.y[1])));
       setPLow(Math.min(...src.map(k => k.y[2])));
     } else {
-      // Sparse or missing data — show procedural fallback
       const fb = generateFallback(price, high, low, changePercent, isPositive);
       setChartData(fb);
       setFallback(true);
@@ -212,14 +240,62 @@ const CleanChart = ({
     }
   }, [propCandles]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Period-driven axis config ──────────────────────────────────
-  const timeVisible = period === '1D' || period === '5D'; // show HH:MM for intraday
+  // ── Derived chart config ───────────────────────────────────────
+  // Show HH:MM time labels for intraday periods only (1D, 5D)
+  const timeVisible = period === '1D' || period === '5D';
   const barSpacing  = BAR_SPACING[period] ?? 6;
-  // Convert hours offset → seconds for lightweight-charts localization
+
+  // ── FIX: Convert tzOffset (hours) → seconds for LWC localization ──
+  // LWC timestamps are UTC epoch seconds. We shift them by tzOffset so
+  // that the displayed labels show the EXCHANGE's local time, not UTC.
+  // Example: US market (EST = UTC-5): tzOffset = -5
+  //   A candle at 14:30 UTC becomes 09:30 EST on the X-axis ✓
+  // Example: Europe (CET = UTC+1): tzOffset = +1
+  //   A candle at 08:00 UTC becomes 09:00 CET on the X-axis ✓
+  // Example: Asia (CST = UTC+8): tzOffset = +8
+  //   A candle at 01:30 UTC becomes 09:30 CST on the X-axis ✓
   const tzOffsetSeconds = Math.round(tzOffset * 3600);
 
+  // ── timeFormatter: formats each X-axis tick label ─────────────
+  // We add tzOffsetSeconds to the raw UTC timestamp before formatting,
+  // then use getUTC* methods (which read the shifted value as-is).
+  // This avoids the browser's local timezone interfering with display.
+  const makeTimeFormatter = (p: string) => (timestamp: number) => {
+    // timestamp from LWC is UTC epoch seconds
+    // Shift to exchange local time by adding tzOffset
+    const localMs = (timestamp + tzOffsetSeconds) * 1000;
+    const d = new Date(localMs);
+
+    if (p === '1D' || p === '5D') {
+      // ── Intraday: show HH:MM in exchange local time ──
+      // e.g. "09:30" for NYSE open, "09:15" for NSE open
+      const hh = d.getUTCHours().toString().padStart(2, '0');
+      const mm = d.getUTCMinutes().toString().padStart(2, '0');
+      return `${hh}:${mm}`;
+    }
+
+    if (p === '1M' || p === '6M' || p === 'YTD') {
+      // ── Daily bars: show "15 Apr" style ──
+      const day = d.getUTCDate().toString().padStart(2, '0');
+      const mon = MONTHS[d.getUTCMonth()];
+      return `${day} ${mon}`;
+    }
+
+    if (p === '1Y') {
+      // ── Weekly bars (1Y): show "Apr '25" style ──
+      const mon  = MONTHS[d.getUTCMonth()];
+      const yr   = d.getUTCFullYear().toString().slice(2);
+      return `${mon} '${yr}`;
+    }
+
+    // ── 5Y / MAX: monthly bars — show "Apr 2024" style ──
+    const mon = MONTHS[d.getUTCMonth()];
+    const yr  = d.getUTCFullYear();
+    return `${mon} ${yr}`;
+  };
+
   // ── Create lightweight-charts instance ────────────────────────
-  // Re-runs only on theme change (dark/light) — not on data/period change
+  // Re-runs only on theme change (dark/light)
   useEffect(() => {
     if (!containerRef.current) return;
     if (chartRef.current) {
@@ -258,18 +334,9 @@ const CleanChart = ({
         fixRightEdge:   true,
         barSpacing,
         rightOffset:    3,
-        // Shift timestamps so x-axis labels show the market's local time, not UTC
+        // ── FIX: Use exchange timezone offset to display correct local time ──
         localization: {
-          timeFormatter: (timestamp: number) => {
-            const localMs = (timestamp + tzOffsetSeconds) * 1000;
-            const d = new Date(localMs);
-            if (timeVisible) {
-              return d.getUTCHours().toString().padStart(2, '0') + ':' + d.getUTCMinutes().toString().padStart(2, '0');
-            }
-            return d.getUTCDate().toString().padStart(2, '0') + ' ' +
-              ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()] +
-              (period === '5Y' || period === 'MAX' ? ' ' + d.getUTCFullYear() : '');
-          },
+          timeFormatter: makeTimeFormatter(period),
         },
       },
       handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true },
@@ -311,26 +378,17 @@ const CleanChart = ({
     if (!seriesRef.current || !chartRef.current || !chartData.length) return;
     seriesRef.current.setData(toLWC(chartData));
     chartRef.current.timeScale().fitContent();
-    // Apply period-specific axis settings immediately
+    // ── FIX: Re-apply correct timeFormatter every time period changes ──
     chartRef.current.applyOptions({
       timeScale: {
         timeVisible,
         barSpacing,
         localization: {
-          timeFormatter: (timestamp: number) => {
-            const localMs = (timestamp + tzOffsetSeconds) * 1000;
-            const d = new Date(localMs);
-            if (timeVisible) {
-              return d.getUTCHours().toString().padStart(2, '0') + ':' + d.getUTCMinutes().toString().padStart(2, '0');
-            }
-            return d.getUTCDate().toString().padStart(2, '0') + ' ' +
-              ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()] +
-              (period === '5Y' || period === 'MAX' ? ' ' + d.getUTCFullYear() : '');
-          },
+          timeFormatter: makeTimeFormatter(period),
         },
       },
     });
-  }, [chartData, period, timeVisible, barSpacing]);
+  }, [chartData, period, timeVisible, barSpacing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isPos       = pChangePct >= 0;
   const delayLabel  = DELAY_LABEL[period] ?? '~15 min delayed';
@@ -353,12 +411,12 @@ const CleanChart = ({
 
         <div className="flex items-start justify-between">
           <div>
-            {/* Live price — always shows current real-time price from parent */}
+            {/* Live price */}
             <div className={`text-4xl sm:text-5xl font-black tracking-tight leading-none mb-2 ${priceCls}`}>
               {price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
 
-            {/* Change for the selected period — recalculated from candle data */}
+            {/* Change for the selected period */}
             <div className={`flex items-center gap-2 text-base font-bold ${isPos ? 'text-emerald-500' : 'text-red-500'}`}>
               {isPos ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
               <span>
@@ -368,7 +426,7 @@ const CleanChart = ({
             </div>
           </div>
 
-          {/* Period High / Low — also derived from candle data */}
+          {/* Period High / Low */}
           <div className="flex flex-col items-end gap-1 text-xs leading-relaxed shrink-0 min-w-[90px]">
             <div className={`w-full px-2 py-1 rounded border text-right ${hlCls}`}>
               H:&nbsp;<span className="font-semibold">
@@ -384,10 +442,34 @@ const CleanChart = ({
         </div>
       </div>
 
-      {/* ── Candlestick chart — edge-to-edge ─────────────────────── */}
-      <div style={{ height: 280 }}>
+      {/* ── Candlestick chart ─────────────────────────────────────── */}
+      <div style={{ height: 280, position: 'relative' }}>
+        {fetching && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: dark ? 'rgba(14,32,56,0.6)' : 'rgba(255,255,255,0.6)', zIndex: 5, borderRadius: 0 }}>
+            <span style={{ fontSize: 11, color: dark ? '#94a3b8' : '#64748b' }}>Loading…</span>
+          </div>
+        )}
         <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
       </div>
+
+      {/* ── Period selector (only when historyUrl provided) ──────── */}
+      {historyUrl && (
+        <div className={`flex items-center gap-1 px-4 py-2 border-t ${dark ? 'border-white/[0.05]' : 'border-slate-100'}`}>
+          {(['1D', '1W', '1M', '3M', '1Y'] as const).map(p => (
+            <button
+              key={p}
+              onClick={() => setActivePeriod(p)}
+              className="text-[11px] font-bold px-2.5 py-1 rounded-lg transition-all"
+              style={activePeriod === p
+                ? { background: dark ? '#1e3a5f' : '#e0eaff', color: '#5194F6' }
+                : { background: 'transparent', color: dark ? '#475569' : '#94a3b8' }
+              }
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── Footer: data source + delay info ─────────────────────── */}
       <div className={`flex items-center justify-between px-5 py-2.5 text-[10px] border-t ${footBg}`}>

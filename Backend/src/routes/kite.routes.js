@@ -327,20 +327,43 @@ router.get("/markets/history/:symbol", async (req, res) => {
   // Apply alias — some frontend symbol names differ from Kite CSV tradingsymbols
   const symResolved = SYMBOL_ALIAS[symUpper] || symUpper;
 
-  // 1. Check stocks first (fast, no API call)
+  // 1. Check hardcoded stocks first (fast, no API call)
   let token = STOCK_TOKEN_MAP[symUpper] || STOCK_TOKEN_MAP[symResolved];
+  let exchange = "NSE"; // default
 
-  // 2. If not a stock, look up from Kite instruments (auto-discovers ALL NSE indices)
-  // Try both original name and resolved alias
+  // 2. Check NSE indices
   if (!token) {
     const indexMap = await getNSEIndexTokens();
     token = indexMap[symUpper] || indexMap[symResolved];
   }
 
-  // 3. If still not found, try hardcoded fallback directly (belt+suspenders)
+  // 3. If still not found, dynamically look up token from Kite instruments CSV
+  // This supports ALL NSE + BSE stocks — not just the hardcoded ones
+  if (!token) {
+    try {
+      const instruments = await loadSearchInstruments(); // reuse the search cache
+      // Try NSE first, then BSE
+      const match =
+        instruments.find(i => i.sym === symUpper && i.exchange === "NSE") ||
+        instruments.find(i => i.sym === symUpper && i.exchange === "BSE") ||
+        instruments.find(i => i.sym === symResolved && i.exchange === "NSE") ||
+        instruments.find(i => i.sym === symResolved && i.exchange === "BSE");
+
+      if (match) {
+        // loadSearchInstruments only gives sym/name/type/seg — need the instrument_token
+        // Re-fetch the full instrument list to get the token (it's cached separately)
+        const fullToken = await getInstrumentToken(match.sym, match.exchange);
+        if (fullToken) { token = fullToken; exchange = match.exchange; }
+      }
+    } catch (e) {
+      console.warn("[history] Dynamic token lookup failed:", e.message);
+    }
+  }
+
+  // 4. Hardcoded fallback (belt+suspenders)
   if (!token) token = NSE_INDEX_FALLBACK[symUpper] || NSE_INDEX_FALLBACK[symResolved];
 
-  if (!token) return res.status(404).json({ status: "error", message: `Unknown symbol: ${symbol}. Tried: ${symUpper}, ${symResolved}` });
+  if (!token) return res.status(404).json({ status: "error", message: `Unknown symbol: ${symbol}. Add it to STOCK_TOKEN_MAP or ensure it exists on NSE/BSE.` });
 
   const cfg = PERIOD_MAP[period] || PERIOD_MAP["1D"];
 
@@ -370,8 +393,8 @@ router.get("/markets/history/:symbol", async (req, res) => {
       const lastDate = toISTDate(rawCandles[rawCandles.length - 1].x);
 
       // Market hours: 9:15 AM IST = 03:45 UTC, 3:30 PM IST = 10:00 UTC
-      const MARKET_OPEN_IST_MINUTES  = 9  * 60 + 15; // 555 min from midnight IST
-      const MARKET_CLOSE_IST_MINUTES = 15 * 60 + 30; // 930 min from midnight IST
+      const MARKET_OPEN_IST_MINUTES  = 9  * 60 + 30; // 570 min — market opens 9:30 AM IST
+      const MARKET_CLOSE_IST_MINUTES = 15 * 60 + 30; // 930 min — market closes 3:30 PM IST
 
       candles = rawCandles.filter(c => {
         if (toISTDate(c.x) !== lastDate) return false;
@@ -750,8 +773,14 @@ async function fetchYahooSymbol(symbol) {
   const meta = r.data?.chart?.result?.[0]?.meta;
   if (!meta?.regularMarketPrice) throw new Error(`Yahoo: no price for ${symbol}`);
   const price     = meta.regularMarketPrice;
-  const prevClose = meta.chartPreviousClose ?? meta.previousClose ?? price;
-  const changePct = prevClose ? ((price - prevClose) / prevClose) * 100 : 0;
+  // ✅ FIX Issue 1: Prefer regularMarketChangePercent (direct from Yahoo, matches their UI)
+  // Manual calculation from chartPreviousClose can drift due to adjusted vs unadjusted close
+  const changePct = meta.regularMarketChangePercent != null
+    ? meta.regularMarketChangePercent
+    : (() => {
+        const prevClose = meta.chartPreviousClose ?? meta.previousClose ?? price;
+        return prevClose ? ((price - prevClose) / prevClose) * 100 : 0;
+      })();
   return { price, changePct, currency: meta.currency ?? "USD" };
 }
 
@@ -1033,8 +1062,71 @@ router.get("/fii-dii", async (req, res) => {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 2.  GIFT NIFTY  —  Kite NSE_IFSC first,  Yahoo Finance fallback
-//     GET /api/v1/kite/gift-nifty
+// NSE-BASED GIFT NIFTY  (used as primary fallback when Kite NSE_IFSC fails)
+// NSE allIndices API publishes GIFT NIFTY with live price + % change vs prev close
+// ─────────────────────────────────────────────────────────────────────────────
+// async function fetchGiftNiftyFromNse(cookies) {
+//   const r = await axios.get("https://www.nseindia.com/api/allIndices", {
+//     timeout: 12000,
+//     headers: nseApiHeaders(cookies, "https://www.nseindia.com/market-data/live-equity-market"),
+//   });
+
+//   const indices = Array.isArray(r.data?.data) ? r.data.data : extractNseRows(r.data);
+
+//   // NSE names it "GIFT NIFTY" or "SGX NIFTY" depending on version
+//   const gift = indices.find(i =>
+//     /GIFT\s*NIFTY|SGX\s*NIFTY/i.test(i.index ?? i.indexSymbol ?? i.key ?? i.name ?? "")
+//   );
+//   if (!gift) throw new Error("GIFT NIFTY not found in NSE allIndices response");
+
+//   const price     = parseFloat(gift.last ?? gift.lastPrice ?? gift.current ?? "0");
+//   const prevClose = parseFloat(gift.previousClose ?? gift.prev_close ?? "0");
+//   const changePct = parseFloat(gift.percentChange ?? gift.pChange ?? "0")
+//     || (prevClose > 0 ? ((price - prevClose) / prevClose) * 100 : 0);
+
+//   if (!price || price <= 0) throw new Error("GIFT NIFTY: invalid price in NSE data");
+
+//   console.log(`[GIFT NIFTY] NSE allIndices: ${price} (${changePct.toFixed(2)}%)`);
+//   return {
+//     symbol:         "GIFT NIFTY",
+//     last_price:     price,
+//     change_percent: +changePct.toFixed(2),
+//     source:         "nse",
+//   };
+// }
+async function fetchGiftNiftyFromNse(cookies) {
+  // ── NSE equity-stockIndices se NIFTY 50 price + pChange lo ──
+  const r = await axios.get(
+    "https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%2050",
+    { timeout: 10000, headers: nseApiHeaders(cookies, "https://www.nseindia.com/market-data/live-equity-market") }
+  );
+
+  const rows = Array.isArray(r.data?.data) ? r.data.data : [];
+  // Pehli row hamesha "NIFTY 50" summary hoti hai
+  const nifty = rows.find(i => {
+    const name = (i.index ?? i.indexSymbol ?? i.symbol ?? "").toUpperCase();
+    return name === "NIFTY 50";
+  }) ?? rows[0];
+
+  if (!nifty) throw new Error("NIFTY 50 not found in equity-stockIndices");
+
+  const price     = parseFloat(nifty.last ?? nifty.lastPrice ?? nifty.current ?? "0");
+  const prevClose = parseFloat(nifty.previousClose ?? nifty.prev_close ?? "0");
+  const pChange   = parseFloat(nifty.pChange ?? nifty.percentChange ?? "0");
+  const changePct = pChange || (prevClose > 0 ? ((price - prevClose) / prevClose) * 100 : 0);
+
+  if (!price || price <= 0) throw new Error("GIFT NIFTY: invalid price from NSE equity-stockIndices");
+
+  console.log(`[GIFT NIFTY] NSE equity-stockIndices: ${price} (${changePct.toFixed(2)}%)`);
+  return {
+    symbol:         "NIFTY 50",
+    last_price:     price,
+    change_percent: +changePct.toFixed(2),
+    source:         "nse",
+  };
+}
+
+
 //
 // Primary:  Kite /quote for NSE_IFSC near-month NIFTY futures
 // Fallback: Yahoo ^NSEI  (Nifty 50 spot — best publicly available proxy)
@@ -1090,63 +1182,70 @@ router.get("/gift-nifty", async (req, res) => {
 
     const lastPrice = q.last_price;
     const prevClose = q.ohlc?.close ?? null;
-    const changePct = q.change != null ? q.change
-      : (lastPrice && prevClose ? ((lastPrice - prevClose) / prevClose) * 100 : null);
-
-    const data = { symbol: sym, last_price: lastPrice, change_percent: changePct, ohlc: q.ohlc, source: "kite" };
+    // ✅ FIX: Use q.change (%) directly from /quote — more accurate than manual ohlc calc
+    const changePct = (lastPrice && prevClose && prevClose !== 0)
+    ? ((lastPrice - prevClose) / prevClose) * 100
+    : null;
+  
+  const data = { symbol: sym, last_price: lastPrice, change_percent: changePct, ohlc: q.ohlc, source: "kite" };
     _giftCache.data = data;
     _giftCache.ts   = Date.now();
     return res.json({ status: "success", data });
 
   } catch (kiteErr) {
-    // 403 = not subscribed to NSE_IFSC; any other error → try Yahoo
-    console.warn(`[GIFT NIFTY] Kite failed (${kiteErr.message}) — falling back to Yahoo ^NSEI`);
+    // 403 = not subscribed to NSE_IFSC; any other error → try NSE allIndices, then Yahoo
+    console.warn(`[GIFT NIFTY] Kite NSE_IFSC failed (${kiteErr.message}) — trying NSE allIndices`);
     _giftMeta.symbol = null; // force re-resolve next time
 
+    // ── Fallback A: NSE allIndices (most accurate — uses NSE session, same % as NSE website) ──
     try {
-      const { price, changePct } = await fetchYahooSymbol("^NSEI");
-      const data = {
-        symbol:         "NIFTY 50 (Yahoo proxy)",
-        last_price:     price,
-        change_percent: changePct,
-        source:         "yahoo",
-      };
+      const cookies = await getNseSession();
+      const data    = await fetchGiftNiftyFromNse(cookies);
       _giftCache.data = data;
       _giftCache.ts   = Date.now();
       return res.json({ status: "success", data });
-    } catch (yahooErr) {
-      console.error("[GIFT NIFTY] Yahoo fallback also failed:", yahooErr.message);
-      if (_giftCache.data) {
-        return res.json({ status: "success", data: _giftCache.data, stale: true });
+    } catch (nseErr) {
+      console.warn(`[GIFT NIFTY] NSE allIndices failed (${nseErr.message}) — trying fresh session`);
+      // Retry with fresh session once
+      try {
+        _nseSession.cookies = ""; _nseSession.ts = 0;
+        const fresh = await getNseSession(true);
+        const data  = await fetchGiftNiftyFromNse(fresh);
+        _giftCache.data = data;
+        _giftCache.ts   = Date.now();
+        return res.json({ status: "success", data });
+      } catch (nseErr2) {
+        console.warn(`[GIFT NIFTY] NSE retry failed (${nseErr2.message}) — falling back to Yahoo ^NSEI`);
       }
-      return res.status(500).json({ status: "error", message: yahooErr.message });
     }
+
+ // ── Fallback B: Yahoo ^NSEI ──
+ try {
+  const { price, changePct } = await fetchYahooSymbol("^NSEI");
+  const data = {
+    symbol:         "NIFTY 50 (Yahoo proxy)",
+    last_price:     price,
+    change_percent: changePct != null ? +Number(changePct).toFixed(2) : null,
+    source:         "yahoo",
+  };
+  console.log(`[GIFT NIFTY] Yahoo ^NSEI fallback: ${price} (${data.change_percent}%)`);
+  _giftCache.data = data;
+  _giftCache.ts   = Date.now();
+  return res.json({ status: "success", data });
+} catch (yahooErr) {
+  console.error("[GIFT NIFTY] All sources failed:", yahooErr.message);
+  if (_giftCache.data) {
+    return res.json({ status: "success", data: _giftCache.data, stale: true });
+  }
+  return res.status(500).json({ status: "error", message: yahooErr.message });
+}
   }
 });
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 3.  COMMODITIES  —  Gold & Silver  —  3-tier priority
-//     GET /api/v1/kite/commodities
-//
-//  Priority 1:  kiteWS.getMCXTicks()  — WebSocket, always real-time (sub-second)
-//               Gold tick key  = "MCX:GOLD",  price is natively ₹/10g
-//               Silver tick key = "MCX:SILVER", price is natively ₹/kg
-//
-//  Priority 2:  Kite REST /quote for MCX near-month futures  (60-second cache)
-//               Uses tradingsymbol prefix filter + excludes MINI/PETAL/GUINEA/TEN
-//               Percentage change = q.net_change (NOT q.change — that's absolute)
-//
-//  Fallback:    Yahoo Finance GC=F + SI=F with live USDINR=X
-//               Gold:   (GC=F ÷ 31.1035) × 10 × USDINR × GOLD_DUTY  → ₹/10g
-//               Silver: SI=F × 32.1507   × USDINR × SILVER_DUTY       → ₹/kg
-//               Duty factors: Gold ~18% (15% customs + 3% GST)
-//                             Silver ~13% (10% customs + 3% GST)
-// ─────────────────────────────────────────────────────────────────────────────
 
-// Indian import duty factors (MCX prices include these; Yahoo prices don't)
-const GOLD_DUTY_FACTOR   = 1.18;  // 15% customs + 3% GST (approx)
-const SILVER_DUTY_FACTOR = 1.13;  // 10% customs + 3% GST (approx)
+const GOLD_DUTY_FACTOR   = 1.146;
+const SILVER_DUTY_FACTOR = 1.146;
 
 const _mcxMeta  = { gold: null, silver: null, ts: 0 };
 const _mcxCache = { data: null, ts: 0 };
@@ -1266,8 +1365,18 @@ router.get("/commodities", async (req, res) => {
   // PRIORITY 1: kiteWS WebSocket ticks (real-time, already subscribed)
   // ═══════════════════════════════════════════════════════════════════
   const wsTicks = kiteWS.getMCXTicks();
-  const wsGold   = wsTicks["MCX:GOLD"];
-  const wsSilver = wsTicks["MCX:SILVER"];
+  // ✅ FIX: MCX WS tick keys are contract-specific e.g. "MCX:GOLD25JUN", "MCX:SILVERMIC25MAY"
+  // Generic "MCX:GOLD" key never matches — find by prefix instead
+  const wsGold   = Object.values(wsTicks).find(t =>
+    typeof t.symbol === "string" && /^MCX:GOLD(?!PETAL|MINI|M)/i.test(t.symbol) && t.last_price > 0
+  ) ?? Object.values(wsTicks).find(t =>
+    typeof t.symbol === "string" && t.symbol.startsWith("MCX:GOLD") && t.last_price > 0
+  );
+  const wsSilver = Object.values(wsTicks).find(t =>
+    typeof t.symbol === "string" && /^MCX:SILVER(?!MICRO|MIC|M)/i.test(t.symbol) && t.last_price > 0
+  ) ?? Object.values(wsTicks).find(t =>
+    typeof t.symbol === "string" && t.symbol.startsWith("MCX:SILVER") && t.last_price > 0
+  );
 
   if (wsGold?.last_price > 0 && wsSilver?.last_price > 0) {
     const wsAge = Math.max(
@@ -1284,9 +1393,10 @@ router.get("/commodities", async (req, res) => {
         gold: {
           symbol:         wsGold.symbol ?? "MCX:GOLD",
           price_per_10g:  Math.round(wsGold.last_price),
-          change_percent: wsGold.change != null && wsGold.change !== 0
+          // ✅ FIX: wsGold.change = % change field (not net_change which is absolute points)
+          change_percent: (wsGold.change != null && wsGold.change !== 0)
             ? +wsGold.change.toFixed(2)
-            : prevGold > 0
+            : (prevGold > 0 && wsGold.last_price !== prevGold)
               ? +(((wsGold.last_price - prevGold) / prevGold) * 100).toFixed(2)
               : null,
           ohlc:   wsGold.ohlc ?? null,
@@ -1296,9 +1406,10 @@ router.get("/commodities", async (req, res) => {
         silver: {
           symbol:         wsSilver.symbol ?? "MCX:SILVER",
           price_per_kg:   Math.round(wsSilver.last_price),
-          change_percent: wsSilver.change != null && wsSilver.change !== 0
+          // ✅ FIX: wsSilver.change = % change field (not net_change which is absolute points)
+          change_percent: (wsSilver.change != null && wsSilver.change !== 0)
             ? +wsSilver.change.toFixed(2)
-            : prevSilver > 0
+            : (prevSilver > 0 && wsSilver.last_price !== prevSilver)
               ? +(((wsSilver.last_price - prevSilver) / prevSilver) * 100).toFixed(2)
               : null,
           ohlc:   wsSilver.ohlc ?? null,
@@ -1338,10 +1449,13 @@ router.get("/commodities", async (req, res) => {
       if (!q) return null;
       const price     = q.last_price;
       const prevClose = q.ohlc?.close ?? null;
-      // Kite REST: use net_change (%) first, fallback to manual calc from ohlc.close
-      const changePct = q.net_change != null
-        ? q.net_change
-        : (price && prevClose ? ((price - prevClose) / prevClose) * 100 : null);
+      // ✅ FIX: Kite REST /quote — 'change' field = % change, 'net_change' = absolute points (NOT %)
+      // Using net_change was wrong — it would show e.g. "200" instead of "1.3%"
+      const changePct = (q.change != null && q.change !== 0)
+        ? q.change
+        : (price && prevClose && prevClose !== 0
+          ? ((price - prevClose) / prevClose) * 100
+          : null);
       return {
         price,
         change_percent: changePct != null ? +changePct.toFixed(2) : null,
@@ -1410,7 +1524,40 @@ router.get("/commodities", async (req, res) => {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// INDIA VIX
+// 3b. COMMODITIES YAHOO — Gold & Silver directly from Yahoo Finance (INR)
+//     GET /api/v1/kite/commodities-yahoo
+//
+//  Always fetches from Yahoo Finance (GC=F + SI=F + USDINR=X) regardless of
+//  Kite WS/REST state. Useful when MCX plan is not active or for cross-checking.
+//  Cache: 60 seconds
+// ─────────────────────────────────────────────────────────────────────────────
+const _yahooCommCache = { data: null, ts: 0 };
+
+router.get("/commodities-yahoo", async (req, res) => {
+  const CACHE_TTL = 60 * 1000; // 60-second cache
+
+  if (_yahooCommCache.data && Date.now() - _yahooCommCache.ts < CACHE_TTL) {
+    return res.json({ status: "success", data: _yahooCommCache.data, cached: true });
+  }
+
+  try {
+    const data = await commoditiesFromYahoo();
+    if (!data.gold && !data.silver) throw new Error("Yahoo returned no commodity data");
+    _yahooCommCache.data = data;
+    _yahooCommCache.ts   = Date.now();
+    console.log(`[MCX Yahoo] Gold ₹${data.gold?.price_per_10g}/10g | Silver ₹${data.silver?.price_per_kg}/kg`);
+    return res.json({ status: "success", data });
+  } catch (err) {
+    console.error("[MCX Yahoo] Failed:", err.message);
+    if (_yahooCommCache.data) {
+      return res.json({ status: "success", data: _yahooCommCache.data, stale: true });
+    }
+    return res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+
+
 // GET /api/v1/kite/vix
 // Priority: WebSocket tick → Kite REST → null (never fake data)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1828,8 +1975,10 @@ router.get("/pcr-maxpain", async (req, res) => {
   }
 
   try {
-    // Step 1: Instruments
-    const instrRes = await axios.get("https://api.kite.trade/instruments/NFO", {
+    // Step 1: Instruments — SENSEX/BANKEX are on BFO (BSE F&O), all others on NFO
+    const BFO_NAMES = new Set(["SENSEX", "BANKEX"]);
+    const foExchange = BFO_NAMES.has(name) ? "BFO" : "NFO";
+    const instrRes = await axios.get(`https://api.kite.trade/instruments/${foExchange}`, {
       headers: headers(), responseType: "text", timeout: 15000,
     });
     const lines = instrRes.data.split("\n").filter(l => l.trim());
@@ -1855,7 +2004,7 @@ router.get("/pcr-maxpain", async (req, res) => {
     if (contracts.length === 0) throw new Error("No CE/PE contracts found");
 
     // Step 2: Batch quote (Kite allows up to 500 per request)
-    const symbols = contracts.slice(0, 500).map(c => `NFO:${c.tradingsymbol}`);
+    const symbols = contracts.slice(0, 500).map(c => `${foExchange}:${c.tradingsymbol}`);
     const qRes    = await axios.get(
       `https://api.kite.trade/quote?${symbols.map(s => `i=${encodeURIComponent(s)}`).join("&")}`,
       { headers: headers(), timeout: 20000 }
@@ -1867,7 +2016,7 @@ router.get("/pcr-maxpain", async (req, res) => {
     contracts.forEach(c => {
       const strike = parseFloat(c.strike);
       if (!strikeMap[strike]) strikeMap[strike] = { ce_oi: 0, pe_oi: 0, ce_ltp: 0, pe_ltp: 0 };
-      const q = quotes[`NFO:${c.tradingsymbol}`];
+      const q = quotes[`${foExchange}:${c.tradingsymbol}`];
       if (!q) return;
       const oi  = q.oi          ?? 0;
       const ltp = q.last_price  ?? 0;
@@ -1937,6 +2086,62 @@ router.get("/pcr-maxpain", async (req, res) => {
     });
   }
 });
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NSE-BASED USD/INR
+// Uses NSE currency derivatives near-month USDINR futures as proxy for spot rate.
+// The % change is relative to previous NSE session close — matches all Indian platforms.
+// ─────────────────────────────────────────────────────────────────────────────
+async function fetchUsdInrFromNse(cookies) {
+  // Try NSE quote-derivative endpoint first (gives metadata with pChange)
+  try {
+    const r = await axios.get(
+      "https://www.nseindia.com/api/quote-derivative?symbol=USDINR",
+      {
+        timeout: 10000,
+        headers: nseApiHeaders(cookies, "https://www.nseindia.com/market-data/currency-derivatives"),
+      }
+    );
+    const stocks = r.data?.stocks ?? r.data?.data ?? [];
+    const near   = Array.isArray(stocks) ? stocks[0] : null;
+    if (!near) throw new Error("Empty USDINR derivative response");
+
+    const meta      = near.metadata ?? near;
+    const price     = parseFloat(meta.lastPrice ?? meta.last_price ?? meta.ltp ?? "0");
+    const prevClose = parseFloat(meta.previousClose ?? meta.prev_close ?? "0");
+    const changePct = parseFloat(meta.pChange ?? meta.percentChange ?? "0")
+      || (prevClose > 0 ? ((price - prevClose) / prevClose) * 100 : 0);
+
+    if (!price || price <= 0) throw new Error("USDINR: invalid price");
+    console.log(`[Macro] USD/INR from NSE derivatives: ₹${price.toFixed(4)} (${changePct.toFixed(3)}%)`);
+    return { rate: +price.toFixed(4), change_pct: +changePct.toFixed(3), source: "nse-cd" };
+  } catch (e) {
+    console.warn("[Macro] NSE quote-derivative USDINR failed:", e.message);
+  }
+
+  // Fallback within NSE: try currencyDerivatives index API
+  const r2 = await axios.get(
+    "https://www.nseindia.com/api/currencyDerivatives?index=USDINR",
+    {
+      timeout: 10000,
+      headers: nseApiHeaders(cookies, "https://www.nseindia.com/market-data/currency-derivatives"),
+    }
+  );
+  const rows = extractNseRows(r2.data);
+  const spot = rows.find(row =>
+    /USDINR/i.test(row.symbol ?? row.instrumentName ?? row.index ?? "") && row.lastPrice
+  );
+  if (!spot) throw new Error("No USDINR data from NSE currencyDerivatives");
+
+  const price     = parseFloat(spot.lastPrice ?? spot.ltp ?? "0");
+  const prevClose = parseFloat(spot.previousClose ?? spot.prev_close ?? "0");
+  const changePct = parseFloat(spot.pChange ?? spot.percentChange ?? "0")
+    || (prevClose > 0 ? ((price - prevClose) / prevClose) * 100 : 0);
+
+  if (!price || price <= 0) throw new Error("USDINR currencyDerivatives: invalid price");
+  return { rate: +price.toFixed(4), change_pct: +changePct.toFixed(3), source: "nse-cd2" };
+}
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2056,16 +2261,32 @@ router.get("/macro", async (req, res) => {
   const results = { ...(_macroCache.data ?? {}) };
 
   // INR/USD — always refresh if stale (60s)
+  // Priority: NSE currency derivatives (matches Indian market % change) → Yahoo fallback
   if (!fxCacheValid) {
+    let fxData = null;
+
+    // ── Primary: NSE USDINR near-month futures (same % change as Zerodha, Investing.com etc.) ──
     try {
-      const fx = await fetchYahooSymbol("USDINR=X");
-      results.inr_usd = fx.price
-        ? { rate: +fx.price.toFixed(4), change_pct: +fx.changePct.toFixed(3), source: "yahoo" }
-        : null;
-      _macroCache.fxTs = Date.now();
-    } catch (_) {
-      results.inr_usd = _macroCache.data?.inr_usd ?? null;
+      const fxCookies = await getNseSession();
+      fxData = await fetchUsdInrFromNse(fxCookies);
+    } catch (nseErr) {
+      console.warn("[Macro] NSE USD/INR failed:", nseErr.message, "— trying Yahoo USDINR=X");
     }
+
+    // ── Fallback: Yahoo Finance USDINR=X ──
+    if (!fxData) {
+      try {
+        const fx = await fetchYahooSymbol("USDINR=X");
+        if (fx?.price) {
+          fxData = { rate: +fx.price.toFixed(4), change_pct: +fx.changePct.toFixed(3), source: "yahoo" };
+        }
+      } catch (yfErr) {
+        console.warn("[Macro] Yahoo USD/INR also failed:", yfErr.message);
+      }
+    }
+
+    results.inr_usd = fxData ?? (_macroCache.data?.inr_usd ?? null);
+    _macroCache.fxTs = Date.now();
   }
 
   // If only FX was stale and macro data is still valid, return early
@@ -2101,6 +2322,151 @@ router.get("/macro", async (req, res) => {
   _macroCache.data = results;
   _macroCache.ts   = Date.now();
   return res.json({ status: "success", data: results });
+});
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// USD/INR — DEDICATED ACCURATE ROUTE
+// GET /api/v1/kite/usdinr
+//
+// Priority chain (most → least accurate):
+//  1. Kite REST /quote — NSE Currency segment USDINR near-month futures
+//     (same source as Zerodha, exact % vs NSE previous close)
+//  2. NSE currencyDerivatives API (session-based)
+//  3. Yahoo USDINR=X (fallback — works 24x7, slight diff on weekends)
+//  4. Stale cache — last known good value (never return 0)
+//
+// Cache: 30s live | stale cache always preferred over returning 0/null
+// ─────────────────────────────────────────────────────────────────────────────
+const _usdInrMeta  = { symbol: null, ts: 0 };
+const _usdInrCache = { data: null, ts: 0 };
+
+// Auto-resolve nearest expiry NSE CDS USDINR futures symbol
+async function resolveUsdInrSymbol() {
+  const ONE_H = 60 * 60 * 1000;
+  if (_usdInrMeta.symbol && Date.now() - _usdInrMeta.ts < ONE_H) {
+    return _usdInrMeta.symbol;
+  }
+  console.log("[USDINR] Fetching NSE CDS instrument list…");
+  const r = await axios.get("https://api.kite.trade/instruments/CDS", {
+    headers: headers(), timeout: 15000, responseType: "text",
+  });
+  const today = new Date().toISOString().split("T")[0];
+  const lines = r.data.split("\n");
+  const hdrs  = lines[0].split(",").map(h => h.trim());
+  const col   = (row, name) => row[hdrs.indexOf(name)]?.trim() ?? "";
+
+  const contracts = lines.slice(1).filter(l => l.trim()).map(l => {
+    const p = l.split(",");
+    return {
+      symbol: col(p, "tradingsymbol"),
+      expiry: col(p, "expiry"),
+      type:   col(p, "instrument_type"),
+      name:   col(p, "name").toUpperCase(),
+    };
+  }).filter(c =>
+    c.type === "FUT" &&
+    /^USDINR/.test(c.symbol) &&
+    c.expiry >= today
+  ).sort((a, b) => a.expiry.localeCompare(b.expiry));
+
+  if (!contracts.length) throw new Error("No active USDINR CDS contracts found");
+
+  _usdInrMeta.symbol = contracts[0].symbol;
+  _usdInrMeta.ts     = Date.now();
+  console.log(`[USDINR] Resolved → ${_usdInrMeta.symbol} (expiry: ${contracts[0].expiry})`);
+  return _usdInrMeta.symbol;
+}
+
+router.get("/usdinr", async (req, res) => {
+  // 30-second cache
+  if (_usdInrCache.data && Date.now() - _usdInrCache.ts < 30_000) {
+    return res.json({ status: "success", data: _usdInrCache.data, cached: true });
+  }
+
+  // ── TIER 1: Kite CDS USDINR futures (most accurate — same as Zerodha app) ──
+  try {
+    const sym       = await resolveUsdInrSymbol();
+    const kiteSymbol = `CDS:${sym}`;
+    // ✅ FIX: Use /quote instead of /ohlc — /quote provides 'change' (% change) directly
+    // /ohlc only gives last_price + ohlc fields, no 'change' field → manual calc drifts
+    const r = await axios.get(
+      `https://api.kite.trade/quote?${symQS([kiteSymbol])}`,
+      { headers: headers(), timeout: 8000 }
+    );
+    const q = r.data?.data?.[kiteSymbol];
+    if (!q) throw new Error(`No quote data for ${kiteSymbol}`);
+
+    const price     = q.last_price;
+    // ✅ FIX: price=0 reject karo — CDS band hone pe 0 aata hai, fallback trigger karo
+    if (!price || price <= 0) throw new Error(`USDINR: invalid price (${price}) — market may be closed`);
+
+    const prevClose = q.ohlc?.close ?? null;
+    // ✅ FIX: 'change' = % change in /quote response (direct from Kite, matches Zerodha app)
+    const changePct = (q.change != null && q.change !== 0)
+      ? q.change
+      : (price && prevClose && prevClose > 0
+        ? ((price - prevClose) / prevClose) * 100
+        : null);
+
+    const data = {
+      rate:       +price.toFixed(4),
+      change_pct: changePct != null ? +changePct.toFixed(3) : null,
+      symbol:     sym,
+      ohlc:       q.ohlc,
+      source:     "kite-cds",
+    };
+    _usdInrCache.data = data;
+    _usdInrCache.ts   = Date.now();
+    console.log(`[USDINR] Kite CDS: ₹${data.rate} (${data.change_pct?.toFixed(3)}%)`);
+    return res.json({ status: "success", data });
+
+  } catch (kiteErr) {
+    console.warn(`[USDINR] Kite CDS failed (${kiteErr.message}) — trying NSE session`);
+    _usdInrMeta.symbol = null; // force re-resolve
+  }
+
+  // ── TIER 2: NSE currency derivatives API ──
+  try {
+    const cookies = await getNseSession();
+    const data    = await fetchUsdInrFromNse(cookies);
+    _usdInrCache.data = data;
+    _usdInrCache.ts   = Date.now();
+    return res.json({ status: "success", data });
+  } catch (nseErr) {
+    console.warn(`[USDINR] NSE session failed (${nseErr.message}) — trying Yahoo`);
+    // Retry with fresh session
+    try {
+      _nseSession.cookies = ""; _nseSession.ts = 0;
+      const fresh = await getNseSession(true);
+      const data  = await fetchUsdInrFromNse(fresh);
+      _usdInrCache.data = data;
+      _usdInrCache.ts   = Date.now();
+      return res.json({ status: "success", data });
+    } catch (nseErr2) {
+      console.warn(`[USDINR] NSE retry failed (${nseErr2.message}) — falling back to Yahoo`);
+    }
+  }
+
+  // ── TIER 3: Yahoo USDINR=X ──
+  try {
+    const fx = await fetchYahooSymbol("USDINR=X");
+    const data = {
+      rate:       +fx.price.toFixed(4),
+      change_pct: +fx.changePct.toFixed(3),
+      source:     "yahoo",
+    };
+    _usdInrCache.data = data;
+    _usdInrCache.ts   = Date.now();
+    console.log(`[USDINR] Yahoo fallback: ₹${data.rate} (${data.change_pct}%)`);
+    return res.json({ status: "success", data });
+  } catch (yahooErr) {
+    console.error("[USDINR] All tiers failed:", yahooErr.message);
+    if (_usdInrCache.data) {
+      return res.json({ status: "success", data: _usdInrCache.data, stale: true });
+    }
+    return res.status(500).json({ status: "error", message: "USD/INR unavailable" });
+  }
 });
 
 
@@ -2287,6 +2653,196 @@ router.get("/global-holidays", async (req, res) => {
   _globalHolCache[year] = { data: staticList, ts: Date.now() };
   console.log(`[GlobalHolidays] Static: ${staticList.length} holidays for ${year}`);
   return res.json({ status: "success", data: staticList, source: "static" });
+});
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INSTRUMENT SEARCH — for KiteChart search bar
+// GET /api/v1/kite/search-instruments?q=RELIANCE
+//
+// Returns matching NSE indices + stocks from cached instrument list.
+// Cache: 6 hours (instrument list changes infrequently)
+// ─────────────────────────────────────────────────────────────────────────────
+let _searchCache   = { instruments: null, ts: 0 };
+const SEARCH_TTL   = 6 * 60 * 60 * 1000; // 6 hours
+
+// ── Full instrument token cache (includes instrument_token field) ─────────────
+let _fullInstrCache   = { data: null, ts: 0 };
+const FULL_INSTR_TTL  = 6 * 60 * 60 * 1000;
+
+async function getInstrumentToken(sym, exchange = "NSE") {
+  if (!_fullInstrCache.data || Date.now() - _fullInstrCache.ts > FULL_INSTR_TTL) {
+    try {
+      console.log("[getInstrumentToken] Fetching full NSE+BSE instrument list...");
+      const [nseRes, bseRes] = await Promise.allSettled([
+        axios.get("https://api.kite.trade/instruments/NSE", { headers: headers(), timeout: 25000, responseType: "text" }),
+        axios.get("https://api.kite.trade/instruments/BSE", { headers: headers(), timeout: 25000, responseType: "text" }),
+      ]);
+      const parseAll = (text, exch) => {
+        try {
+          const lines = text.split("\n").filter(l => l.trim());
+          const hdrs  = lines[0].split(",").map(h => h.trim());
+          const col   = (row, name) => row[hdrs.indexOf(name)]?.trim() ?? "";
+          return lines.slice(1).filter(l => l.trim()).map(l => {
+            const p = l.split(",");
+            return {
+              sym:   col(p, "tradingsymbol"),
+              token: parseInt(col(p, "instrument_token")),
+              type:  col(p, "instrument_type"),
+              exchange: exch,
+            };
+          }).filter(i => i.sym && !isNaN(i.token));
+        } catch (_) { return []; }
+      };
+      const nse = nseRes.status === "fulfilled" ? parseAll(nseRes.value.data, "NSE") : [];
+      const bse = bseRes.status === "fulfilled" ? parseAll(bseRes.value.data, "BSE") : [];
+      _fullInstrCache.data = [...nse, ...bse];
+      _fullInstrCache.ts   = Date.now();
+      console.log(`[getInstrumentToken] Cached ${_fullInstrCache.data.length} instruments`);
+    } catch (e) {
+      console.warn("[getInstrumentToken] Failed to load instruments:", e.message);
+      return null;
+    }
+  }
+  const match =
+    _fullInstrCache.data.find(i => i.sym === sym && i.exchange === exchange && i.type === "EQ") ||
+    _fullInstrCache.data.find(i => i.sym === sym && i.type === "EQ") ||
+    _fullInstrCache.data.find(i => i.sym === sym && i.exchange === exchange);
+  return match ? match.token : null;
+}
+
+// Hard-coded popular symbols always shown / boosted in search
+const SEARCH_POPULAR = [
+  { key: "NIFTY 50",          label: "Nifty 50",           exchange: "NSE", type: "INDEX" },
+  { key: "SENSEX",             label: "Sensex",             exchange: "BSE", type: "INDEX" },
+  { key: "NIFTY BANK",        label: "Bank Nifty",          exchange: "NSE", type: "INDEX" },
+  { key: "NIFTY LARGEMID250", label: "LargeMid 250",        exchange: "NSE", type: "INDEX" },
+  { key: "NIFTY AUTO",        label: "Nifty Auto",          exchange: "NSE", type: "INDEX" },
+  { key: "NIFTY PHARMA",      label: "Nifty Pharma",        exchange: "NSE", type: "INDEX" },
+  { key: "NIFTY METAL",       label: "Nifty Metal",         exchange: "NSE", type: "INDEX" },
+  { key: "NIFTY FIN SERVICE", label: "Nifty FinServ",       exchange: "NSE", type: "INDEX" },
+  { key: "NIFTY IT",          label: "Nifty IT",            exchange: "NSE", type: "INDEX" },
+  { key: "NIFTY FMCG",        label: "Nifty FMCG",         exchange: "NSE", type: "INDEX" },
+  { key: "NIFTY ENERGY",      label: "Nifty Energy",        exchange: "NSE", type: "INDEX" },
+  { key: "NIFTY PSU BANK",    label: "Nifty PSU Bank",      exchange: "NSE", type: "INDEX" },
+  { key: "NIFTY REALTY",      label: "Nifty Realty",        exchange: "NSE", type: "INDEX" },
+  { key: "NIFTY IND DEFENCE", label: "Nifty Defence",       exchange: "NSE", type: "INDEX" },
+  { key: "RELIANCE",          label: "Reliance Industries", exchange: "NSE", type: "EQ" },
+  { key: "TCS",               label: "TCS",                 exchange: "NSE", type: "EQ" },
+  { key: "HDFCBANK",          label: "HDFC Bank",           exchange: "NSE", type: "EQ" },
+  { key: "INFY",              label: "Infosys",             exchange: "NSE", type: "EQ" },
+  { key: "ICICIBANK",         label: "ICICI Bank",          exchange: "NSE", type: "EQ" },
+  { key: "WIPRO",             label: "Wipro",               exchange: "NSE", type: "EQ" },
+  { key: "ITC",               label: "ITC",                 exchange: "NSE", type: "EQ" },
+  { key: "HINDUNILVR",        label: "Hindustan Unilever",  exchange: "NSE", type: "EQ" },
+  { key: "AXISBANK",          label: "Axis Bank",           exchange: "NSE", type: "EQ" },
+  { key: "KOTAKBANK",         label: "Kotak Mahindra Bank", exchange: "NSE", type: "EQ" },
+  { key: "BAJFINANCE",        label: "Bajaj Finance",       exchange: "NSE", type: "EQ" },
+  { key: "SBIN",              label: "State Bank of India", exchange: "NSE", type: "EQ" },
+  { key: "MARUTI",            label: "Maruti Suzuki",       exchange: "NSE", type: "EQ" },
+  { key: "TATAMOTORS",        label: "Tata Motors",         exchange: "NSE", type: "EQ" },
+  { key: "TATASTEEL",         label: "Tata Steel",          exchange: "NSE", type: "EQ" },
+  { key: "SUNPHARMA",         label: "Sun Pharma",          exchange: "NSE", type: "EQ" },
+  { key: "ONGC",              label: "ONGC",                exchange: "NSE", type: "EQ" },
+  { key: "NTPC",              label: "NTPC",                exchange: "NSE", type: "EQ" },
+  { key: "POWERGRID",         label: "Power Grid",          exchange: "NSE", type: "EQ" },
+  { key: "ADANIENT",          label: "Adani Enterprises",   exchange: "NSE", type: "EQ" },
+  { key: "ADANIPORTS",        label: "Adani Ports",         exchange: "NSE", type: "EQ" },
+];
+
+async function loadSearchInstruments() {
+  if (_searchCache.instruments && Date.now() - _searchCache.ts < SEARCH_TTL) {
+    return _searchCache.instruments;
+  }
+
+  // Fetch NSE and BSE instrument lists in parallel for comprehensive coverage
+  console.log("[Search] Fetching full NSE+BSE instrument list for search cache...");
+  const [nseRes, bseRes] = await Promise.allSettled([
+    axios.get("https://api.kite.trade/instruments/NSE", {
+      headers: headers(), timeout: 25000, responseType: "text",
+    }),
+    axios.get("https://api.kite.trade/instruments/BSE", {
+      headers: headers(), timeout: 25000, responseType: "text",
+    }),
+  ]);
+
+  const parseInstruments = (text, defaultExchange) => {
+    try {
+      const lines = text.split("\n").filter(l => l.trim());
+      const hdrs  = lines[0].split(",").map(h => h.trim());
+      const col   = (row, name) => row[hdrs.indexOf(name)]?.trim() ?? "";
+      return lines.slice(1)
+        .filter(l => l.trim())
+        .map(l => {
+          const p    = l.split(",");
+          const sym  = col(p, "tradingsymbol");
+          const name = col(p, "name");
+          const type = col(p, "instrument_type");
+          const seg  = col(p, "segment");
+          return { sym, name, type, seg, exchange: defaultExchange };
+        })
+        // Include EQ stocks + index instruments
+        .filter(i => i.sym && i.name &&
+          (i.type === "EQ" || i.seg?.includes("INDICES"))
+        );
+    } catch (_) { return []; }
+  };
+
+  const nseList = nseRes.status === "fulfilled" ? parseInstruments(nseRes.value.data, "NSE") : [];
+  const bseList = bseRes.status === "fulfilled" ? parseInstruments(bseRes.value.data, "BSE") : [];
+
+  // De-duplicate: prefer NSE listing when same symbol exists on both exchanges
+  const seenSyms = new Set(nseList.map(i => i.sym));
+  const combined = [
+    ...nseList,
+    ...bseList.filter(i => !seenSyms.has(i.sym)),
+  ];
+
+  _searchCache.instruments = combined;
+  _searchCache.ts          = Date.now();
+  console.log(`[Search] Cached ${nseList.length} NSE + ${bseList.filter(i => !seenSyms.has(i.sym)).length} BSE-only = ${combined.length} total instruments`);
+  return combined;
+}
+
+router.get("/search-instruments", async (req, res) => {
+  const q = (req.query.q || "").toString().trim().toUpperCase();
+
+  // No query → return all popular symbols
+  if (!q) {
+    return res.json({ status: "success", results: SEARCH_POPULAR });
+  }
+
+  // Search popular list first (indices + pre-loaded top stocks)
+  const popMatches = SEARCH_POPULAR.filter(s =>
+    s.key.startsWith(q) || s.key.includes(q) || s.label.toUpperCase().includes(q)
+  );
+
+  // Search ALL cached instruments — no slice limit (user has Kite 500 plan)
+  let instrMatches = [];
+  try {
+    const instruments = await loadSearchInstruments();
+    instrMatches = instruments
+      .filter(i =>
+        i.sym.startsWith(q) ||
+        i.sym.includes(q)   ||
+        i.name.toUpperCase().includes(q)
+      )
+      .map(i => ({
+        key:      i.sym,
+        label:    i.name || i.sym,
+        exchange: i.exchange ?? "NSE",
+        type:     i.type,
+      }));
+  } catch (_) {}
+
+  // Merge: popular matches first (de-duped), then all instrument matches
+  const seen   = new Set(popMatches.map(s => s.key));
+  const merged = [
+    ...popMatches,
+    ...instrMatches.filter(s => !seen.has(s.key)),
+  ];
+  // Cap at 100 to avoid sending massive payloads, but this covers any realistic search
+  res.json({ status: "success", results: merged.slice(0, 100) });
 });
 
 

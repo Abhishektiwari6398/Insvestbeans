@@ -610,7 +610,7 @@ const ImpactMeter: React.FC<{ impact: "High" | "Medium" | "Low"; tk: typeof T.da
   );
 };
 
-// ─── AdminInlinePanel — sirf Section 03 + 04 fields (no title/date/description) ──
+// ─── Constants ────────────────────────────────────────────────────────────────
 const ASSETS_LIST = ["Equity", "Commodities", "Forex", "Bonds"];
 const ASSET_PILL_COLOR: Record<string, { c: string; bg: string }> = {
   Equity:      { c: "#74A8C9", bg: "rgba(116,168,201,0.15)" },
@@ -619,257 +619,462 @@ const ASSET_PILL_COLOR: Record<string, { c: string; bg: string }> = {
   Bonds:       { c: "#a78bfa", bg: "rgba(167,139,250,0.12)" },
 };
 
-const AdminInlinePanel: React.FC<{
-  event: MarketEvent; tk: typeof T.dark; isLight: boolean;
-  onSaved: () => void; onCancel: () => void;
-}> = ({ event, tk, isLight, onSaved, onCancel }) => {
-  const _API = (import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1");
+// ─── AdminFullEventModal — Complete Create / Edit modal ──────────────────────
+// isCreate=true → POST new event
+// isCreate=false + event → PUT full edit of existing DB event
+const AdminFullEventModal: React.FC<{
+  tk: typeof T.dark; isLight: boolean;
+  event?: MarketEvent | null;   // null = create new
+  onSaved: () => void;
+  onClose: () => void;
+}> = ({ tk, isLight, event, onSaved, onClose }) => {
+  const isCreate = !event;
 
-  const [marketImpact, setMarketImpact] = useState<string>(event.marketImpact ?? "");
-  const [impactTerm,   setImpactTerm]   = useState<string>(event.impactTerm   ?? "");
-  // Single-select: take first asset if any
-  const [asset,    setAsset]   = useState<string>((event.whoAffected?.assets ?? [])[0] ?? "");
-  const [sectors,  setSectors] = useState<string>((event.whoAffected?.sectors ?? []).join(", "));
-  const [saving,   setSaving]  = useState(false);
+  // ── Basic fields ──
+  const [title,       setTitle]       = useState(event?.title       ?? "");
+  const [date,        setDate]        = useState(event?.date        ?? new Date().toISOString().slice(0, 10));
+  const [region,      setRegion]      = useState<"india"|"global">(event?.region ?? "india");
+  const [impact,      setImpact]      = useState<"High"|"Medium"|"Low">(event?.impact ?? "Medium");
+  const [description, setDescription] = useState(event?.description ?? "");
+  const [whatHappened,setWhatHappened] = useState(event?.whatHappened ?? "");
+  const [sourceUrl,   setSourceUrl]   = useState(event?.sourceUrl   ?? "");
+  const [investbeansInsight, setInvestbeansInsight] = useState(event?.investbeansInsight ?? "");
 
-  const wordCount = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
-  const sectorWC  = wordCount(sectors);
+  // ── Market Impact ──
+  const [marketImpact, setMarketImpact] = useState(event?.marketImpact ?? "");
+  const [impactTerm,   setImpactTerm]   = useState(event?.impactTerm   ?? "");
 
-  // Single-select toggle
-  const selectAsset = (a: string) => setAsset(prev => prev === a ? "" : a);
+  // ── Who Affected ──
+  const [asset,   setAsset]   = useState<string>((event?.whoAffected?.assets ?? [])[0] ?? "");
+  const [sectors, setSectors] = useState<string>(
+    Array.isArray(event?.whoAffected?.sectors)
+      ? event!.whoAffected!.sectors.join(", ")
+      : (event?.whoAffected?.sectors as any as string) ?? ""
+  );
+
+  const [saving,  setSaving]  = useState(false);
+  const [error,   setError]   = useState("");
+
+  const wc = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
+  const sectorWC = wc(sectors);
+  const insightWC = wc(investbeansInsight);
+
+  // Close on Escape
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", fn);
+    return () => window.removeEventListener("keydown", fn);
+  }, [onClose]);
 
   const inp: React.CSSProperties = {
-    width: "100%", padding: "6px 9px", borderRadius: 5, fontSize: 11,
-    border: `1px solid ${tk.border}`, background: isLight ? "#fff" : "#040c18",
+    width: "100%", padding: "8px 10px", borderRadius: 6, fontSize: 12,
+    border: `1px solid ${tk.border}`,
+    background: isLight ? "#fff" : "#050d1c",
     color: tk.textPrimary, outline: "none", fontFamily: "inherit",
-    boxSizing: "border-box",
+    boxSizing: "border-box", transition: "border-color 0.15s",
   };
-
-  const pillStyle = (active: boolean, ac: string, abg: string): React.CSSProperties => ({
-    padding: "3px 10px", borderRadius: 4, fontSize: 10, fontWeight: 700, cursor: "pointer",
-    border: `1px solid ${active ? ac : tk.border}`,
-    background: active ? abg : "transparent",
-    color: active ? ac : tk.textMuted,
-    transition: "all 0.1s", whiteSpace: "nowrap" as const,
-  });
-
   const lbl: React.CSSProperties = {
-    fontSize: 9, fontWeight: 700, color: tk.accent, letterSpacing: "0.1em",
-    display: "block", marginBottom: 4, textTransform: "uppercase",
+    fontSize: 9, fontWeight: 700, color: tk.textMuted,
+    letterSpacing: "0.12em", textTransform: "uppercase",
+    display: "block", marginBottom: 5,
   };
+  const pill = (active: boolean, ac: string, abg: string): React.CSSProperties => ({
+    padding: "4px 12px", borderRadius: 5, fontSize: 10, fontWeight: 700,
+    cursor: "pointer", border: `1px solid ${active ? ac : tk.border}`,
+    background: active ? abg : "transparent",
+    color: active ? ac : tk.textMuted, transition: "all 0.1s",
+    whiteSpace: "nowrap" as const,
+  });
+  const sectionCard: React.CSSProperties = {
+    background: isLight ? "#f8fafc" : "#060d1c",
+    border: `1px solid ${tk.border}`, borderRadius: 8,
+    padding: "14px 14px", marginBottom: 12,
+  };
+  const sectionTitle = (color: string, num: string, label: string) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+      <span style={{
+        fontSize: 8, fontWeight: 800, letterSpacing: "0.2em",
+        color, fontFamily: "'IBM Plex Mono', monospace",
+      }}>{num}</span>
+      <div style={{ flex: 1, height: 1, background: `${color}30` }} />
+      <span style={{ fontSize: 9, fontWeight: 700, color, letterSpacing: "0.1em", textTransform: "uppercase" }}>{label}</span>
+    </div>
+  );
+
+  const MI_OPTS = [
+    { val: "bullish", label: "▲ BULLISH", c: tk.green, bg: tk.greenDim },
+    { val: "bearish", label: "▼ BEARISH", c: tk.red,   bg: tk.redDim   },
+    { val: "mixed",   label: "— MIXED",   c: tk.amber, bg: tk.amberDim },
+  ];
+  const TERM_OPTS = [
+    { val: "short",        label: "SHORT"     },
+    { val: "medium",       label: "MEDIUM"    },
+    { val: "long",         label: "LONG"      },
+    { val: "short-medium", label: "SHORT-MED" },
+  ];
+  const IMPACT_OPTS: Array<{ val: "High"|"Medium"|"Low"; c: string }> = [
+    { val: "High",   c: tk.red   },
+    { val: "Medium", c: tk.amber },
+    { val: "Low",    c: tk.green },
+  ];
 
   const handleSave = async () => {
-    if (sectorWC > 70) return alert("Sectors must be \u226470 words");
+    setError("");
+    if (!title.trim())  return setError("Title is required.");
+    if (!date)          return setError("Date is required.");
+    if (sectorWC > 70)  return setError("Sectors must be ≤70 words.");
+    if (insightWC > 300) return setError("InvestBeans Insight must be ≤300 words.");
+
     setSaving(true);
     try {
       const token = localStorage.getItem("accessToken");
-      const authHeader: Record<string,string> = token ? { Authorization: `Bearer ${token}` } : {};
-      const enrichment = {
-        marketImpact, impactTerm,
-        whoAffected: { assets: asset ? [asset] : [], sectors },
+      const authH: Record<string,string> = token ? { Authorization: `Bearer ${token}` } : {};
+      const body = {
+        title:        title.trim(),
+        date,
+        region,
+        impact,
+        description:        description.trim(),
+        whatHappened:       whatHappened.trim(),
+        sourceUrl:          sourceUrl.trim(),
+        investbeansInsight: investbeansInsight.trim(),
+        marketImpact,
+        impactTerm,
+        whoAffected: { assets: asset ? [asset] : [], sectors: sectors.trim() },
       };
-      const isRealDbId = /^[0-9a-f]{24}$/i.test(event.id);
-      let res: Response;
 
-      if (isRealDbId) {
-        // Already in DB → PATCH enrichment fields only
-        res = await fetch(`${_API}/admin/events/${event.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", ...authHeader },
+      let res: Response;
+      if (isCreate) {
+        // POST — create new event
+        res = await fetch(`${API}/admin/events`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authH },
           credentials: "include",
-          body: JSON.stringify(enrichment),
+          body: JSON.stringify(body),
         });
       } else {
-        // Not in DB yet (came from live API feed) → check by title+date if already saved
-        const checkRes = await fetch(
-          `${_API}/admin/events?title=${encodeURIComponent(event.title.trim())}&date=${event.date}&limit=1`,
-          { headers: authHeader, credentials: "include" }
-        );
-        const checkData = checkRes.ok ? await checkRes.json() : null;
-        const existing = checkData?.data?.[0] ?? null;
-
-        if (existing?._id) {
-          // Already saved before → PATCH that record
-          res = await fetch(`${_API}/admin/events/${existing._id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json", ...authHeader },
-            credentials: "include",
-            body: JSON.stringify(enrichment),
-          });
-        } else {
-          // Brand new → POST with FULL event data (all fields) + enrichment
-          // Include whatHappened + sourceUrl so card doesn't lose data after save
-          res = await fetch(`${_API}/admin/events`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", ...authHeader },
-            credentials: "include",
-            body: JSON.stringify({
-              title:        event.title,
-              date:         event.date,
-              region:       event.region,
-              impact:       event.impact       ?? "Medium",
-              description:  event.description  ?? "",
-              whatHappened: event.whatHappened  ?? "",
-              sourceUrl:    event.sourceUrl     ?? "",
-              ...enrichment,
-            }),
-          });
-        }
+        // PUT — full replace of existing event
+        res = await fetch(`${API}/admin/events/${event!.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...authH },
+          credentials: "include",
+          body: JSON.stringify(body),
+        });
       }
 
       const data = await res.json();
       if (!data.success) throw new Error(data.message || "Save failed");
       onSaved();
     } catch (err: any) {
-      alert(err.message || "Save failed");
+      setError(err.message || "Save failed. Please try again.");
     } finally { setSaving(false); }
   };
-
-  const MI_OPTS = [
-    { val: "bullish", label: "▲ BULLISH", c: tk.green,  bg: tk.greenDim  },
-    { val: "bearish", label: "▼ BEARISH", c: tk.red,    bg: tk.redDim    },
-    { val: "mixed",   label: "— MIXED",   c: tk.amber,  bg: tk.amberDim  },
-  ];
-  const TERM_OPTS = [
-    { val: "short",        label: "SHORT"        },
-    { val: "medium",       label: "MEDIUM"       },
-    { val: "long",         label: "LONG"         },
-    { val: "short-medium", label: "SHORT-MED"    },
-  ];
 
   return (
     <div
       style={{
-        borderTop: `2px solid ${tk.accent}`,
-        background: isLight ? "rgba(81,148,246,0.03)" : "rgba(81,148,246,0.05)",
-        padding: "14px 16px",
+        position: "fixed", inset: 0, zIndex: 1000,
+        display: "flex", alignItems: "flex-start", justifyContent: "center",
+        background: "rgba(4,8,16,0.85)",
+        backdropFilter: "blur(4px)",
+        overflowY: "auto",
+        padding: "32px 16px 64px",
       }}
-      onClick={e => e.stopPropagation()}
+      onClick={onClose}
     >
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-        <div style={{ width: 5, height: 5, borderRadius: "50%", background: tk.accent, boxShadow: `0 0 0 3px ${tk.accentDim}` }} />
-        <span style={{ fontSize: 10, fontWeight: 700, color: tk.accent, letterSpacing: "0.14em", textTransform: "uppercase" }}>
-          Admin — Enrich Event
-        </span>
-        <span style={{ fontSize: 9, color: tk.textMuted }}>
-          Market Impact · Who Is Affected
-        </span>
-      </div>
-
-      {/* ── 01 MARKET IMPACT ── */}
-      <div style={{
-        background: isLight ? "#f0f7fe" : "#060d1c",
-        border: `1px solid ${tk.border}`, borderRadius: 7,
-        padding: "10px 12px", marginBottom: 10,
-      }}>
-        <span style={{ ...lbl, color: tk.accent, marginBottom: 8 }}>01 — Market Impact</span>
-
-        {/* Direction */}
-        <div style={{ marginBottom: 8 }}>
-          <span style={{ fontSize: 8, color: tk.textMuted, display: "block", marginBottom: 5, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-            Direction
-          </span>
-          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-            <button type="button" onClick={() => setMarketImpact("")}
-              style={pillStyle(marketImpact === "", tk.textMuted, "rgba(100,116,139,0.12)")}>NONE</button>
-            {MI_OPTS.map(o => (
-              <button type="button" key={o.val} onClick={() => setMarketImpact(o.val)}
-                style={pillStyle(marketImpact === o.val, o.c, o.bg)}>{o.label}</button>
-            ))}
+      <div
+        style={{
+          width: "100%", maxWidth: 620,
+          background: isLight ? "#ffffff" : "#070e1a",
+          border: `1px solid ${tk.accentBorder}`,
+          borderRadius: 14,
+          overflow: "hidden",
+          boxShadow: "0 32px 80px rgba(0,0,0,0.7)",
+          animation: "fadeSlideIn 0.2s ease both",
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* ── Modal Header ── */}
+        <div style={{
+          height: 3,
+          background: `linear-gradient(90deg, ${tk.accent}, #8b5cf6, ${tk.accent})`,
+        }} />
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "16px 20px",
+          borderBottom: `1px solid ${tk.border}`,
+          background: isLight ? "#f8fafc" : "#040810",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: tk.accentDim, border: `1px solid ${tk.accentBorder}`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <Calendar size={14} color={tk.accent} />
+            </div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: tk.textPrimary, fontFamily: "'Outfit', sans-serif" }}>
+                {isCreate ? "Create New Event" : "Edit Event"}
+              </div>
+              <div style={{ fontSize: 10, color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: "0.1em" }}>
+                {isCreate ? "ADD TO MARKET CALENDAR" : `EDITING · ${event?.date}`}
+              </div>
+            </div>
           </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: 30, height: 30, borderRadius: 7, cursor: "pointer",
+              border: `1px solid ${tk.border}`, background: "transparent",
+              color: tk.textMuted, fontSize: 16, display: "flex",
+              alignItems: "center", justifyContent: "center", transition: "all 0.12s",
+            }}
+          >×</button>
         </div>
 
-        {/* Time Horizon */}
-        <div>
-          <span style={{ fontSize: 8, color: tk.textMuted, display: "block", marginBottom: 5, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-            Time Horizon
-          </span>
-          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-            <button type="button" onClick={() => setImpactTerm("")}
-              style={pillStyle(impactTerm === "", tk.textMuted, "rgba(100,116,139,0.12)")}>NONE</button>
-            {TERM_OPTS.map(o => (
-              <button type="button" key={o.val} onClick={() => setImpactTerm(o.val)}
-                style={pillStyle(impactTerm === o.val, tk.accent, tk.accentDim)}>{o.label}</button>
-            ))}
-          </div>
-        </div>
-      </div>
+        {/* ── Scrollable Body ── */}
+        <div style={{ padding: "20px", overflowY: "auto", maxHeight: "calc(100vh - 220px)" }}>
 
-      {/* ── 04 WHO IS AFFECTED ── */}
-      <div style={{
-        background: isLight ? "#f0f7fe" : "#060d1c",
-        border: `1px solid ${tk.border}`, borderRadius: 7,
-        padding: "10px 12px", marginBottom: 10,
-      }}>
-        <span style={{ ...lbl, color: "#74A8C9", marginBottom: 8 }}>04 — Who Is Affected</span>
-
-        {/* Assets */}
-        <div style={{ marginBottom: 8 }}>
-          <span style={{ fontSize: 8, color: tk.textMuted, display: "block", marginBottom: 5, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-            Asset Class — select one
-          </span>
-          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-            {ASSETS_LIST.map(a => {
-              const { c, bg } = ASSET_PILL_COLOR[a] ?? { c: tk.accent, bg: tk.accentDim };
-              return (
-                <button type="button" key={a} onClick={() => selectAsset(a)}
-                  style={pillStyle(asset === a, c, bg)}>{a.toUpperCase()}</button>
-              );
-            })}
-          </div>
-          {asset && (
-            <div style={{ marginTop: 5 }}>
-              <span style={{ fontSize: 9, color: tk.textMuted }}>
-                ✓ {asset} selected ·{" "}
-                <span style={{ cursor: "pointer", color: tk.accent }} onClick={() => setAsset("")}>clear</span>
-              </span>
+          {/* Error banner */}
+          {error && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8, padding: "10px 14px",
+              borderRadius: 7, marginBottom: 14,
+              background: tk.redDim, border: `1px solid rgba(239,68,68,0.3)`,
+            }}>
+              <AlertCircle size={13} color={tk.red} />
+              <span style={{ fontSize: 11, color: tk.red }}>{error}</span>
             </div>
           )}
+
+          {/* ── SECTION 1: Basic Info ── */}
+          <div style={sectionCard}>
+            {sectionTitle(tk.accent, "01", "Basic Info")}
+
+            {/* Title */}
+            <div style={{ marginBottom: 12 }}>
+              <span style={lbl}>Event Title *</span>
+              <input
+                style={inp}
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                placeholder="e.g. RBI Monetary Policy Decision (Jun)"
+                maxLength={200}
+              />
+            </div>
+
+            {/* Date + Region row */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+              <div>
+                <span style={lbl}>Date *</span>
+                <input
+                  type="date"
+                  style={{ ...inp, colorScheme: isLight ? "light" : "dark" }}
+                  value={date}
+                  onChange={e => setDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <span style={lbl}>Region *</span>
+                <div style={{ display: "flex", gap: 6, paddingTop: 2 }}>
+                  {(["india", "global"] as const).map(r => (
+                    <button key={r} type="button" onClick={() => setRegion(r)}
+                      style={pill(region === r, tk.accent, tk.accentDim)}>
+                      {r === "india" ? "🇮🇳 INDIA" : "🌍 GLOBAL"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Impact Level */}
+            <div style={{ marginBottom: 12 }}>
+              <span style={lbl}>Impact Level</span>
+              <div style={{ display: "flex", gap: 6 }}>
+                {IMPACT_OPTS.map(o => (
+                  <button key={o.val} type="button" onClick={() => setImpact(o.val)}
+                    style={pill(impact === o.val, o.c, `${o.c}18`)}>
+                    {o.val.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <span style={lbl}>Description <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, color: tk.textTiny }}>(brief summary)</span></span>
+              <textarea
+                style={{ ...inp, resize: "none", minHeight: 56, lineHeight: "1.6" }}
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                placeholder="e.g. RBI June MPC — second review of FY27, expected to assess monsoon-related food inflation risk."
+                maxLength={400}
+              />
+            </div>
+          </div>
+
+          {/* ── SECTION 2: What Happened + Source ── */}
+          <div style={sectionCard}>
+            {sectionTitle(tk.blue, "02", "What Happened & Source")}
+
+            <div style={{ marginBottom: 12 }}>
+              <span style={lbl}>What Happened <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, color: tk.textTiny }}>(max 2 lines)</span></span>
+              <textarea
+                style={{ ...inp, resize: "none", minHeight: 52, lineHeight: "1.6" }}
+                value={whatHappened}
+                onChange={e => setWhatHappened(e.target.value)}
+                placeholder="e.g. RBI held rates steady at 6.25%, citing persistent core inflation and global uncertainty."
+                maxLength={500}
+              />
+            </div>
+
+            <div>
+              <span style={lbl}>Source URL <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, color: tk.textTiny }}>(optional)</span></span>
+              <input
+                style={inp}
+                value={sourceUrl}
+                onChange={e => setSourceUrl(e.target.value)}
+                placeholder="https://www.rbi.org.in/..."
+                type="url"
+              />
+            </div>
+          </div>
+
+          {/* ── SECTION 3: Market Impact ── */}
+          <div style={sectionCard}>
+            {sectionTitle(tk.green, "03", "Market Impact")}
+
+            <div style={{ marginBottom: 12 }}>
+              <span style={lbl}>Direction</span>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <button type="button" onClick={() => setMarketImpact("")}
+                  style={pill(marketImpact === "", tk.textMuted, "rgba(100,116,139,0.15)")}>— NONE</button>
+                {MI_OPTS.map(o => (
+                  <button key={o.val} type="button" onClick={() => setMarketImpact(o.val)}
+                    style={pill(marketImpact === o.val, o.c, o.bg)}>{o.label}</button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <span style={lbl}>Time Horizon</span>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <button type="button" onClick={() => setImpactTerm("")}
+                  style={pill(impactTerm === "", tk.textMuted, "rgba(100,116,139,0.15)")}>— NONE</button>
+                {TERM_OPTS.map(o => (
+                  <button key={o.val} type="button" onClick={() => setImpactTerm(o.val)}
+                    style={pill(impactTerm === o.val, tk.accent, tk.accentDim)}>{o.label}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ── SECTION 4: Who Is Affected ── */}
+          <div style={sectionCard}>
+            {sectionTitle("#74A8C9", "04", "Who Is Affected")}
+
+            <div style={{ marginBottom: 12 }}>
+              <span style={lbl}>Asset Class <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, color: tk.textTiny }}>(select one)</span></span>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {ASSETS_LIST.map(a => {
+                  const { c, bg } = ASSET_PILL_COLOR[a];
+                  return (
+                    <button key={a} type="button"
+                      onClick={() => setAsset(prev => prev === a ? "" : a)}
+                      style={pill(asset === a, c, bg)}>
+                      {a.toUpperCase()}
+                    </button>
+                  );
+                })}
+              </div>
+              {asset && (
+                <span style={{ fontSize: 9, color: tk.textMuted, marginTop: 5, display: "block" }}>
+                  ✓ {asset} selected ·{" "}
+                  <span style={{ color: tk.accent, cursor: "pointer" }} onClick={() => setAsset("")}>clear</span>
+                </span>
+              )}
+            </div>
+
+            <div>
+              <span style={lbl}>
+                Key Sectors{" "}
+                <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, color: sectorWC > 70 ? tk.red : tk.textTiny }}>
+                  {sectorWC}/70 words
+                </span>
+              </span>
+              <textarea
+                style={{ ...inp, resize: "none", minHeight: 48, lineHeight: "1.6", borderColor: sectorWC > 70 ? tk.red : tk.border }}
+                value={sectors}
+                onChange={e => setSectors(e.target.value)}
+                placeholder="e.g. Banking & NBFCs · Housing Finance · Auto Sector"
+                maxLength={600}
+              />
+            </div>
+          </div>
+
+          {/* ── SECTION 5: InvestBeans Insight ── */}
+          <div style={sectionCard}>
+            {sectionTitle(tk.purple, "05", "InvestBeans Insight")}
+            <div>
+              <span style={lbl}>
+                Analysis / Insight{" "}
+                <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, color: insightWC > 300 ? tk.red : tk.textTiny }}>
+                  {insightWC}/300 words
+                </span>
+              </span>
+              <textarea
+                style={{ ...inp, resize: "none", minHeight: 80, lineHeight: "1.6", borderColor: insightWC > 300 ? tk.red : tk.border }}
+                value={investbeansInsight}
+                onChange={e => setInvestbeansInsight(e.target.value)}
+                placeholder="Your market analysis and insight for this event…"
+                maxLength={2000}
+              />
+            </div>
+          </div>
+
         </div>
 
-        {/* Key Sectors */}
-        <div>
-          <span style={{ fontSize: 8, color: tk.textMuted, display: "block", marginBottom: 4, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-            Key Sectors
-            <span style={{ color: sectorWC > 70 ? tk.red : tk.textMuted, marginLeft: 6, fontWeight: 400, textTransform: "none" }}>
-              {sectorWC}/70 words
-            </span>
+        {/* ── Footer / Action Buttons ── */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "14px 20px",
+          borderTop: `1px solid ${tk.border}`,
+          background: isLight ? "#f8fafc" : "#040810",
+          gap: 10,
+        }}>
+          <span style={{ fontSize: 10, color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace" }}>
+            {isCreate ? "NEW EVENT" : `EDITING ${event?.id?.slice(0, 8)}…`}
           </span>
-          <textarea
-            style={{ ...inp, resize: "none", minHeight: 38, maxHeight: 72, lineHeight: "1.5", borderColor: sectorWC > 70 ? tk.red : tk.border }}
-            value={sectors}
-            onChange={e => setSectors(e.target.value)}
-            placeholder="e.g. Banking & NBFCs · Housing Finance · Auto"
-            maxLength={600}
-          />
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button" onClick={onClose}
+              style={{
+                padding: "8px 20px", borderRadius: 7, fontSize: 12, fontWeight: 600,
+                border: `1px solid ${tk.border}`, background: "transparent",
+                color: tk.textMuted, cursor: "pointer",
+              }}
+            >Cancel</button>
+            <button
+              type="button"
+              disabled={saving || sectorWC > 70 || insightWC > 300}
+              onClick={handleSave}
+              style={{
+                padding: "8px 24px", borderRadius: 7, fontSize: 12, fontWeight: 700,
+                border: "none",
+                background: (saving || sectorWC > 70 || insightWC > 300) ? tk.border : tk.accent,
+                color: "#fff", cursor: saving ? "not-allowed" : "pointer",
+                opacity: saving ? 0.7 : 1, transition: "all 0.15s",
+                display: "flex", alignItems: "center", gap: 6,
+              }}
+            >
+              {saving
+                ? <><RefreshCw size={11} style={{ animation: "spin 1s linear infinite" }} /> Saving…</>
+                : isCreate ? "✦ Create Event" : "✓ Save Changes"
+              }
+            </button>
+          </div>
         </div>
-      </div>
-
-      {/* Action buttons */}
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
-        <button
-          type="button" onClick={onCancel}
-          style={{
-            padding: "6px 16px", borderRadius: 6, fontSize: 11, fontWeight: 600,
-            border: `1px solid ${tk.border}`, background: "transparent",
-            color: tk.textMuted, cursor: "pointer",
-          }}
-        >Cancel</button>
-        <button
-          type="button"
-          disabled={saving || sectorWC > 70}
-          onClick={handleSave}
-          style={{
-            padding: "6px 18px", borderRadius: 6, fontSize: 11, fontWeight: 700,
-            border: "none",
-            background: (saving || sectorWC > 70) ? tk.border : tk.accent,
-            color: "#fff", cursor: saving ? "not-allowed" : "pointer",
-            opacity: saving ? 0.65 : 1, transition: "all 0.15s",
-          }}
-        >
-          {saving ? "Saving…" : "Save Changes"}
-        </button>
       </div>
     </div>
   );
@@ -878,13 +1083,12 @@ const AdminInlinePanel: React.FC<{
 // ─── EventTerminalCard ────────────────────────────────────────────────────────
 const EventTerminalCard: React.FC<{
   event: MarketEvent; isLight: boolean; tk: typeof T.dark; idx: number; section: Section;
-  isAdmin?: boolean; onRefresh?: () => void;
-}> = ({ event, isLight, tk, idx, section, isAdmin, onRefresh }) => {
-  const [expanded,      setExpanded]      = useState(false);
-  const [adminEditing,  setAdminEditing]  = useState(false);
-  const past = isPast(event.date);
+  isAdmin?: boolean; onRefresh?: () => void; onEdit?: (event: MarketEvent) => void;
+}> = ({ event, isLight, tk, idx, section, isAdmin, onRefresh, onEdit }) => {
+  const [expanded, setExpanded] = useState(false);
+  const past   = isPast(event.date);
   const today_ = isToday(event.date);
-  const days = daysUntil(event.date);
+  const days   = daysUntil(event.date);
   const catCfg = CAT_CONFIG[event.category] ?? CAT_CONFIG.economic;
   const Icon = catCfg.icon;
   const catColor = (tk as any)[catCfg.colorKey] ?? tk.accent;
@@ -1040,32 +1244,84 @@ const EventTerminalCard: React.FC<{
               {expanded ? <ChevronUp size={11} color={tk.accent} /> : <ChevronDown size={11} color={tk.textMuted} />}
             </div>
           )}
-          {/* Source link */}
-          {!hasDetail && event.source === "api" && (
+          {/* Source link — LIVE badge only for events, never for holidays */}
+          {/* ✅ FIX 3: section !== "holidays" check added to hide LIVE badge on holidays */}
+          {!hasDetail && event.source === "api" && section !== "holidays" && (
             <span style={{ fontSize: 8, color: tk.accent, fontWeight: 600 }}>LIVE</span>
           )}
 
-          {/* ── Admin pencil edit — all api events except holidays; upsert handles non-DB ids ── */}
-          {isAdmin && event.source === "api" && event.category !== "holiday" && (
-            <button
-              title="Admin: Edit Section 03 & 04"
-              onClick={e => { e.stopPropagation(); setAdminEditing(p => !p); setExpanded(false); }}
-              style={{
-                width: 24, height: 24, borderRadius: 5, cursor: "pointer",
-                background: adminEditing ? tk.accentDim : "transparent",
-                border: `1px solid ${adminEditing ? tk.accentBorder : tk.border}`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                transition: "all 0.12s",
-              }}
-            >
-              {/* Pencil SVG */}
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
-                stroke={adminEditing ? tk.accent : tk.textMuted}
-                strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-            </button>
+          {/* ── Admin pencil edit + delete ── */}
+          {/* ✅ FIX 2: Removed source==="api" check — India events (static source) bhi edit ho sakein */}
+          {isAdmin && event.category !== "holiday" && (
+            <>
+              <button
+                title="Edit Event"
+                onClick={e => { e.stopPropagation(); onEdit?.(event); }}
+                style={{
+                  width: 24, height: 24, borderRadius: 5, cursor: "pointer",
+                  background: "transparent",
+                  border: `1px solid ${tk.border}`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  transition: "all 0.12s",
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLButtonElement).style.background = tk.accentDim;
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = tk.accentBorder;
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = tk.border;
+                }}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                  stroke={tk.accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+              {/* Delete — only for real DB events */}
+              {/^[0-9a-f]{24}$/i.test(event.id) && (
+                <button
+                  title="Delete Event"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (!confirm(`Delete "${event.title}"?`)) return;
+                    try {
+                      const token = localStorage.getItem("accessToken");
+                      const authH: Record<string,string> = token ? { Authorization: `Bearer ${token}` } : {};
+                      const res = await fetch(`${API}/admin/events/${event.id}`, {
+                        method: "DELETE", headers: authH, credentials: "include",
+                      });
+                      const data = await res.json();
+                      if (!data.success) throw new Error(data.message || "Delete failed");
+                      onRefresh?.();
+                    } catch (err: any) { alert(err.message || "Delete failed"); }
+                  }}
+                  style={{
+                    width: 24, height: 24, borderRadius: 5, cursor: "pointer",
+                    background: "transparent", border: `1px solid ${tk.border}`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    transition: "all 0.12s",
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.12)";
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(239,68,68,0.4)";
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = tk.border;
+                  }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                    stroke={tk.red} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                    <path d="M10 11v6M14 11v6"/>
+                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                  </svg>
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -1167,16 +1423,6 @@ const EventTerminalCard: React.FC<{
         </div>
       )}
 
-      {/* ── Admin Inline Edit Panel (Section 03 + 04 only) ───── */}
-      {adminEditing && isAdmin && event.source === "api" && event.category !== "holiday" && (
-        <AdminInlinePanel
-          event={event}
-          tk={tk}
-          isLight={isLight}
-          onSaved={() => { setAdminEditing(false); onRefresh?.(); }}
-          onCancel={() => setAdminEditing(false)}
-        />
-      )}
     </div>
   );
 };
@@ -1191,11 +1437,14 @@ const EventsView: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [region,   setRegion]   = useState<Region>((searchParams.get("region")  as Region)  ?? "india");
   const [section,  setSection]  = useState<Section>((searchParams.get("section") as Section) ?? "events");
-  const [selMonth, setSelMonth] = useState<string | null>(null); // "YYYY-M" key
+  const [selMonth, setSelMonth] = useState<string | null>(null);
   const [sideOpen, setSideOpen] = useState(true);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [sentimentFilter, setSentimentFilter] = useState<"all" | "bullish" | "mixed" | "bearish">("all");
-  // Admin modal state removed — events come from API feed, admin enriches via inline panel
+
+  // Admin modal state — null=closed, undefined=create new, MarketEvent=edit existing
+  const [adminModal, setAdminModal] = useState<MarketEvent | null | undefined>(undefined);
+  const adminModalOpen = adminModal !== undefined;
 
   useEffect(() => {
     setRegion((searchParams.get("region")  as Region)  ?? "india");
@@ -1221,7 +1470,8 @@ const EventsView: React.FC = () => {
     const map = new Map<string, string>(); // key → label
     for (const e of sourceEvents) {
       const d = parseDate(e.date);
-      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      // ✅ FIX 4b: Pad month with 0 so "2026-01" sorts before "2026-09" correctly
+      const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2,"0")}`;
       if (!map.has(key)) map.set(key, `${MONTHS[d.getMonth()]} ${d.getFullYear()}`);
     }
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
@@ -1248,7 +1498,8 @@ const EventsView: React.FC = () => {
     if (selMonth !== null) {
       evts = evts.filter(e => {
         const d = parseDate(e.date);
-        return `${d.getFullYear()}-${d.getMonth()}` === selMonth;
+        // ✅ FIX 4c: Use padded key to match availableMonths format
+        return `${d.getFullYear()}-${String(d.getMonth()).padStart(2,"0")}` === selMonth;
       });
     }
 
@@ -1268,13 +1519,19 @@ const EventsView: React.FC = () => {
 
   const grouped = useMemo(() => {
     const map = new Map<string, { label: string; events: MarketEvent[] }>();
+    // ✅ FIX 4: filteredEvents is already sorted (upcoming first by date, past by desc date)
+    // Build map in that order — Map preserves insertion order
     for (const e of filteredEvents) {
       const d = parseDate(e.date);
-      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2,"0")}`;
       if (!map.has(key)) map.set(key, { label: `${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`, events: [] });
       map.get(key)!.events.push(e);
     }
-    return map;
+    // Sort the map keys so months always appear in chronological order
+    const sorted = new Map(
+      Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+    );
+    return sorted;
   }, [filteredEvents]);
 
   const upcomingCount = filteredEvents.filter(e => !isPast(e.date)).length;
@@ -1339,11 +1596,13 @@ const EventsView: React.FC = () => {
           .events-outer-pad   { padding: 0 !important; }
           .events-main-grid   { flex-direction: column !important; padding: 0 !important; }
           .events-feed        { padding: 12px 10px !important; }
-          .events-page-header { padding: 10px 12px !important; gap: 8px !important; }
+          .events-page-header { padding: 10px 12px !important; gap: 8px !important; flex-wrap: wrap !important; }
           .events-header-right { flex-wrap: wrap !important; gap: 6px !important; }
           .sentiment-pills button { padding: 4px 8px !important; font-size: 10px !important; }
           .events-page-header h1 { font-size: 14px !important; }
           .events-date-refresh  { display: none !important; }
+          /* ✅ FIX: ensure create event + filter buttons always visible on mobile */
+          .events-page-header > div:first-child { flex-wrap: wrap; gap: 6px; }
         }
         /* Small mobile */
         @media (max-width: 480px) {
@@ -1389,7 +1648,7 @@ const EventsView: React.FC = () => {
                 EVENTS & HOLIDAYS
               </span>
             </div>
-            {/* Date (today's date) + Refresh — moved to LEFT */}
+            {/* Date (today's date) + Refresh — hidden on mobile */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 16 }} className="events-date-refresh">
               <span style={{
                 fontSize: 11, color: tk.textMuted,
@@ -1411,6 +1670,23 @@ const EventsView: React.FC = () => {
                 REFRESH
               </button>
             </div>
+            {/* ✅ FIX 1: Admin — Create Event button moved OUTSIDE events-date-refresh so it shows on mobile */}
+            {isAdmin && section === "events" && (
+              <button
+                onClick={() => setAdminModal(null)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  fontSize: 11, fontWeight: 700, padding: "5px 14px", borderRadius: 6,
+                  border: `1px solid ${tk.accentBorder}`,
+                  background: tk.accent,
+                  color: "#fff", cursor: "pointer", transition: "all 0.15s",
+                  letterSpacing: "0.04em", whiteSpace: "nowrap",
+                }}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                CREATE EVENT
+              </button>
+            )}
           </div>
 
           {/* RIGHT: Sentiment filter + desktop sidebar toggle */}
@@ -1494,9 +1770,10 @@ const EventsView: React.FC = () => {
               <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.16em", color: tk.textMuted, display: "block", marginBottom: 8 }}>MONTH</span>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 <button style={btnStyle(selMonth === null)} onClick={() => setSelMonth(null)}>ALL</button>
+                {/* ✅ FIX 5b: Month labels in "May 2026" format */}
                 {availableMonths.map(([key, label]) => (
                   <button key={key} style={btnStyle(selMonth === key)} onClick={() => setSelMonth(key)}>
-                    {label.toUpperCase()}
+                    {label}
                   </button>
                 ))}
               </div>
@@ -1590,9 +1867,10 @@ const EventsView: React.FC = () => {
                   <button style={btnStyle(selMonth === null)} onClick={() => setSelMonth(null)}>
                     ALL MONTHS
                   </button>
+                  {/* ✅ FIX 5: Month labels in "May 2026" format (Title case, not all-caps) */}
                   {availableMonths.map(([key, label]) => (
                     <button key={key} style={btnStyle(selMonth === key)} onClick={() => setSelMonth(key)}>
-                      {label.toUpperCase()}
+                      {label}
                     </button>
                   ))}
                 </div>
@@ -1675,6 +1953,7 @@ const EventsView: React.FC = () => {
                         key={e.id} event={e} isLight={isLight} tk={tk} idx={i} section={section}
                         isAdmin={isAdmin}
                         onRefresh={refresh}
+                        onEdit={isAdmin ? (ev) => setAdminModal(ev) : undefined}
                       />
                     ))}
                   </div>
@@ -1683,7 +1962,7 @@ const EventsView: React.FC = () => {
             })}
 
             {/* Footer note */}
-            {!loading && grouped.size > 0 && (
+            {/* {!loading && grouped.size > 0 && (
               <div style={{
                 marginTop: 32, padding: "12px 16px", borderRadius: 7,
                 background: tk.elevated, border: `1px solid ${tk.border}`,
@@ -1697,13 +1976,24 @@ const EventsView: React.FC = () => {
                   Not SEBI-registered. Not investment advice.
                 </span>
               </div>
-            )}
+            )} */}
 
             <div style={{ height: 60 }} />
           </div>
         </div>
         </div>
       </div>
+      {/* ── Admin Full Event Modal (Create / Edit) ── */}
+      {adminModalOpen && (
+        <AdminFullEventModal
+          tk={tk}
+          isLight={isLight}
+          event={adminModal ?? undefined}
+          onSaved={() => { setAdminModal(undefined); refresh(); }}
+          onClose={() => setAdminModal(undefined)}
+        />
+      )}
+
       <Footer />
 
     </>

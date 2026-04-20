@@ -449,7 +449,32 @@ useEffect(() => {
                 Categories
               </h3>
               <div className="relative">
-                <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide scroll-smooth snap-x snap-mandatory -mx-2 px-2">
+                <style>{`
+                  .categories-scroll::-webkit-scrollbar {
+                    height: 4px;
+                    border-radius: 999px;
+                  }
+                  .categories-scroll::-webkit-scrollbar-track {
+                    background: transparent;
+                    border-radius: 999px;
+                  }
+                  .categories-scroll.light::-webkit-scrollbar-thumb {
+                    background: linear-gradient(to right, #93c5fd, #6366f1);
+                    border-radius: 999px;
+                  }
+                  .categories-scroll.dark::-webkit-scrollbar-thumb {
+                    background: linear-gradient(to right, #3b82f6, #6366f1);
+                    border-radius: 999px;
+                  }
+                `}</style>
+                <div
+                  className={`categories-scroll ${isLight ? 'light' : 'dark'} flex gap-2 overflow-x-auto scroll-smooth snap-x snap-mandatory -mx-2 px-2`}
+                  style={{
+                    paddingBottom: '10px',
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: isLight ? '#93c5fd transparent' : '#3b82f6 transparent',
+                  }}
+                >
                   {categories.map((category) => (
                     <button
                       key={category}

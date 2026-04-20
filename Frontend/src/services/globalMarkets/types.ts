@@ -8,6 +8,7 @@ export interface IndexQuote {
   changePercent: number; high: number; low: number;
   timestamp: number; status: "open" | "closed" | "pre" | "after";
   candles: CandlePoint[];                       // real 15-min OHLC
+  timezone?: string;                            // exchange timezone e.g. "America/New_York"
 }
 export interface ForexPair {
   pair: string; base: string; quote: string;
@@ -18,6 +19,7 @@ export interface Commodity {
   name: string; symbol: string; price: number;
   change: number; changePercent: number; unit: string;
   candles: CandlePoint[];                       // real 15-min OHLC
+  timezone?: string;                            // exchange timezone
 }
 export interface VixData {
   value: number; change: number; changePercent: number;
@@ -26,6 +28,7 @@ export interface VixData {
 export interface GlobalEvent {
   date: string; region: string; title: string;
   impact: "Low" | "Medium" | "High"; actual?: string; forecast?: string;
+  url?: string;                                 // clickable link for event
 }
 export interface RegionSummary {
   name: string; flag: string; avgChange: number;
@@ -41,3 +44,6 @@ export interface GlobalMarketData {
   marketStatus: { us: "open"|"closed"; europe: "open"|"closed"; asia: "open"|"closed" };
 }
 export type LoadingState = "idle" | "loading" | "success" | "error";
+
+// ── Chart helper ───────────────────────────────────────────
+export type ChartPeriod = "1D" | "5D" | "1M" | "6M" | "YTD" | "1Y" | "5Y" | "MAX";

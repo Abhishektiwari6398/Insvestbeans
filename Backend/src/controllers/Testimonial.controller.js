@@ -78,15 +78,6 @@ export const getMyTestimonial = async (req, res) => {
 export const createTestimonial = async (req, res) => {
   const user = getUser(req);
   try {
-    // Check if user already has a review
-    const existing = await Testimonial.findOne({ user: user._id });
-    if (existing) {
-      return res.status(400).json({
-        success: false,
-        message: "You have already posted a review. You can edit it instead.",
-      });
-    }
-
     const { name, role, company, rating, preview, fullText, tag, source } = req.body;
 
     // Validate required
@@ -129,12 +120,6 @@ export const createTestimonial = async (req, res) => {
     return res.status(201).json({ success: true, data: testimonial });
   } catch (err) {
     console.error("createTestimonial error:", err);
-    if (err.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: "You have already posted a review.",
-      });
-    }
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
@@ -148,11 +133,6 @@ export const updateTestimonial = async (req, res) => {
     const testimonial = await Testimonial.findById(req.params.id);
     if (!testimonial) {
       return res.status(404).json({ success: false, message: "Review not found." });
-    }
-
-    // Only the owner can edit
-    if (testimonial.user.toString() !== user._id.toString()) {
-      return res.status(403).json({ success: false, message: "Not authorised to edit this review." });
     }
 
     const { name, role, company, rating, preview, fullText, tag, source } = req.body;

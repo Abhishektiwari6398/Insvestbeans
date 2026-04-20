@@ -6,7 +6,7 @@ const testimonialSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      unique: true, // one review per user
+      // unique constraint removed — admin can add multiple reviews
     },
     name: {
       type: String,

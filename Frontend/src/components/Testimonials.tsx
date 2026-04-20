@@ -10,7 +10,6 @@ import { useTheme } from "@/controllers/Themecontext";
 import { useAuth } from "@/controllers/AuthContext";
 import {
   getAllTestimonials,
-  getMyTestimonial,
   deleteTestimonial,
   Testimonial as ApiTestimonial,
 } from "@/services/Testimonialservice";
@@ -290,7 +289,6 @@ export default function TestimonialsPage() {
 
   // API state
   const [apiTestimonials, setApiTestimonials] = useState<Testimonial[]>([]);
-  const [myTestimonial, setMyTestimonial] = useState<ApiTestimonial | null>(null);
   const [loadingApi, setLoadingApi] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -310,10 +308,6 @@ export default function TestimonialsPage() {
   }, []);
 
   useEffect(() => { fetchAll(); }, []);
-  useEffect(() => {
-    if (isLoggedIn) fetchMine();
-    else setMyTestimonial(null);
-  }, [isLoggedIn]);
 
   const fetchAll = async () => {
     try {
@@ -325,18 +319,12 @@ export default function TestimonialsPage() {
     }
   };
 
-  const fetchMine = async () => {
-    try { setMyTestimonial(await getMyTestimonial()); }
-    catch { setMyTestimonial(null); }
-  };
-
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this review?")) return;
     try {
       setDeletingId(id);
       await deleteTestimonial(id);
       setApiTestimonials(prev => prev.filter(t => t._id !== id));
-      if (myTestimonial?._id === id) setMyTestimonial(null);
       toast.success("Review deleted successfully.");
     } catch (err: any) {
       toast.error(err.message || "Failed to delete review.");
@@ -352,10 +340,9 @@ export default function TestimonialsPage() {
         toast.success("Review updated successfully.");
         return copy;
       }
-      toast.success("Review posted! Thank you for your feedback.");
+      toast.success("Review added successfully.");
       return [unified, ...prev];
     });
-    setMyTestimonial(updated);
     setEditTarget(null);
   };
 
@@ -404,13 +391,10 @@ export default function TestimonialsPage() {
   };
 
   // ── Button visibility logic ───────────────────────────────────────────────
-  // ● Not logged in           → soft prompt text only
-  // ● Logged in, no review    → "Write a Review" button
-  // ● Logged in, has review   → "Edit My Review" button  (no duplicate create)
-  // ● Admin                   → no top button; delete icon shows on each card
-  const userAlreadyPosted = !!myTestimonial;
-  const showWriteBtn = isLoggedIn && !isAdmin && !userAlreadyPosted && !authLoading;
-  const showEditBtn  = isLoggedIn && !isAdmin &&  userAlreadyPosted && !!myTestimonial && !authLoading;
+  // ● Not logged in / regular user → no buttons, just view reviews
+  // ● Admin                        → "Add Review" button + edit/delete icons on each card
+  const showWriteBtn = isAdmin && !authLoading;
+  const showEditBtn  = false; // edit happens via card icon, not header button
 
   // Theme tokens
   const headingColor    = isLight ? "#041421" : "#E8EDF5";
@@ -460,7 +444,7 @@ export default function TestimonialsPage() {
                 key={`${t.id}-${i}`} t={t}
                 isMobile={false} isLight={isLight}
                 onClick={() => setModal(t)}
-                canEdit={isLoggedIn && isMyCard && !isAdmin}
+                canEdit={isAdmin && isApiCard}
                 canDelete={isAdmin && isApiCard}
                 onEdit={() => openEdit(t)}
                 onDelete={() => handleDelete(t._id!)}
@@ -501,15 +485,7 @@ export default function TestimonialsPage() {
                 onClick={openCreate}
                 style={{ display: "inline-flex", alignItems: "center", gap: "7px", padding: "9px 20px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, background: "linear-gradient(135deg,#0A3656,#1F5F89)", border: "none", color: "#fff", cursor: "pointer", boxShadow: "0 4px 14px rgba(10,54,86,0.28)" }}
               >
-                <Plus size={15} /> Write a Review
-              </button>
-            )}
-            {showEditBtn && (
-              <button
-                onClick={() => openEdit(toUnified(myTestimonial!))}
-                style={{ display: "inline-flex", alignItems: "center", gap: "7px", padding: "9px 20px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, background: "transparent", border: "1px solid #1F5F89", color: "#1F5F89", cursor: "pointer" }}
-              >
-                <Edit3 size={14} /> Edit My Review
+                <Plus size={15} /> Add Review
               </button>
             )}
           </div>
@@ -561,7 +537,7 @@ export default function TestimonialsPage() {
                       <TestimonialCard
                         t={t} isMobile={true} isLight={isLight}
                         onClick={() => setModal(t)}
-                        canEdit={isLoggedIn && isMyCard && !isAdmin}
+                        canEdit={isAdmin && isApiCard}
                         canDelete={isAdmin && isApiCard}
                         onEdit={() => openEdit(t)}
                         onDelete={() => handleDelete(t._id!)}

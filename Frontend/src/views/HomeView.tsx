@@ -297,7 +297,7 @@ const HomeView = ({ activeTab, onChangeTab }: HomeViewProps) => {
                         </span>
                         <span className="flex items-center gap-3">
                           <ZerodhaMarketClock isLight={isLight} />
-                          <span style={{ color: isLight ? "#94a3b8" : "#475569" }}>Powered by Zerodha</span>
+                         
                         </span>
                       </div>
                     </>

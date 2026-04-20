@@ -243,6 +243,48 @@ function useAPI<T>(url: string, deps: any[] = []) {
   return { data, loading, error, meta, refresh: load };
 }
 
+// ── API Instrument Search (mirrors KiteChart exactly) ─────────────
+// Returns any NSE/BSE stock or index from /kite/search-instruments
+interface InstrResult { key: string; label: string; exchange: string; type?: string }
+
+function useInstrumentSearch(query: string, open: boolean) {
+  const [results, setResults] = useState<InstrResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    const q = query.trim();
+    const doFetch = () => {
+      setLoading(true);
+      fetch(`${BASE}/kite/search-instruments${q ? `?q=${encodeURIComponent(q.toUpperCase())}` : ""}`)
+        .then(r => r.json())
+        .then(d => setResults(d.results ?? []))
+        .catch(() => setResults([]))
+        .finally(() => setLoading(false));
+    };
+    if (!q) {
+      doFetch(); // show popular immediately when opened
+    } else {
+      timerRef.current = setTimeout(doFetch, 280); // debounce 280ms like KiteChart
+    }
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [query, open]);
+
+  return { results, loading };
+}
+
+// Helper: fetch instrument token from quote API given exchange:sym key
+async function fetchInstrToken(exchange: string, sym: string): Promise<number> {
+  try {
+    const key = `${exchange}:${sym}`;
+    const r = await fetch(BASE + "/kite/quote?i=" + encodeURIComponent(key));
+    const j = await r.json();
+    return j.data?.[key]?.instrument_token ?? 0;
+  } catch { return 0; }
+}
+
 // ── Primitives ────────────────────────────────────────────────────
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   const l = useIL();
@@ -370,8 +412,17 @@ interface Candle { x: number; y: [number, number, number, number]; volume?: numb
 type Period = "1D" | "1W" | "1M" | "3M" | "1Y";
 const PERIODS: Period[] = ["1D", "1W", "1M", "3M", "1Y"];
 const P_INTERVAL: Record<Period, string> = { "1D": "5minute", "1W": "30minute", "1M": "day", "3M": "day", "1Y": "day" };
-const P_DAYS: Record<Period, number> = { "1D": 1, "1W": 7, "1M": 30, "3M": 90, "1Y": 365 };
-const P_LABEL: Record<Period, string> = { "1D": "5m candles", "1W": "30m candles", "1M": "EOD · daily candles", "3M": "EOD · daily candles", "1Y": "EOD · daily candles" };
+// 1D: fetch 4 days so weekends/holidays always have data; backend returns today's candles
+const P_DAYS: Record<Period, number> = { "1D": 4, "1W": 7, "1M": 30, "3M": 90, "1Y": 365 };
+const P_LABEL: Record<Period, string> = { "1D": "5m candles · 9:15–15:30 IST", "1W": "30m candles · IST", "1M": "EOD · daily candles", "3M": "EOD · daily candles", "1Y": "EOD · daily candles" };
+
+// IST offset: UTC+5:30 = 19800 seconds
+// lightweight-charts uses UNIX seconds; Kite timestamps are UTC ms → convert to IST seconds
+// so that chart x-axis shows IST time (9:15, 9:20 … 15:30) instead of UTC (3:45, 3:50 … 10:00)
+const IST_OFFSET_SEC = 5.5 * 3600; // 19800
+function toISTSec(utcMs: number): number {
+  return Math.floor(utcMs / 1000) + IST_OFFSET_SEC;
+}
 
 function CandleChart({ token, height = 300, showControls = true, defaultPeriod = "1D", liveTick }: {
   token: number; height?: number; showControls?: boolean; defaultPeriod?: Period; liveTick?: KiteTick;
@@ -430,6 +481,22 @@ function CandleChart({ token, height = 300, showControls = true, defaultPeriod =
         horzLine: { color: "rgba(81,148,246,0.25)", labelBackgroundColor: dark ? "#0c1a2e" : "#dbeafe", width: 1, style: 1 },
       },
       rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.06, bottom: 0.18 }, minimumWidth: 70 },
+      localization: {
+        // Show time labels in IST on chart x-axis
+        timeFormatter: (t: number) => {
+          // t is already IST seconds (we added IST_OFFSET_SEC when pushing data)
+          const d = new Date((t - IST_OFFSET_SEC) * 1000); // back to UTC ms for Date
+          if (period === "1D" || period === "1W") {
+            const hh = String(d.getUTCHours() + 5).padStart(2, "0");
+            const rawMins = d.getUTCMinutes() + 30;
+            const mm = String(rawMins % 60).padStart(2, "0");
+            const extraH = rawMins >= 60 ? 1 : 0;
+            const finalH = String(d.getUTCHours() + 5 + extraH).padStart(2, "0");
+            return `${finalH}:${mm}`;
+          }
+          return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
+        },
+      },
       timeScale: { borderVisible: false, timeVisible: period === "1D" || period === "1W", secondsVisible: false, fixLeftEdge: true, fixRightEdge: true, barSpacing: 9, rightOffset: 4 },
       handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true },
       handleScale: { mouseWheel: false, pinch: false },
@@ -460,7 +527,7 @@ function CandleChart({ token, height = 300, showControls = true, defaultPeriod =
     if (!liveTick?.last_price || !cSerRef.current || period !== "1D" || candles.length === 0) return;
     const last = candles[candles.length - 1];
     if (!last) return;
-    const t = Math.floor(last.x / 1000) as any;
+    const t = toISTSec(last.x) as any;
     try {
       cSerRef.current.update({
         time: t,
@@ -486,7 +553,7 @@ function CandleChart({ token, height = 300, showControls = true, defaultPeriod =
     if (!cSerRef.current || !vSerRef.current || !candles.length) return;
     const seen = new Set<number>();
     const rows = candles
-      .map(c => ({ time: Math.floor(c.x / 1000) as any, o: c.y[0], h: c.y[1], l: c.y[2], cl: c.y[3], v: c.volume ?? 0 }))
+      .map(c => ({ time: toISTSec(c.x) as any, o: c.y[0], h: c.y[1], l: c.y[2], cl: c.y[3], v: c.volume ?? 0 }))
       .filter(c => { const tt = c.time as number; if (seen.has(tt)) return false; seen.add(tt); return true; })
       .sort((a, b) => (a.time as number) - (b.time as number));
     cSerRef.current.setData(rows.map(r => ({ time: r.time, open: r.o, high: r.h, low: r.l, close: r.cl })));
@@ -652,61 +719,39 @@ function SearchBar({ rawTicks, onResult }: {
   const l = useIL();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
-  const [searching, setSearching] = useState(false);
+  const [selecting, setSelecting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const dropRef = useRef<HTMLDivElement>(null);
+  const wrapRef  = useRef<HTMLDivElement>(null);
 
-  // Filter from catalogue
-  const suggestions = useMemo(() => {
-    if (query.length < 1) return [];
-    const q = query.toUpperCase();
-    return SEARCH_CATALOGUE.filter(s =>
-      s.sym.toUpperCase().includes(q) || s.name.toUpperCase().includes(q)
-    ).slice(0, 8);
-  }, [query]);
+  // API search — same as KiteChart
+  const { results, loading: apiLoading } = useInstrumentSearch(query, open);
 
   // Close on outside click
   useEffect(() => {
     const h = (e: MouseEvent) => {
-      if (dropRef.current && !dropRef.current.contains(e.target as Node) &&
-        inputRef.current && !inputRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  const handleSelect = (item: typeof SEARCH_CATALOGUE[0]) => {
-    setQuery(item.sym);
+  // When user picks a result: fetch token via quote API, then call onResult
+  const handleSelect = async (r: InstrResult) => {
+    setQuery(r.key);
     setOpen(false);
-    onResult(item);
-  };
-
-  // Try unknown symbol via API if not in catalogue
-  const handleSearch = async () => {
-    if (!query.trim()) { onResult(null); return; }
-    const exactMatch = SEARCH_CATALOGUE.find(s => s.sym.toUpperCase() === query.toUpperCase().trim());
-    if (exactMatch) { handleSelect(exactMatch); return; }
-    // Try live quote for unknown symbol
-    setSearching(true);
+    setSelecting(true);
     try {
-      const sym = query.toUpperCase().trim();
-      const r = await fetch(BASE + "/kite/quote?i=" + encodeURIComponent("NSE:" + sym));
-      const j = await r.json();
-      if (j.status === "success" && j.data?.["NSE:" + sym]) {
-        onResult({ sym, name: sym, token: j.data["NSE:" + sym].instrument_token ?? 0, ex: "NSE" });
-        setOpen(false);
-      } else {
-        alert("Symbol not found: " + sym);
-      }
-    } catch { alert("Could not search. Check connection."); }
-    finally { setSearching(false); }
+      const token = await fetchInstrToken(r.exchange, r.key);
+      onResult({ sym: r.key, name: r.label, token, ex: r.exchange });
+    } catch {
+      onResult({ sym: r.key, name: r.label, token: 0, ex: r.exchange });
+    } finally { setSelecting(false); }
   };
 
   return (
-    <div className="relative w-full" ref={dropRef as any}>
-      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${l ? "bg-slate-50 border-slate-200 focus-within:border-[#5194F6] focus-within:bg-white"
+    <div className="relative w-full" ref={wrapRef}>
+      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${l
+          ? "bg-slate-50 border-slate-200 focus-within:border-[#5194F6] focus-within:bg-white"
           : "bg-[#0c1a2e] border-[#1e3a5f]/50 focus-within:border-[#5194F6] focus-within:bg-[#0c1a2e]"
         }`}>
         <Search className={`w-3.5 h-3.5 shrink-0 ${tx.t3(l)}`} />
@@ -714,43 +759,62 @@ function SearchBar({ rawTicks, onResult }: {
           ref={inputRef}
           value={query}
           onChange={e => { setQuery(e.target.value); setOpen(true); }}
-          onKeyDown={e => { if (e.key === "Enter") handleSearch(); if (e.key === "Escape") { setOpen(false); setQuery(""); onResult(null); } }}
-          onFocus={() => query.length > 0 && setOpen(true)}
-          placeholder="Search stocks, indices…"
+          onFocus={() => setOpen(true)}
+          onKeyDown={e => { if (e.key === "Escape") { setOpen(false); setQuery(""); onResult(null); } }}
+          placeholder="Search any stock, index…"
           className={`flex-1 bg-transparent text-xs font-bold outline-none placeholder:font-normal w-full min-w-0 ${tx.t1(l)}`}
         />
-        {searching && <RefreshCw className="w-3 h-3 animate-spin text-[#5194F6] shrink-0" />}
-        {query && !searching && (
+        {(apiLoading || selecting) && <RefreshCw className="w-3 h-3 animate-spin text-[#5194F6] shrink-0" />}
+        {query && !apiLoading && !selecting && (
           <button onClick={() => { setQuery(""); setOpen(false); onResult(null); }}>
             <X className={`w-3 h-3 ${tx.t3(l)}`} />
           </button>
         )}
       </div>
-      {/* Dropdown */}
-      {open && suggestions.length > 0 && (
-        <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border shadow-xl z-50 overflow-hidden ${l ? "bg-white border-slate-200" : "bg-[#0c1a2e] border-[#1e3a5f]/50"}`}>
-          {suggestions.map(s => {
-            const key = s.ex + ":" + s.sym;
-            const tick = rawTicks[key] as KiteTick | undefined;
-            const pct = getPct(tick);
-            return (
-              <button key={s.sym} onMouseDown={() => handleSelect(s)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs transition-colors ${l ? "hover:bg-slate-50" : "hover:bg-white/[0.04]"}`}>
-                <div className="text-left">
-                  <p className={`font-black ${tx.t1(l)}`}>{s.sym}</p>
-                  <p className={`text-[10px] ${tx.t3(l)}`}>{s.name}</p>
+
+      {/* Dropdown — API results */}
+      {open && (
+        <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border shadow-xl z-50 overflow-hidden max-h-72 overflow-y-auto ${l ? "bg-white border-slate-200" : "bg-[#0c1a2e] border-[#1e3a5f]/50"}`}>
+          {apiLoading && (
+            <div className={`px-4 py-3 text-xs flex items-center gap-2 ${tx.t3(l)}`}>
+              <RefreshCw className="w-3 h-3 animate-spin" />Searching…
+            </div>
+          )}
+          {!apiLoading && results.length === 0 && query.length > 0 && (
+            <div className={`px-4 py-3 text-xs ${tx.t3(l)}`}>No results</div>
+          )}
+          {!apiLoading && results.length > 0 && (
+            <>
+              {!query.trim() && (
+                <div className={`sticky top-0 px-3 pt-2 pb-1 text-[9px] font-bold uppercase tracking-wider ${l ? "bg-white text-slate-400" : "bg-[#0c1a2e] text-slate-500"}`}>
+                  Popular
                 </div>
-                <div className="text-right tabular-nums shrink-0 ml-3">
-                  {tick?.last_price != null ? (
-                    <>
-                      <p className={`font-bold ${tx.t1(l)}`}>₹{fmt(tick.last_price)}</p>
-                      {pct != null && <p className={`text-[10px] font-bold ${pct >= 0 ? "text-emerald-500" : "text-red-500"}`}>{pct >= 0 ? "+" : ""}{pct.toFixed(2)}%</p>}
-                    </>
-                  ) : <span className={tx.t3(l)}>···</span>}
-                </div>
-              </button>
-            );
-          })}
+              )}
+              {results.map(r => {
+                const tickKey = `${r.exchange}:${r.key}`;
+                const tick = rawTicks[tickKey] as KiteTick | undefined;
+                const pct = getPct(tick);
+                return (
+                  <button key={r.key + r.exchange} onMouseDown={() => handleSelect(r)}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs transition-colors ${l ? "hover:bg-slate-50" : "hover:bg-white/[0.04]"}`}>
+                    <div className="text-left min-w-0">
+                      <p className={`font-black ${tx.t1(l)}`}>{r.key}</p>
+                      <p className={`text-[10px] truncate ${tx.t3(l)}`}>{r.label !== r.key ? r.label : ""}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-3">
+                      {tick?.last_price != null && (
+                        <div className="text-right tabular-nums">
+                          <p className={`font-bold text-xs ${tx.t1(l)}`}>₹{fmt(tick.last_price)}</p>
+                          {pct != null && <p className={`text-[10px] font-bold ${pct >= 0 ? "text-emerald-500" : "text-red-500"}`}>{pct >= 0 ? "+" : ""}{pct.toFixed(2)}%</p>}
+                        </div>
+                      )}
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${l ? "bg-slate-100 text-slate-500 border-slate-200" : "bg-white/5 text-slate-400 border-[#1e3a5f]/50"}`}>{r.exchange}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -772,7 +836,7 @@ function IndicesSection({ ticks, connected }: any) {
 
   return (
     <section className="mb-8">
-      <SecHead id="indices" icon={BarChart3} title="Major Indices" sub="OHLCV Candlestick · Historical · Live" live={connected} />
+      <SecHead id="indices" icon={BarChart3} title="Major Indices" live={connected} />
       {/* Index tabs */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
         {INDICES.map((m, i) => {
@@ -866,41 +930,33 @@ function StockRow({ s, tick, last, maxVol }: { s: typeof STOCKS[0]; tick?: KiteT
   return (
     <div
       onClick={() => window.open(nseUrl, "_blank")}
-      className={`grid grid-cols-3 sm:grid-cols-10 items-center px-3 sm:px-5 cursor-pointer ${!last ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""} ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}>
-      <div className="col-span-1 sm:col-span-2 flex items-center gap-1.5 sm:gap-2 py-1.5 sm:py-3">
+      className={`grid items-center px-3 sm:px-4 cursor-pointer ${!last ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""} ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}
+      style={{ gridTemplateColumns: "1fr 80px 76px 64px" }}>
+      {/* Symbol + Name */}
+      <div className="flex items-center gap-1.5 sm:gap-2 py-2 sm:py-3 min-w-0">
         <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center text-[9px] font-black shrink-0 ${tx.pill(l, up(p))}`}>{s.sym.slice(0, 2)}</div>
         <div className="min-w-0">
           <p className={`font-bold text-[11px] sm:text-xs truncate ${tx.t1(l)}`}>{s.sym}</p>
-          <p className={`text-[10px] truncate hidden sm:block ${tx.t3(l)}`}>{s.name}</p>
+          <p className={`text-[10px] truncate ${tx.t3(l)}`}>{s.name}</p>
         </div>
       </div>
-      <div className={`text-right text-xs sm:text-sm font-black tabular-nums transition-colors duration-500 ${f === "up" ? "text-emerald-500" : f === "dn" ? "text-red-500" : tx.t1(l)}`}>
-        {tick?.last_price != null ? `₹${fmt(tick.last_price)}` : <Skel h="h-4" w="w-16" />}
+      {/* LTP */}
+      <div className={`text-right text-xs font-black tabular-nums transition-colors duration-500 ${f === "up" ? "text-emerald-500" : f === "dn" ? "text-red-500" : tx.t1(l)}`}>
+        {tick?.last_price != null ? `₹${fmt(tick.last_price)}` : <Skel h="h-4" w="w-14" />}
       </div>
-      <div className={`text-right text-xs tabular-nums hidden sm:block ${tx.t2(l)}`}>{tick?.ohlc?.open != null ? `₹${fmt(tick.ohlc.open)}` : "—"}</div>
-      <div className="text-right text-xs tabular-nums text-emerald-600 font-semibold hidden sm:block">{tick?.ohlc?.high != null ? `₹${fmt(tick.ohlc.high)}` : "—"}</div>
-      <div className="text-right text-xs tabular-nums text-red-500 font-semibold hidden sm:block">{tick?.ohlc?.low != null ? `₹${fmt(tick.ohlc.low)}` : "—"}</div>
-      <div className={`text-right text-xs tabular-nums hidden md:block ${tx.t2(l)}`}>{tick?.ohlc?.close != null ? `₹${fmt(tick.ohlc.close)}` : "—"}</div>
-      <div className="text-right py-1.5 sm:py-3 hidden sm:block">
+      {/* Volume — always visible */}
+      <div className="text-right py-2 sm:py-3">
         <p className={`text-xs tabular-nums ${vol != null && vol > 0 ? tx.t2(l) : tx.t3(l)}`}>
-          {vol != null ? fmtV(vol) : "—"}
+          {vol != null && vol > 0 ? fmtV(vol) : "—"}
         </p>
-        {vol != null && (
+        {vol != null && vol > 0 && (
           <div className={`mt-1 h-1 rounded-full overflow-hidden ${l ? "bg-slate-100" : "bg-[#1e3a5f]"}`}>
-            <div className="h-full bg-blue-400/60 rounded-full transition-all duration-700" style={{ width: maxVol > 0 && vol > 0 ? `${(vol / maxVol) * 100}%` : "2%" }} />
+            <div className="h-full bg-blue-400/60 rounded-full transition-all duration-700" style={{ width: maxVol > 0 ? `${(vol / maxVol) * 100}%` : "2%" }} />
           </div>
         )}
       </div>
-      <div className="text-right py-1.5 sm:py-3"><PctTag p={p} sm /></div>
-      {/* NSE link icon */}
-      <div className="hidden sm:flex justify-end py-1.5 sm:py-3">
-        <a href={nseUrl} target="_blank" rel="noopener noreferrer"
-          onClick={e => e.stopPropagation()}
-          title={`View ${s.sym} on NSE`}
-          className={`inline-flex items-center justify-center w-5 h-5 rounded opacity-30 hover:opacity-100 transition-opacity text-[#5194F6]`}>
-          <ExternalLink className="w-3 h-3" />
-        </a>
-      </div>
+      {/* Chg% */}
+      <div className="text-right py-2 sm:py-3"><PctTag p={p} sm /></div>
     </div>
   );
 }
@@ -910,20 +966,18 @@ function StocksSection({ ticks }: { ticks: any }) {
   const maxVol = useMemo(() => Math.max(...STOCKS.map(s => ticks[s.key]?.volume ?? 0), 1), [ticks]);
   return (
     <section className="mb-8">
-      <SecHead id="stocks" icon={LineChart} title="Top Stocks" sub="Live OHLCV · Volume Bars" live />
+      <SecHead id="stocks" icon={LineChart} title="Top Stocks" live />
       <Card className="overflow-hidden">
-        <div className={`grid grid-cols-3 sm:grid-cols-10 px-3 sm:px-5 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
-          <div className="col-span-1 sm:col-span-2">Symbol</div>
+        <div className={`grid items-center px-3 sm:px-4 py-2 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}
+          style={{ gridTemplateColumns: "1fr 80px 76px 64px" }}>
+          <div>Symbol</div>
           <div className="text-right">LTP</div>
-          <div className="text-right hidden sm:block">Open</div>
-          <div className="text-right text-emerald-600 hidden sm:block">High</div>
-          <div className="text-right text-red-500 hidden sm:block">Low</div>
-          <div className="text-right hidden md:block">Prev Close</div>
-          <div className="text-right hidden sm:block">Volume</div>
+          <div className="text-right">Volume</div>
           <div className="text-right">Chg%</div>
-          <div className="hidden sm:block"></div>
         </div>
-        {STOCKS.map((s, i) => <StockRow key={s.key} s={s} tick={ticks[s.key]} last={i === STOCKS.length - 1} maxVol={maxVol} />)}
+        <div className="overflow-y-auto" style={{ maxHeight: 360 }}>
+          {STOCKS.map((s, i) => <StockRow key={s.key} s={s} tick={ticks[s.key]} last={i === STOCKS.length - 1} maxVol={maxVol} />)}
+        </div>
       </Card>
     </section>
   );
@@ -932,49 +986,173 @@ function StocksSection({ ticks }: { ticks: any }) {
 // ══════════════════════════════════════════════════════════════════
 // MARKET DEPTH
 // ══════════════════════════════════════════════════════════════════
+// NSE/BSE index symbols — Kite does NOT provide market depth for these
+const INDEX_SYMS = new Set([
+  "NSE:NIFTY 50", "NSE:NIFTY BANK", "BSE:SENSEX", "NSE:NIFTY AUTO",
+  "NSE:NIFTY PHARMA", "NSE:NIFTY IT", "NSE:NIFTY METAL", "NSE:NIFTY FIN SERVICE",
+  "NSE:NIFTY REALTY", "NSE:NIFTY FMCG", "NSE:NIFTY ENERGY", "NSE:NIFTY PSU BANK",
+  "NSE:INDIA VIX", "NSE:NIFTY LARGEMID250", "NSE:NIFTY MIDCAP 100",
+  "NSE:NIFTY SMLCAP 100", "NSE:NIFTY IND DEFENCE", "NSE:NIFTY MIDCAP SELECT",
+]);
+
+// ── REST depth poller — fetches full quote+depth for ANY equity via REST API ──
+function useRestDepth(sym: string) {
+  const [data,    setData]    = useState<KiteTick | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setData(null);
+    setLoading(true);
+    if (!sym || INDEX_SYMS.has(sym)) { setLoading(false); return; } // no depth for indices
+
+    let cancelled = false;
+
+    const doFetch = async () => {
+      try {
+        const r = await fetch(`${BASE}/kite/quote?i=${encodeURIComponent(sym)}`);
+        const j = await r.json();
+        // Kite response: { status, data: { "NSE:SBIN": { last_price, ohlc, depth, ... } } }
+        const q = j.data?.[sym];
+        if (!q || cancelled) return;
+        setData({
+          symbol:           sym,
+          instrument_token: q.instrument_token,
+          tradable:         q.tradable ?? true,
+          mode:             "full",
+          last_price:       q.last_price,
+          ohlc:             q.ohlc,
+          depth:            q.depth ?? null,
+          buy_quantity:     q.buy_quantity  ?? 0,
+          sell_quantity:    q.sell_quantity ?? 0,
+          volume:           q.volume_traded ?? q.volume ?? 0,
+          change:           q.net_change    ?? 0,
+        } as KiteTick);
+      } catch (_) {}
+      finally { if (!cancelled) setLoading(false); }
+    };
+
+    doFetch();
+    const id = setInterval(doFetch, 3000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [sym]);
+
+  return { data, loading };
+}
+
 function DepthCard({ sym, ticks }: { sym: string; ticks: any }) {
   const l = useIL();
-  const tick = ticks[sym] as KiteTick | undefined;
+  const isIndex = INDEX_SYMS.has(sym);
+  const { data: restData, loading: restLoading } = useRestDepth(sym);
+
+  const wsTick  = ticks[sym] as KiteTick | undefined;
+
+  // Build the merged tick:
+  // • For equities: REST provides depth, WS provides live last_price
+  //   (REST also gives last_price as fallback if WS hasn't subscribed this token)
+  // • For indices: only WS data exists (no depth from Kite)
+  const tick: KiteTick | undefined = isIndex
+    ? wsTick                                         // index: just WS (no depth)
+    : restData                                       // equity: REST is primary (has depth)
+        ? { ...restData, last_price: wsTick?.last_price ?? restData.last_price,
+            ohlc: wsTick?.ohlc ?? restData.ohlc }   // overlay live WS price if available
+        : wsTick;                                    // equity fallback before first REST fetch
+
   const name = sym.split(":")[1];
+  const p = getPct(tick);
   return (
-    <Card className="overflow-hidden">
-      <div className={`px-4 py-3 border-b ${l ? "border-slate-100" : "border-[#1e3a5f]/50"}`}>
-        <div className="flex items-center justify-between mb-1">
-          <span className={`font-black text-sm ${tx.t1(l)}`}>{name}</span>
-          <PctTag p={getPct(tick)} sm />
-        </div>
-        <FlashPrice val={tick?.last_price} cls="text-lg font-black tabular-nums" />
-        {tick?.depth && (
-          <div className="flex gap-4 mt-1">
-            <span className="text-[10px] text-emerald-600 font-bold">Buy: {fmtV(tick.buy_quantity)}</span>
-            <span className="text-[10px] text-red-500 font-bold">Sell: {fmtV(tick.sell_quantity)}</span>
+    <Card className="overflow-hidden w-full">
+      {/* Header */}
+      <div className={`px-5 py-4 border-b ${l ? "border-slate-100" : "border-[#1e3a5f]/50"}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <span className={`font-black text-base ${tx.t1(l)}`}>{name}</span>
+            <span className={`ml-3 text-[10px] font-bold ${tx.t3(l)}`}>{sym.split(":")[0]}</span>
           </div>
-        )}
+          <PctTag p={p} />
+        </div>
+        <div className="flex items-center gap-4 mt-1">
+          <FlashPrice val={tick?.last_price} cls="text-2xl font-black tabular-nums" />
+          {tick?.depth && (
+            <div className="flex gap-4">
+              <span className="text-xs text-emerald-600 font-bold">Buy: {fmtV(tick.buy_quantity)}</span>
+              <span className="text-xs text-red-500 font-bold">Sell: {fmtV(tick.sell_quantity)}</span>
+            </div>
+          )}
+        </div>
       </div>
+
       {tick?.depth ? (
         <>
-          <div className={`grid grid-cols-3 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}>
-            <span>Bid Qty</span><span className="text-center">Price</span><span className="text-right">Ask Qty</span>
+          {/* Column headers */}
+          <div className={`grid px-5 py-2 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}
+            style={{ gridTemplateColumns: "1fr 1fr 120px 1fr 1fr" }}>
+            <span className="text-emerald-600">Bid Qty</span>
+            <span className="text-emerald-600 text-right">Orders</span>
+            <span className="text-center">Price</span>
+            <span className="text-red-500 text-right">Orders</span>
+            <span className="text-red-500 text-right">Ask Qty</span>
           </div>
           {Array.from({ length: 5 }).map((_, i) => {
             const b = tick.depth!.buy[i];
             const a = tick.depth!.sell[i];
-            const mx = Math.max(...tick.depth!.buy.map(x => x.quantity), ...tick.depth!.sell.map(x => x.quantity), 1);
+            const mx = Math.max(
+              ...tick.depth!.buy.map(x => x.quantity),
+              ...tick.depth!.sell.map(x => x.quantity), 1
+            );
+            const bPct = b ? (b.quantity / mx) * 40 : 0;
+            const aPct = a ? (a.quantity / mx) * 40 : 0;
             return (
-              <div key={i} className={`grid grid-cols-3 px-3 py-1.5 text-xs relative ${i < 4 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""} ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}>
-                <div className="absolute inset-y-0 left-0 bg-emerald-500/6" style={{ width: `${(b ? b.quantity / mx : 0) * 33}%` }} />
-                <div className="absolute inset-y-0 right-0 bg-red-500/6" style={{ width: `${(a ? a.quantity / mx : 0) * 33}%` }} />
-                <span className="text-emerald-600 font-bold tabular-nums z-10 relative">{b ? b.quantity.toLocaleString("en-IN") : "—"}</span>
-                <span className={`text-center font-mono z-10 relative ${tx.t1(l)}`}>{b ? `₹${fmt(b.price)}` : a ? `₹${fmt(a.price)}` : "—"}</span>
-                <span className="text-right text-red-500 font-bold tabular-nums z-10 relative">{a ? a.quantity.toLocaleString("en-IN") : "—"}</span>
+              <div key={i}
+                className={`grid px-5 py-2.5 text-xs relative items-center
+                ${i < 4 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""}
+                ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}
+                style={{ gridTemplateColumns: "1fr 1fr 120px 1fr 1fr" }}>
+                <div className="absolute inset-y-0 left-0 bg-emerald-500/8 rounded-l" style={{ width: `${bPct}%` }} />
+                <div className="absolute inset-y-0 right-0 bg-red-500/8 rounded-r"    style={{ width: `${aPct}%` }} />
+                <span className="text-emerald-600 font-bold tabular-nums relative z-10">
+                  {b ? b.quantity.toLocaleString("en-IN") : "—"}
+                </span>
+                <span className={`text-right tabular-nums relative z-10 ${tx.t3(l)}`}>{b?.orders ?? "—"}</span>
+                <span className={`text-center font-mono font-bold relative z-10 ${tx.t1(l)}`}>
+                  {b ? `₹${fmt(b.price)}` : a ? `₹${fmt(a.price)}` : "—"}
+                </span>
+                <span className={`text-right tabular-nums relative z-10 ${tx.t3(l)}`}>{a?.orders ?? "—"}</span>
+                <span className="text-right text-red-500 font-bold tabular-nums relative z-10">
+                  {a ? a.quantity.toLocaleString("en-IN") : "—"}
+                </span>
               </div>
             );
           })}
         </>
       ) : (
-        <div className="p-4 space-y-2">
-          {[...Array(5)].map((_, i) => <Skel key={i} h="h-7" />)}
-          <p className={`text-center text-xs mt-2 ${tx.t3(l)}`}>{tick ? "Full mode data loading…" : "Waiting for WebSocket…"}</p>
+        <div className="px-5 py-8">
+          {isIndex ? (
+            /* Indices: Kite does not provide Level 2 order book for index instruments */
+            <div className={`flex flex-col items-center gap-3 text-center`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${l ? "bg-amber-50" : "bg-amber-500/10"}`}>
+                <Info className={`w-5 h-5 ${l ? "text-amber-500" : "text-amber-400"}`} />
+              </div>
+              <p className={`text-sm font-bold ${tx.t1(l)}`}>Depth not available for indices</p>
+              <p className={`text-xs max-w-xs ${tx.t3(l)}`}>
+                Kite Connect does not provide Level 2 order book data for index instruments (NIFTY 50, SENSEX, etc.).<br />
+                Search for an <span className="font-bold text-[#5194F6]">equity stock</span> (e.g. RELIANCE, SBIN, INFY) to see live depth.
+              </p>
+            </div>
+          ) : restLoading ? (
+            /* First fetch in progress — show skeletons */
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => <Skel key={i} h="h-9" />)}
+              <p className={`text-center text-xs mt-2 ${tx.t3(l)}`}>Fetching depth…</p>
+            </div>
+          ) : (
+            /* Data arrived but depth is null — rare edge case */
+            <div className="space-y-2 mb-4">
+              {[...Array(5)].map((_, i) => <Skel key={i} h="h-9" />)}
+              <p className={`text-center text-xs ${tx.t3(l)}`}>
+                {tick ? "Depth data unavailable for this instrument" : "Waiting for data…"}
+              </p>
+            </div>
+          )}
         </div>
       )}
     </Card>
@@ -983,61 +1161,85 @@ function DepthCard({ sym, ticks }: { sym: string; ticks: any }) {
 
 function DepthSection({ ticks }: { ticks: any }) {
   const l = useIL();
-  const DEFAULT_SYMS = ["NSE:RELIANCE", "NSE:TCS", "NSE:HDFCBANK"];
-  const [selected, setSelected] = useState<string[]>(DEFAULT_SYMS);
+  const DEFAULT_SYM = "NSE:RELIANCE";
+  // Single active symbol — search replaces it directly
+  const [activeSym, setActiveSym] = useState(DEFAULT_SYM);
   const [searchVal, setSearchVal] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
 
-  const allStockKeys = STOCKS.map(s => s.key);
-  const filtered = searchVal.length > 0
-    ? allStockKeys.filter(k => k.toLowerCase().includes(searchVal.toLowerCase()))
-    : allStockKeys;
+  const { results: depthResults, loading: depthSearchLoading } = useInstrumentSearch(searchVal, searchOpen);
 
-  const handleAdd = (sym: string) => {
-    if (!selected.includes(sym)) {
-      setSelected(prev => [...prev.slice(-2), sym]); // keep max 3
-    }
-    setSearchVal("");
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setSearchOpen(false); setSearchVal("");
+      }
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  // Selecting replaces the active card immediately
+  const handleSelect = (r: InstrResult) => {
+    const key = `${r.exchange}:${r.key}`;
+    setActiveSym(key);
+    setSearchVal(r.key);
+    setSearchOpen(false);
   };
 
   return (
     <section className="mb-8">
-      <SecHead id="depth" icon={ArrowUpDown} title="Market Depth" sub="Level 2 Order Book · 5 Best Bids & Asks" live />
-      {/* Search/Select for stocks */}
-      <div className={`flex items-center gap-2 mb-3 p-3 rounded-xl border ${tx.card(l)}`}>
-        <Search className={`w-3.5 h-3.5 shrink-0 ${tx.t3(l)}`} />
-        <input
-          value={searchVal}
-          onChange={e => setSearchVal(e.target.value)}
-          placeholder="Search stock to view depth (e.g. INFY, WIPRO)…"
-          className={`flex-1 bg-transparent text-xs font-bold outline-none placeholder:font-normal ${tx.t1(l)}`}
-        />
-        {searchVal && (
-          <button onClick={() => setSearchVal("")}><X className={`w-3.5 h-3.5 ${tx.t3(l)}`} /></button>
+      <SecHead id="depth" icon={ArrowUpDown} title="Market Depth" live />
+
+      {/* Search bar — selecting replaces the card */}
+      <div className="relative mb-4" ref={wrapRef}>
+        <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all ${tx.card(l)} focus-within:border-[#5194F6]`}>
+          <Search className={`w-4 h-4 shrink-0 ${tx.t3(l)}`} />
+          <input
+            value={searchVal}
+            onChange={e => { setSearchVal(e.target.value); setSearchOpen(true); }}
+            onFocus={() => setSearchOpen(true)}
+            placeholder={`Viewing: ${activeSym.split(":")[1]} — Search any stock (e.g. INFY, WIPRO, SBIN)…`}
+            className={`flex-1 bg-transparent text-xs font-bold outline-none placeholder:font-normal ${tx.t1(l)}`}
+          />
+          {depthSearchLoading && <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#5194F6]" />}
+          {searchVal && !depthSearchLoading && (
+            <button onClick={() => { setSearchVal(""); setActiveSym(DEFAULT_SYM); setSearchOpen(false); }}>
+              <X className={`w-3.5 h-3.5 ${tx.t3(l)}`} />
+            </button>
+          )}
+        </div>
+
+        {searchOpen && (
+          <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border shadow-xl z-50 overflow-hidden max-h-60 overflow-y-auto ${l ? "bg-white border-slate-200" : "bg-[#0c1a2e] border-[#1e3a5f]/50"}`}>
+            {depthSearchLoading && (
+              <div className={`px-4 py-3 text-xs flex items-center gap-2 ${tx.t3(l)}`}>
+                <RefreshCw className="w-3 h-3 animate-spin" />Searching…
+              </div>
+            )}
+            {!depthSearchLoading && depthResults.length === 0 && searchVal.length > 0 && (
+              <div className={`px-4 py-3 text-xs ${tx.t3(l)}`}>No results for "{searchVal}"</div>
+            )}
+            {!depthSearchLoading && !searchVal && (
+              <div className={`sticky top-0 px-3 pt-2 pb-1 text-[9px] font-bold uppercase tracking-wider ${l ? "bg-white text-slate-400" : "bg-[#0c1a2e] text-slate-500"}`}>Popular</div>
+            )}
+            {!depthSearchLoading && depthResults.map(r => (
+              <button key={r.key + r.exchange} onMouseDown={() => handleSelect(r)}
+                className={`w-full flex items-center justify-between px-4 py-2.5 text-xs font-bold transition-colors ${l ? "hover:bg-slate-50" : "hover:bg-white/[0.04]"}`}>
+                <div className="text-left">
+                  <p className={`font-black ${tx.t1(l)}`}>{r.key}</p>
+                  <p className={`text-[10px] ${tx.t3(l)}`}>{r.label !== r.key ? r.label : ""}</p>
+                </div>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${l ? "bg-slate-100 text-slate-500 border-slate-200" : "bg-white/5 text-slate-400 border-[#1e3a5f]/50"}`}>{r.exchange}</span>
+              </button>
+            ))}
+          </div>
         )}
       </div>
-      {/* Dropdown suggestions */}
-      {searchVal.length > 0 && filtered.length > 0 && (
-        <div className={`mb-3 rounded-xl border overflow-hidden ${l ? "bg-white border-slate-200" : "bg-[#0c1a2e] border-[#1e3a5f]/50"}`}>
-          {filtered.slice(0, 6).map(sym => (
-            <button key={sym} onClick={() => handleAdd(sym)}
-              className={`w-full text-left px-4 py-2.5 text-xs font-bold transition-colors ${l ? "hover:bg-slate-50" : "hover:bg-white/[0.04]"} ${tx.t1(l)}`}>
-              {sym.split(":")[1]}
-            </button>
-          ))}
-        </div>
-      )}
-      {/* Selected chips */}
-      <div className="flex gap-2 mb-3 flex-wrap">
-        {selected.map(sym => (
-          <div key={sym} className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border text-xs font-bold ${l ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-blue-900/20 border-[#5194F6]/25 text-blue-400"}`}>
-            {sym.split(":")[1]}
-            <button onClick={() => setSelected(prev => prev.filter(s => s !== sym))}><X className="w-3 h-3" /></button>
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {selected.map(s => <DepthCard key={s} sym={s} ticks={ticks} />)}
-      </div>
+
+      {/* Single full-width depth card */}
+      <DepthCard sym={activeSym} ticks={ticks} />
     </section>
   );
 }
@@ -1109,7 +1311,7 @@ function OptionsSection({ ticks }: { ticks: any }) {
   const FO_NAMES = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"];
   return (
     <section className="mb-8">
-      <SecHead id="options" icon={Layers} title="F&O Instruments" sub={`Options Chain & Futures · Kite Connect \`/instruments/NFO\``} />
+      <SecHead id="options" icon={Layers} title="F&O Instruments"  />
 
       {/* Controls Row 1 — Index name + Expiry + Refresh */}
       <div className="flex items-center gap-2 mb-2 overflow-x-auto scrollbar-none pb-1 flex-nowrap">
@@ -1167,6 +1369,7 @@ function OptionsSection({ ticks }: { ticks: any }) {
                 <RefreshCw className="w-3 h-3 animate-spin" /> Fetching live quotes...
               </div>
             )}
+            <div className="overflow-y-auto" style={{ maxHeight: 400 }}>
             {strikes.length === 0 ? (
               <div className={`p-8 text-center text-sm ${tx.t2(l)}`}>
                 <Layers className="w-10 h-10 mx-auto mb-3 opacity-20" />
@@ -1210,6 +1413,7 @@ function OptionsSection({ ticks }: { ticks: any }) {
                 </div>
               );
             })}
+            </div>
           </div>
         </Card>
 
@@ -1219,39 +1423,68 @@ function OptionsSection({ ticks }: { ticks: any }) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// HISTORICAL DATA — Candlestick chart + table toggle
+// HISTORICAL DATA — Table only + API search for any stock/index
 // ══════════════════════════════════════════════════════════════════
 function HistoricalSection() {
   const l = useIL();
-  const SYMS = [
-    { label: "Nifty 50", token: 256265 },
-    { label: "Sensex", token: 265 },
-    { label: "Bank Nifty", token: 260105 },
 
-    { label: "Nifty Auto", token: 258049 },
-    { label: "Nifty Pharma", token: 259849 },
+  // Pre-defined quick-access symbols with known tokens
+  const QUICK_SYMS = [
+    { label: "Nifty 50",    token: 256265 },
+    { label: "Sensex",      token: 265 },
+    { label: "Bank Nifty",  token: 260105 },
+    { label: "Nifty Auto",  token: 258049 },
+    { label: "Nifty Pharma",token: 259849 },
     { label: "Nifty Metal", token: 259337 },
-    { label: "Nifty Energy", token: 258409 },
-    { label: "Nifty FMCG", token: 258537 },
-    { label: "Nifty Realty", token: 260361 },
-    { label: "Reliance", token: 738561 },
-    { label: "TCS", token: 2953217 },
-    { label: "HDFC Bank", token: 341249 },
-    { label: "Infosys", token: 408065 },
-    { label: "ICICI Bank", token: 1270529 },
-    { label: "Wipro", token: 969473 },
-    { label: "HUL", token: 356865 },
-    { label: "ITC", token: 424961 },
-  ];
-  const IVLS = [
-    { label: "5m", val: "5minute" },
-    { label: "15m", val: "15minute" },
-    { label: "1h", val: "60minute" },
-    { label: "1d", val: "day" },
+    { label: "Nifty Energy",token: 258409 },
+    { label: "Nifty FMCG",  token: 258537 },
+    { label: "Reliance",    token: 738561 },
+    { label: "TCS",         token: 2953217 },
+    { label: "HDFC Bank",   token: 341249 },
+    { label: "Infosys",     token: 408065 },
+    { label: "ICICI Bank",  token: 1270529 },
+    { label: "Wipro",       token: 969473 },
+    { label: "HUL",         token: 356865 },
+    { label: "ITC",         token: 424961 },
   ];
 
-  const [sym, setSym] = useState(SYMS[0]);
-  const [ivl, setIvl] = useState("day");
+  const IVLS = [
+    { label: "5m",  val: "5minute" },
+    { label: "15m", val: "15minute" },
+    { label: "1h",  val: "60minute" },
+    { label: "1d",  val: "day" },
+  ];
+
+  const [sym, setSym]             = useState(QUICK_SYMS[0]);
+  const [ivl, setIvl]             = useState("day");
+  const [histSearch, setHistSearch]       = useState("");
+  const [histSearchOpen, setHistSearchOpen] = useState(false);
+  const [tokenFetching, setTokenFetching] = useState(false);
+  const histWrapRef = useRef<HTMLDivElement>(null);
+
+  // API search — any NSE/BSE instrument
+  const { results: histResults, loading: histSearchLoading } = useInstrumentSearch(histSearch, histSearchOpen);
+
+  // Close on outside click
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (histWrapRef.current && !histWrapRef.current.contains(e.target as Node)) {
+        setHistSearchOpen(false); setHistSearch("");
+      }
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  // When user picks from search: fetch token, then load data
+  const handleHistSelect = async (r: InstrResult) => {
+    setHistSearch(""); setHistSearchOpen(false);
+    setTokenFetching(true);
+    try {
+      const token = await fetchInstrToken(r.exchange, r.key);
+      setSym({ label: r.key, token });
+    } finally { setTokenFetching(false); }
+  };
 
   const { data, loading, error, refresh } = useAPI<any>(
     `/kite/historical?token=${sym.token}&interval=${ivl}`,
@@ -1263,12 +1496,59 @@ function HistoricalSection() {
 
   return (
     <section className="mb-8">
-      <SecHead id="historical" icon={BookOpen} title="Historical Data" sub="OHLCV · Table · All Stocks & Indices" />
+      <SecHead id="historical" icon={BookOpen} title="Historical Data" />
 
-      {/* Row 1: symbol buttons — full scrollable row */}
+      {/* API Search bar — any stock from NSE/BSE */}
+      <div className="relative mb-3" ref={histWrapRef}>
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${tx.card(l)} focus-within:border-[#5194F6]`}>
+          <Search className={`w-3.5 h-3.5 shrink-0 ${tx.t3(l)}`} />
+          <input
+            value={histSearch}
+            onChange={e => { setHistSearch(e.target.value); setHistSearchOpen(true); }}
+            onFocus={() => setHistSearchOpen(true)}
+            placeholder={`Viewing: ${sym.label} — Search any stock or index…`}
+            className={`flex-1 bg-transparent text-xs font-bold outline-none placeholder:font-normal ${tx.t1(l)}`}
+          />
+          {(histSearchLoading || tokenFetching) && <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#5194F6]" />}
+          {histSearch && !histSearchLoading && !tokenFetching && (
+            <button onClick={() => { setHistSearch(""); setHistSearchOpen(false); }}>
+              <X className={`w-3.5 h-3.5 ${tx.t3(l)}`} />
+            </button>
+          )}
+        </div>
+
+        {/* Dropdown */}
+        {histSearchOpen && (
+          <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border shadow-xl z-50 overflow-hidden max-h-60 overflow-y-auto ${l ? "bg-white border-slate-200" : "bg-[#0c1a2e] border-[#1e3a5f]/50"}`}>
+            {histSearchLoading && <div className={`px-4 py-3 text-xs flex items-center gap-2 ${tx.t3(l)}`}><RefreshCw className="w-3 h-3 animate-spin" />Searching…</div>}
+            {!histSearchLoading && histResults.length === 0 && histSearch.length > 0 && (
+              <div className={`px-4 py-3 text-xs ${tx.t3(l)}`}>No results</div>
+            )}
+            {!histSearchLoading && histResults.length > 0 && (
+              <>
+                {!histSearch.trim() && (
+                  <div className={`sticky top-0 px-3 pt-2 pb-1 text-[9px] font-bold uppercase tracking-wider ${l ? "bg-white text-slate-400" : "bg-[#0c1a2e] text-slate-500"}`}>Popular</div>
+                )}
+                {histResults.map(r => (
+                  <button key={r.key + r.exchange} onMouseDown={() => handleHistSelect(r)}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs transition-colors ${l ? "hover:bg-slate-50" : "hover:bg-white/[0.04]"}`}>
+                    <div className="text-left">
+                      <p className={`font-black ${tx.t1(l)}`}>{r.key}</p>
+                      <p className={`text-[10px] ${tx.t3(l)}`}>{r.label !== r.key ? r.label : ""}</p>
+                    </div>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${l ? "bg-slate-100 text-slate-500 border-slate-200" : "bg-white/5 text-slate-400 border-[#1e3a5f]/50"}`}>{r.exchange}</span>
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Quick-access symbol buttons */}
       <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1 mb-2 flex-nowrap">
-        {SYMS.map(s => (
-          <button key={s.token} onClick={() => setSym(s)}
+        {QUICK_SYMS.map(s => (
+          <button key={s.token} onClick={() => { setSym(s); setHistSearch(""); setHistSearchOpen(false); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all shrink-0 ${sym.token === s.token
                 ? "bg-[#5194F6] text-white border-transparent"
                 : l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
@@ -1276,7 +1556,7 @@ function HistoricalSection() {
         ))}
       </div>
 
-      {/* Row 2: interval + refresh — no chart toggle */}
+      {/* Interval + refresh */}
       <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1 mb-3 flex-nowrap">
         {IVLS.map(iv => (
           <button key={iv.val} onClick={() => setIvl(iv.val)}
@@ -1308,30 +1588,33 @@ function HistoricalSection() {
               <div className="text-right">Close</div>
               <div className="text-right">Vol</div>
             </div>
-            {loading
-              ? <div className="p-4 space-y-2">{[...Array(8)].map((_, i) => <Skel key={i} h="h-9" />)}</div>
-              : rows.length === 0
-                ? <div className={`p-8 text-center text-sm ${tx.t2(l)}`}>No data available</div>
-                : rows.map((c, i) => {
-                  const o = c.y?.[0], h = c.y?.[1], lo = c.y?.[2], cl = c.y?.[3];
-                  const isu = (cl ?? 0) >= (o ?? 0);
-                  return (
-                    <div key={i}
-                      className={`grid px-3 py-2.5 items-center ${i < rows.length - 1 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""} ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}
-                      style={{ gridTemplateColumns: "88px 1fr 1fr 1fr 1fr 64px" }}>
-                      <div className={`text-xs font-semibold flex items-center gap-1 ${tx.t2(l)}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isu ? "bg-emerald-500" : "bg-red-500"}`} />
-                        {c.x ? new Date(c.x).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—"}
+            {/* Scrollable rows */}
+            <div className="overflow-y-auto" style={{ maxHeight: 380 }}>
+              {loading
+                ? <div className="p-4 space-y-2">{[...Array(8)].map((_, i) => <Skel key={i} h="h-9" />)}</div>
+                : rows.length === 0
+                  ? <div className={`p-8 text-center text-sm ${tx.t2(l)}`}>No data available</div>
+                  : rows.map((c, i) => {
+                    const o = c.y?.[0], h = c.y?.[1], lo = c.y?.[2], cl = c.y?.[3];
+                    const isu = (cl ?? 0) >= (o ?? 0);
+                    return (
+                      <div key={i}
+                        className={`grid px-3 py-2 items-center ${i < rows.length - 1 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""} ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}
+                        style={{ gridTemplateColumns: "88px 1fr 1fr 1fr 1fr 64px" }}>
+                        <div className={`text-xs font-semibold flex items-center gap-1 ${tx.t2(l)}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isu ? "bg-emerald-500" : "bg-red-500"}`} />
+                          {c.x ? new Date(c.x).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—"}
+                        </div>
+                        <div className={`text-right text-xs tabular-nums ${tx.t1(l)}`}>₹{fmt(o)}</div>
+                        <div className="text-right text-xs tabular-nums text-emerald-600 font-semibold">₹{fmt(h)}</div>
+                        <div className="text-right text-xs tabular-nums text-red-500 font-semibold">₹{fmt(lo)}</div>
+                        <div className={`text-right text-xs tabular-nums font-bold ${isu ? "text-emerald-600" : "text-red-500"}`}>₹{fmt(cl)}</div>
+                        <div className={`text-right text-xs tabular-nums ${tx.t3(l)}`}>{fmtV(c.volume)}</div>
                       </div>
-                      <div className={`text-right text-xs tabular-nums ${tx.t1(l)}`}>₹{fmt(o)}</div>
-                      <div className="text-right text-xs tabular-nums text-emerald-600 font-semibold">₹{fmt(h)}</div>
-                      <div className="text-right text-xs tabular-nums text-red-500 font-semibold">₹{fmt(lo)}</div>
-                      <div className={`text-right text-xs tabular-nums font-bold ${isu ? "text-emerald-600" : "text-red-500"}`}>₹{fmt(cl)}</div>
-                      <div className={`text-right text-xs tabular-nums ${tx.t3(l)}`}>{fmtV(c.volume)}</div>
-                    </div>
-                  );
-                })
-            }
+                    );
+                  })
+              }
+            </div>
           </div>
         </div>
       </Card>
@@ -1645,7 +1928,7 @@ function BreadthVixSection({ ticks }: { ticks: any }) {
   return (
     <section className="mb-8">
       <SecHead id="breadth" icon={BarChart3} title="Market Breadth & Volatility"
-        sub="Advance · Decline · India VIX · 52-Week H/L" live />
+       live />
 
       {/* ── Breadth Boxes — single scrollable row, all clickable ── */}
       <div className="flex gap-4 mb-3 overflow-x-auto pb-1 scrollbar-none">
@@ -1710,9 +1993,9 @@ function BreadthVixSection({ ticks }: { ticks: any }) {
             </div>
           ))}
         </div>
-        <div className={`px-4 py-2 text-[10px] border-t ${l ? "border-slate-100 text-slate-400" : "border-[#1e3a5f]/50 text-slate-500"}`}>
+        {/* <div className={`px-4 py-2 text-[10px] border-t ${l ? "border-slate-100 text-slate-400" : "border-[#1e3a5f]/50 text-slate-500"}`}>
           VIX &lt;13: Calm · 13–20: Normal · 20–30: Elevated · &gt;30: Panic · Source: NSE via Kite WebSocket (token 264969)
-        </div>
+        </div> */}
       </div>
     </section>
   );
@@ -1772,7 +2055,7 @@ function SectorSection({ ticks }: { ticks: any }) {
   return (
     <section className="mb-8">
       <SecHead id="sectors" icon={PieChart} title="Sector Performance"
-        sub="10 NSE Sectoral Indices · Live 1D Change" live />
+         live />
 
       {/* Top / Bottom chips */}
       <div className="flex flex-wrap gap-2 mb-3">
@@ -1797,6 +2080,7 @@ function SectorSection({ ticks }: { ticks: any }) {
           <div className="hidden sm:block sm:col-span-1 text-right">Vol</div>
           <div className="hidden sm:block sm:col-span-1 text-right"></div>
         </div>
+        <div className="overflow-y-auto" style={{ maxHeight: 380 }}>
         {sorted.map((s, i) => {
           const isPos = (s.pct ?? 0) >= 0;
           const barPct = s.pct != null ? (Math.abs(s.pct) / maxAbs) * 100 : 0;
@@ -1806,7 +2090,7 @@ function SectorSection({ ticks }: { ticks: any }) {
           const nseUrl = `https://www.nseindia.com/market-data/live-equity-market?symbol=${encodeURIComponent(s.sym)}`;
           return (
             <div key={s.key}
-              className={`grid grid-cols-3 sm:grid-cols-12 px-4 sm:px-5 py-2.5 items-center relative overflow-hidden
+              className={`grid grid-cols-3 sm:grid-cols-12 px-4 sm:px-5 py-2 items-center relative overflow-hidden
               ${i < sorted.length - 1 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""}
               ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}>
               {/* Background bar */}
@@ -1840,7 +2124,7 @@ function SectorSection({ ticks }: { ticks: any }) {
                   </>
                 ) : <span className={`text-xs ${tx.t3(l)}`}>—</span>}
               </div>
-              {/* Volume — indices don't have volume via Kite quote mode */}
+              {/* Volume */}
               <div className={`sm:col-span-1 text-right text-xs tabular-nums relative z-10 hidden sm:block ${tx.t3(l)}`}>
                 {vol != null && vol > 0 ? fmtV(vol) : <span className="text-[10px]">N/A</span>}
               </div>
@@ -1849,13 +2133,14 @@ function SectorSection({ ticks }: { ticks: any }) {
                 <a href={nseUrl} target="_blank" rel="noopener noreferrer"
                   onClick={e => e.stopPropagation()}
                   title={`View ${s.name} stocks on NSE`}
-                  className={`inline-flex items-center justify-center w-5 h-5 rounded opacity-40 hover:opacity-100 transition-opacity ${l ? "text-[#5194F6]" : "text-[#5194F6]"}`}>
+                  className={`inline-flex items-center justify-center w-5 h-5 rounded opacity-40 hover:opacity-100 transition-opacity text-[#5194F6]`}>
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
             </div>
           );
         })}
+        </div>
       </Card>
     </section>
   );
@@ -1893,20 +2178,20 @@ function GainersLosersSection() {
     return (
       <div
         onClick={() => window.open(nseUrl, "_blank")}
-        className={`grid items-center px-3 py-2.5 text-xs cursor-pointer
+        className={`grid items-center px-3 py-2 text-xs cursor-pointer
         ${rank < rows.length - 1 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""}
         ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}
-        style={{ gridTemplateColumns: "28px 1fr 80px 72px 62px" }}>
+        style={{ gridTemplateColumns: "22px 1fr 72px 68px 58px" }}>
         {/* # */}
-        <span className={`text-[10px] font-black text-center ${tx.t3(l)}`}>{rank + 1}</span>
-        {/* Symbol */}
+        <span className={`text-[10px] font-black ${tx.t3(l)}`}>{rank + 1}</span>
+        {/* Symbol + name */}
         <div className="min-w-0 pr-2">
           <p className={`font-black text-[11px] truncate ${tx.t1(l)}`}>{symbol}</p>
-          {name && <p className={`text-[10px] truncate ${tx.t3(l)}`}>{name}</p>}
+          {name && <p className={`text-[10px] truncate leading-tight ${tx.t3(l)}`}>{name}</p>}
         </div>
         {/* LTP */}
         <div className="text-right">
-          <p className={`font-bold tabular-nums ${tx.t1(l)}`}>{ltp > 0 ? `₹${fmt(ltp)}` : "—"}</p>
+          <p className={`font-bold tabular-nums text-xs ${tx.t1(l)}`}>{ltp > 0 ? `₹${fmt(ltp)}` : "—"}</p>
         </div>
         {/* Volume */}
         <div className="text-right">
@@ -1917,7 +2202,7 @@ function GainersLosersSection() {
         {/* Change% */}
         <div className="text-right">
           <p className={`text-[11px] font-bold tabular-nums ${isPos ? "text-emerald-500" : "text-red-500"}`}>
-            {isPos ? "+" : ""}{changePct != null ? changePct.toFixed(2) : "—"}%
+            {isPos ? "+" : ""}{changePct != null ? Number(changePct).toFixed(2) : "—"}%
           </p>
         </div>
       </div>
@@ -1927,7 +2212,7 @@ function GainersLosersSection() {
   return (
     <section className="mb-8">
       <SecHead id="gainers" icon={TrendingUp} title="Gainers · Losers · Most Active"
-        sub="NSE Cash Market · Real-time from NSE API" />
+         />
 
       {/* Tab controls — single row, refresh always inline */}
       <div className="flex items-center gap-1.5 mb-3 overflow-x-auto scrollbar-none pb-0.5">
@@ -1956,15 +2241,16 @@ function GainersLosersSection() {
           </div>
         )}
 
-        <div className={`grid items-center px-3 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}
-          style={{ gridTemplateColumns: "28px 1fr 80px 72px 62px" }}>
-          <span className="text-center">#</span>
+        <div className={`grid items-center px-3 py-2 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}
+          style={{ gridTemplateColumns: "22px 1fr 72px 68px 58px" }}>
+          <span>#</span>
           <span>Symbol</span>
           <span className="text-right">LTP</span>
           <span className="text-right">Volume</span>
           <span className="text-right">Chg%</span>
         </div>
 
+        <div className="overflow-y-auto" style={{ maxHeight: 380 }}>
         {loading ? (
           <div className="p-4 space-y-2">{[...Array(8)].map((_, i) => <Skel key={i} h="h-10" />)}</div>
         ) : !isAvailable ? (
@@ -1978,6 +2264,7 @@ function GainersLosersSection() {
             {tab === "gainers" ? "No gainers data yet — market may be closed" : tab === "losers" ? "No losers data yet" : "No active stocks data"}
           </div>
         ) : rows.map((r: any, i: number) => <StockLine key={r.symbol + i} r={r} rank={i} />)}
+        </div>
       </Card>
 
       {/* By-value sublist for most active */}
@@ -1985,9 +2272,9 @@ function GainersLosersSection() {
         <div className="mt-3">
           <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${tx.t3(l)}`}>By Traded Value</p>
           <Card className="overflow-hidden">
-            <div className={`grid items-center px-3 py-2.5 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}
-              style={{ gridTemplateColumns: "28px 1fr 80px 72px 62px" }}>
-              <span className="text-center">#</span>
+            <div className={`grid items-center px-3 py-2 text-[9px] font-black uppercase tracking-widest ${tx.header(l)} ${tx.t3(l)}`}
+              style={{ gridTemplateColumns: "22px 1fr 72px 68px 58px" }}>
+              <span>#</span>
               <span>Symbol</span>
               <span className="text-right">LTP</span>
               <span className="text-right">Volume</span>
@@ -2004,17 +2291,17 @@ function GainersLosersSection() {
               return (
                 <div key={symbol + i}
                   onClick={() => window.open(nseUrl, "_blank")}
-                  className={`grid items-center px-3 py-2.5 text-xs cursor-pointer
+                  className={`grid items-center px-3 py-2 text-xs cursor-pointer
                   ${i < 9 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""}
                   ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}
-                  style={{ gridTemplateColumns: "28px 1fr 80px 72px 62px" }}>
-                  <span className={`text-[10px] font-black text-center ${tx.t3(l)}`}>{i + 1}</span>
+                  style={{ gridTemplateColumns: "22px 1fr 72px 68px 58px" }}>
+                  <span className={`text-[10px] font-black ${tx.t3(l)}`}>{i + 1}</span>
                   <div className="min-w-0 pr-2">
                     <p className={`font-black text-[11px] truncate ${tx.t1(l)}`}>{symbol}</p>
-                    {name && <p className={`text-[10px] truncate ${tx.t3(l)}`}>{name}</p>}
+                    {name && <p className={`text-[10px] truncate leading-tight ${tx.t3(l)}`}>{name}</p>}
                   </div>
                   <div className="text-right">
-                    <p className={`font-bold tabular-nums ${tx.t1(l)}`}>{ltp > 0 ? `₹${fmt(ltp)}` : "—"}</p>
+                    <p className={`font-bold tabular-nums text-xs ${tx.t1(l)}`}>{ltp > 0 ? `₹${fmt(ltp)}` : "—"}</p>
                   </div>
                   <div className="text-right">
                     <p className={`text-[11px] tabular-nums ${vol > 0 ? tx.t2(l) : tx.t3(l)}`}>
@@ -2059,7 +2346,7 @@ function FiiDiiSection() {
   return (
     <section className="mb-8">
       <SecHead id="fii-dii" icon={Building2} title="FII / DII Activity"
-        sub={`Institutional Flows · ${source ?? "NSE"}${date ? ` · ${date}` : ""}`} />
+        />
 
       {loading && <Card className="p-4 space-y-2">{[...Array(2)].map((_, i) => <Skel key={i} h="h-14" />)}</Card>}
 
@@ -2116,16 +2403,89 @@ function FiiDiiSection() {
 }
 
 
+// ── Curated list of valid F&O underlyings (NFO + BFO) ────────────
+// Only names where PCR/MaxPain actually has data on NSE/BSE F&O
+const FO_UNDERLYINGS = [
+  // NFO indices
+  { key: "NIFTY",      label: "Nifty 50",              ex: "NFO" },
+  { key: "BANKNIFTY",  label: "Bank Nifty",             ex: "NFO" },
+  { key: "FINNIFTY",   label: "Nifty Fin Services",     ex: "NFO" },
+  { key: "MIDCPNIFTY", label: "Nifty Midcap Select",   ex: "NFO" },
+  // BFO indices (BSE)
+  { key: "SENSEX",     label: "BSE Sensex",             ex: "BFO" },
+  { key: "BANKEX",     label: "BSE Bankex",             ex: "BFO" },
+  // Popular stock F&O (NFO)
+  { key: "RELIANCE",   label: "Reliance Industries",    ex: "NFO" },
+  { key: "TCS",        label: "Tata Consultancy Svc",   ex: "NFO" },
+  { key: "HDFCBANK",   label: "HDFC Bank",              ex: "NFO" },
+  { key: "INFY",       label: "Infosys",                ex: "NFO" },
+  { key: "ICICIBANK",  label: "ICICI Bank",             ex: "NFO" },
+  { key: "SBIN",       label: "State Bank of India",    ex: "NFO" },
+  { key: "AXISBANK",   label: "Axis Bank",              ex: "NFO" },
+  { key: "KOTAKBANK",  label: "Kotak Mahindra Bank",    ex: "NFO" },
+  { key: "BAJFINANCE", label: "Bajaj Finance",          ex: "NFO" },
+  { key: "LT",         label: "Larsen & Toubro",        ex: "NFO" },
+  { key: "TATAMOTORS", label: "Tata Motors",            ex: "NFO" },
+  { key: "WIPRO",      label: "Wipro",                  ex: "NFO" },
+  { key: "ADANIENT",   label: "Adani Enterprises",      ex: "NFO" },
+  { key: "MARUTI",     label: "Maruti Suzuki",          ex: "NFO" },
+  { key: "SUNPHARMA",  label: "Sun Pharma",             ex: "NFO" },
+  { key: "TATASTEEL",  label: "Tata Steel",             ex: "NFO" },
+  { key: "ONGC",       label: "ONGC",                   ex: "NFO" },
+  { key: "NTPC",       label: "NTPC",                   ex: "NFO" },
+  { key: "COALINDIA",  label: "Coal India",             ex: "NFO" },
+  { key: "JSWSTEEL",   label: "JSW Steel",              ex: "NFO" },
+  { key: "HINDALCO",   label: "Hindalco Industries",    ex: "NFO" },
+  { key: "POWERGRID",  label: "Power Grid Corp",        ex: "NFO" },
+  { key: "ZOMATO",     label: "Zomato",                 ex: "NFO" },
+  { key: "IRFC",       label: "IRFC",                   ex: "NFO" },
+  { key: "HAL",        label: "Hindustan Aeronautics",  ex: "NFO" },
+  { key: "BEL",        label: "Bharat Electronics",     ex: "NFO" },
+];
+
 // ── PCR + MAX PAIN WIDGET  (add this inside or after OptionsSection) ──────────
 function PcrMaxPainWidget({ ticks }: { ticks: any }) {
   const l = useIL();
   const [name, setName] = useState<"NIFTY" | "BANKNIFTY">("NIFTY");
 
-  const { data, loading, error, refresh } = useAPI<any>(`/kite/pcr-maxpain?name=${name}`, [name]);
+  // PCR search bar state — uses curated F&O underlying list (not generic instrument search)
+  const [pcrSearch, setPcrSearch] = useState("");
+  const [pcrSearchOpen, setPcrSearchOpen] = useState(false);
+  const [pcrCustomName, setPcrCustomName] = useState<string | null>(null);
+  const pcrWrapRef = useRef<HTMLDivElement>(null);
 
-  const spot = name === "NIFTY"
-    ? (ticks["NSE:NIFTY 50"]?.last_price as number | undefined)
-    : (ticks["NSE:NIFTY BANK"]?.last_price as number | undefined);
+  // Filter curated F&O list by search query
+  const pcrResults = useMemo(() => {
+    const q = pcrSearch.trim().toUpperCase();
+    if (!q) return FO_UNDERLYINGS;
+    return FO_UNDERLYINGS.filter(f =>
+      f.key.includes(q) || f.label.toUpperCase().includes(q)
+    );
+  }, [pcrSearch]);
+  const pcrSearchLoading = false; // local filter — instant
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (pcrWrapRef.current && !pcrWrapRef.current.contains(e.target as Node)) {
+        setPcrSearchOpen(false); setPcrSearch("");
+      }
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  // activeName is already clean (e.g. "NIFTY", "SENSEX", "RELIANCE") — no prefix to strip
+  const activeName = (pcrCustomName ?? name).trim();
+
+  const { data, loading, error, refresh } = useAPI<any>(`/kite/pcr-maxpain?name=${activeName}`, [activeName]);
+
+  const spot = activeName === "NIFTY"       ? (ticks["NSE:NIFTY 50"]?.last_price  as number | undefined)
+             : activeName === "BANKNIFTY"   ? (ticks["NSE:NIFTY BANK"]?.last_price as number | undefined)
+             : activeName === "FINNIFTY"    ? (ticks["NSE:NIFTY FIN SERVICE"]?.last_price as number | undefined)
+             : activeName === "MIDCPNIFTY"  ? (ticks["NSE:NIFTY MIDCAP SELECT"]?.last_price as number | undefined)
+             : activeName === "SENSEX"      ? (ticks["BSE:SENSEX"]?.last_price     as number | undefined)
+             : undefined;
 
   const pcr = data?.pcr ?? null;
   const maxPain = data?.max_pain ?? null;
@@ -2146,18 +2506,67 @@ function PcrMaxPainWidget({ ticks }: { ticks: any }) {
   return (
     <Card className="overflow-hidden mb-4">
       {/* Header */}
-      <div className={`flex items-center gap-3 px-5 py-3 border-b ${tx.header(l)}`}>
+      <div className={`flex items-center gap-3 px-5 py-3 border-b flex-wrap gap-y-2 ${tx.header(l)}`}>
         <Layers className="w-4 h-4 text-[#5194F6]" />
         <span className={`font-black text-sm ${tx.t1(l)}`}>PCR · Max Pain</span>
-        <div className="flex gap-1.5 ml-2">
+        <div className="flex gap-1.5">
           {(["NIFTY", "BANKNIFTY"] as const).map(n => (
-            <button key={n} onClick={() => setName(n)}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-bold border transition-all ${name === n ? "bg-[#5194F6] text-white border-transparent" : l ? "bg-white text-slate-500 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"}`}>
+            <button key={n} onClick={() => { setName(n); setPcrCustomName(null); setPcrSearch(""); }}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-bold border transition-all ${(pcrCustomName === null && name === n) ? "bg-[#5194F6] text-white border-transparent" : l ? "bg-white text-slate-500 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"}`}>
               {n}
             </button>
           ))}
         </div>
-        {expiry && <span className={`text-[10px] ml-auto ${tx.t3(l)}`}>Expiry: {expiry}</span>}
+
+        {/* PCR Search bar */}
+        <div className="relative flex-1 min-w-[160px]" ref={pcrWrapRef}>
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all ${l
+            ? "bg-slate-50 border-slate-200 focus-within:border-[#5194F6]"
+            : "bg-[#0c1a2e] border-[#1e3a5f]/50 focus-within:border-[#5194F6]"
+          }`}>
+            <Search className={`w-3 h-3 shrink-0 ${tx.t3(l)}`} />
+            <input
+              value={pcrSearch}
+              onChange={e => { setPcrSearch(e.target.value); setPcrSearchOpen(true); }}
+              onFocus={() => setPcrSearchOpen(true)}
+              placeholder={pcrCustomName ? `Viewing: ${pcrCustomName}` : "Search index…"}
+              className={`flex-1 bg-transparent text-[11px] font-bold outline-none placeholder:font-normal min-w-0 ${tx.t1(l)}`}
+            />
+            {pcrSearchLoading && <RefreshCw className="w-3 h-3 animate-spin text-[#5194F6]" />}
+            {(pcrSearch || pcrCustomName) && !pcrSearchLoading && (
+              <button onClick={() => { setPcrSearch(""); setPcrCustomName(null); setPcrSearchOpen(false); }}>
+                <X className={`w-3 h-3 ${tx.t3(l)}`} />
+              </button>
+            )}
+          </div>
+          {pcrSearchOpen && (
+            <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border shadow-xl z-50 overflow-hidden max-h-56 overflow-y-auto ${l ? "bg-white border-slate-200" : "bg-[#0c1a2e] border-[#1e3a5f]/50"}`}>
+              {pcrSearchLoading && <div className={`px-4 py-3 text-xs flex items-center gap-2 ${tx.t3(l)}`}><RefreshCw className="w-3 h-3 animate-spin" />Searching…</div>}
+              {!pcrSearchLoading && pcrResults.length === 0 && pcrSearch.length > 0 && (
+                <div className={`px-4 py-3 text-xs ${tx.t3(l)}`}>No results</div>
+              )}
+              {!pcrSearchLoading && !pcrSearch && (
+                <div className={`sticky top-0 px-3 pt-2 pb-1 text-[9px] font-bold uppercase tracking-wider ${l ? "bg-white text-slate-400" : "bg-[#0c1a2e] text-slate-500"}`}>F&amp;O Underlyings</div>
+              )}
+              {!pcrSearchLoading && pcrResults.map(f => (
+                <button key={f.key + f.ex} onMouseDown={() => {
+                  setPcrCustomName(f.key);
+                  setPcrSearch("");
+                  setPcrSearchOpen(false);
+                }}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs transition-colors ${l ? "hover:bg-slate-50" : "hover:bg-white/[0.04]"}`}>
+                  <div className="text-left">
+                    <p className={`font-black ${tx.t1(l)}`}>{f.key}</p>
+                    <p className={`text-[10px] ${tx.t3(l)}`}>{f.label}</p>
+                  </div>
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${l ? "bg-slate-100 text-slate-500 border-slate-200" : "bg-white/5 text-slate-400 border-[#1e3a5f]/50"}`}>{f.ex}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {expiry && <span className={`text-[10px] ml-auto shrink-0 ${tx.t3(l)}`}>Expiry: {expiry}</span>}
         <button onClick={refresh}>
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""} ${tx.t3(l)}`} />
         </button>
@@ -2187,7 +2596,7 @@ function PcrMaxPainWidget({ ticks }: { ticks: any }) {
           {pcrState && (
             <div className={`px-5 py-2 border-t text-xs flex items-center gap-2 ${l ? "border-slate-100 bg-slate-50" : "border-[#1e3a5f]/50 bg-[#070e1a]"}`}>
               <span className={`font-bold ${pcrState.cls}`}>● {pcrState.label}</span>
-              <span className={`${tx.t3(l)}`}>· PCR &gt;1.0 = more puts = bullish sentiment · Max Pain = gravity for expiry price</span>
+              {/* <span className={`${tx.t3(l)}`}>· PCR &gt;1.0 = more puts = bullish sentiment · Max Pain = gravity for expiry price</span> */}
             </div>
           )}
 
@@ -2239,6 +2648,12 @@ const MACRO_FALLBACK = {
 function MacroSection() {
   const l = useIL();
   const { data, loading, error, refresh } = useAPI<any>("/kite/macro", []);
+
+  // Auto-refresh every 5 minutes for live data
+  useEffect(() => {
+    const id = setInterval(() => refresh(), 5 * 60_000);
+    return () => clearInterval(id);
+  }, [refresh]);
 
   const inrUsd = data?.inr_usd ?? null;
 
@@ -2302,7 +2717,7 @@ function MacroSection() {
   return (
     <section className="mb-8">
       <SecHead id="macro" icon={Globe2} title="Macro Indicators"
-        sub="INR/USD · RBI Rate · CPI · GDP · Bond Yield" />
+ />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-2">
         {loading
@@ -2333,8 +2748,11 @@ function MacroSection() {
         </div>
       )}
 
-      <div className={`mt-1 text-[10px] ${tx.t3(l)}`}>
-        INR/USD: live (Yahoo). Bond yield & RBI rate: live when available, fallback to last known values. CPI/GDP: MOSPI/NSO annual data.
+      <div className={`mt-1 text-[10px] flex items-center gap-1 ${tx.t3(l)}`}>
+        INR/USD: live (Yahoo). Bond yield &amp; RBI rate: live when available, fallback to last known values. CPI/GDP: MOSPI/NSO annual data.
+        <button onClick={refresh} className={`ml-auto flex items-center gap-1 px-2 py-0.5 rounded border text-[9px] font-bold transition-colors ${l ? "bg-white border-slate-200 text-slate-500 hover:border-slate-300" : "bg-[#0c1a2e] border-[#1e3a5f]/50 text-slate-500 hover:text-slate-400"}`}>
+          <RefreshCw className={`w-2.5 h-2.5 ${loading ? "animate-spin" : ""}`} />Refresh
+        </button>
       </div>
     </section>
   );
@@ -2435,32 +2853,40 @@ export default function DomesticView() {
               onClick={() => setSidebar(v => !v)}>
               {sidebar ? <X className={`w-4 h-4 ${tx.t1(l)}`} /> : <Menu className={`w-4 h-4 ${tx.t1(l)}`} />}
             </button>
-            {/* Market status badge */}
-            <span className={`text-[9px] font-black px-2 py-1 rounded-md border shrink-0 ${mktOpen && connected
+
+            {/* 1. Indian Market Open/Closed badge */}
+            <span className={`flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-md border shrink-0 ${
+              mktOpen
                 ? l ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
                 : l ? "bg-slate-50 border-slate-100 text-slate-400" : "bg-[#1e3a5f]/40 border-[#1e3a5f]/50 text-slate-500"
-              }`}>{mktOpen ? (connected ? "● LIVE" : "○ CONNECTING…") : "MARKET CLOSED"}</span>
-            {/* Search bar — takes remaining space */}
-            <div className="flex-1 min-w-0">
-              <SearchBar rawTicks={rawTicks} onResult={setSearchResult} />
-            </div>
-            {/* Right side — clock on sm+, connection on md+ */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              {/* {connected && instrCount > 0 && (
-                <div className={`hidden md:flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md border ${l ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"}`}>
-                  <Activity className="w-3 h-3" />
-                  <span>{instrCount}</span>
-                </div>
-              )} */}
-              {!connected && (
-                <div className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-1 rounded-md border ${l ? "bg-red-50 border-red-200 text-red-600" : "bg-red-500/10 border-red-500/20 text-red-400"}`}>
-                  <WifiOff className="w-3 h-3" />
-                </div>
-              )}
-              <div className={`hidden sm:flex items-center gap-1 text-[10px] ${tx.t3(l)}`}>
-                <Clock className="w-3 h-3" />
-                <span className="tabular-nums">{now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}</span>
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${mktOpen ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+              <span className="hidden xs:inline">Indian Mkt · </span>{mktOpen ? "Open" : "Closed"}
+            </span>
+
+            {/* 2. NSE/BSE timing — hidden on smallest screens */}
+            <span className={`hidden sm:block text-[9px] font-semibold shrink-0 whitespace-nowrap ${tx.t3(l)}`}>
+              NSE/BSE · 9:15–15:30
+            </span>
+
+            {/* 3. Search bar — centered with flex-1 and mx-auto */}
+            <div className="flex-1 flex justify-center min-w-0">
+              <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg">
+                <SearchBar rawTicks={rawTicks} onResult={setSearchResult} />
               </div>
+            </div>
+
+            {/* Offline indicator */}
+            {!connected && (
+              <div className={`flex items-center gap-1 text-[9px] font-bold px-1.5 py-1 rounded-md border shrink-0 ${l ? "bg-red-50 border-red-200 text-red-600" : "bg-red-500/10 border-red-500/20 text-red-400"}`}>
+                <WifiOff className="w-3 h-3" />
+              </div>
+            )}
+
+            {/* 4. Current Time */}
+            <div className={`flex items-center gap-1 text-[10px] shrink-0 ${tx.t3(l)}`}>
+              <Clock className="w-3 h-3" />
+              <span className="tabular-nums">{now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}</span>
             </div>
           </div>
         </div>
@@ -2478,20 +2904,8 @@ export default function DomesticView() {
               <SearchResultCard item={searchResult} onClose={() => setSearchResult(null)} rawTicks={rawTicks} />
             )}
 
-            <MarketStatusWidget connected={connected} />
-
-            {/* Overview: only show prompt when no stock searched */}
-            <div id="overview" className="scroll-mt-24 mb-5">
-              {!searchResult && (
-                <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${tx.card(l)}`}>
-                  <Search className={`w-5 h-5 opacity-25 shrink-0 ${tx.t3(l)}`} />
-                  <div className="min-w-0">
-                    <p className={`text-sm font-bold truncate ${tx.t1(l)}`}>Search a stock or index to view its chart</p>
-                    <p className={`text-[11px] ${tx.t3(l)}`}>e.g. RELIANCE, TCS, NIFTY 50</p>
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Overview anchor */}
+            <div id="overview" className="scroll-mt-24" />
 
 
             <BreadthVixSection ticks={ticks} />

@@ -687,8 +687,8 @@ const EducationView = () => {
                   ].map(({ label, tab }) => (
                     <button
                       key={tab}
-                      onClick={() => { setActiveTab(tab); setActiveNavKey(tab); }}
-                      className="px-5 py-2 rounded-full text-sm font-semibold transition-all hover:scale-105"
+                     
+                      className="px-5 py-2 rounded-full text-sm font-semibold transition-all"
                       style={activeTab === tab
                         ? {
                             background: tab === 'financial' ? 'rgba(59,130,246,0.15)' : 'rgba(139,92,246,0.15)',

@@ -38,9 +38,11 @@ import CommoditiesView from "@/views/Commoditiesview";
 import AdminDashboard from "./components/Admindashboard";
 import CheckoutPage from "./components/Checkoutpage";
 import EventsView from "./views/Eventsview";
+import { EducationDetailView } from "./views/Educationdetailview";
+import AdminEducationSeed from "./admin/AdminEducationSeed";
 
 // ── Education sub-pages (NEW) ─────────────────────────────────────────────────
-import EducationDetailView from "@/views/Educationdetailview";
+
 
 
 const queryClient = new QueryClient();
@@ -59,6 +61,7 @@ const App = () => (
               <Route path="/" element={<HomeController />} />
               <Route path="/domestic" element={<DomesticController />} />
               <Route path="/global" element={<GlobalController />} />
+              <Route path="/admin/education-seed" element={<AdminEducationSeed />} />
 
               {/* /markets → Full Commodities & ETFs view */}
               <Route path="/markets" element={<CommoditiesView />} />
@@ -72,7 +75,8 @@ const App = () => (
               <Route path="/education" element={<EducationView />} />
               
               {/* "Start Learning" detail page */}
-              <Route path="/education/:categoryId" element={<EducationDetailView />} />
+              <Route path="/education/:categoryId" element={<EducationDetailView/>} />
+
 
               <Route path="/team" element={<TeamView />} />
               <Route path="/blogs" element={<BlogsView />} />

@@ -340,94 +340,113 @@ function DomesticCard({ item }: { item: DomesticItem }) {
         onClick={() => setOpen(o => !o)}
         className={`w-full flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${l ? "bg-slate-50 text-slate-400 hover:text-slate-600" : "bg-[#070e1a]/50 text-slate-600 hover:text-slate-400"}`}
       >
-        {open ? "▲ Hide details" : "▼ COT · Seasonal · Risk Metrics"}
+        ▼ COT · Seasonal · Risk Metrics
       </button>
 
-      {/* Expanded detail */}
+      {/* ── Detail POPUP modal ── */}
       {open && q && (
-        <div className={`px-5 pb-5 pt-4 border-t space-y-4 ${DIV(l)}`}>
-          {/* COT */}
-          {item.cot !== undefined && (
-            <div>
-              <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${T3(l)}`}>CFTC COT Positioning</p>
-              <COTBar cot={item.cot} l={l} />
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 999, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          onClick={() => setOpen(false)}
+        >
+          <div
+            style={{ width: "100%", maxWidth: 520, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, background: l ? "#ffffff" : "#0c1a2e", border: l ? "1px solid rgba(226,232,240,0.9)" : "1px solid #1e3a5f", padding: 20, boxShadow: "0 24px 64px rgba(0,0,0,0.5)" }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div>
+                <p className={`text-xs font-black uppercase tracking-widest ${T3(l)}`}>{item.name}</p>
+                <p className={`text-base font-black ${T1(l)}`}>COT · Seasonal · Risk Metrics</p>
+              </div>
+              <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, lineHeight: 1 }} className={T3(l)}>✕</button>
             </div>
-          )}
-          {/* Futures curve detail */}
-          {item.futuresCurve && item.futuresCurve.type !== "Unknown" && (
-            <div className={`p-3 rounded-xl ${CARD2(l)}`}>
-              <div className="flex items-center justify-between mb-1">
-                <p className={`text-[10px] font-bold uppercase tracking-widest ${T3(l)}`}>Futures Curve</p>
-                <span className="text-xs font-bold" style={{ color: item.futuresCurve.color }}>{item.futuresCurve.type}</span>
-              </div>
-              <p className={`text-xs ${T2(l)}`}>{item.futuresCurve.desc}</p>
-              <p className={`text-sm font-bold mt-1 ${T1(l)}`}>Spread: ${item.futuresCurve.spread >= 0 ? "+" : ""}{item.futuresCurve.spread}</p>
-            </div>
-          )}
-          {/* Risk metrics */}
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { label: "Day Volatility", val: `${item.dayVolatility?.toFixed(2) ?? "—"}%`, color: "" },
-              { label: "Max DD 1Y",      val: `${item.maxDrawdown1Y ?? "—"}%`,              color: "text-red-400" },
-              { label: "Nifty Corr.",    val: `${(item.correlation ?? 0) > 0 ? "+" : ""}${item.correlation}`, color: (item.correlation ?? 0) > 0 ? "text-emerald-400" : "text-red-400" },
-              { label: "Import Dep.",    val: item.importDep,                               color: "" },
-            ].map(m => (
-              <div key={m.label} className={`p-2.5 rounded-xl ${CARD2(l)}`}>
-                <p className={`text-[10px] mb-0.5 ${T3(l)}`}>{m.label}</p>
-                <p className={`text-sm font-bold ${m.color || T1(l)}`}>{m.val}</p>
-              </div>
-            ))}
-          </div>
-          {/* Seasonal */}
-          {item.seasonal && (
-            <div className="grid grid-cols-2 gap-2">
-              <div className={`p-2.5 rounded-xl ${CARD2(l)}`}>
-                <p className={`text-[10px] ${T3(l)}`}>Best months</p>
-                <p className="text-sm font-bold text-emerald-400 mt-0.5">{item.seasonal.best}</p>
-              </div>
-              <div className={`p-2.5 rounded-xl ${CARD2(l)}`}>
-                <p className={`text-[10px] ${T3(l)}`}>Weak months</p>
-                <p className="text-sm font-bold text-red-400 mt-0.5">{item.seasonal.worst}</p>
-              </div>
-            </div>
-          )}
-          {/* Events */}
-          {item.eventSensitivity && item.eventSensitivity.length > 0 && (
-            <div>
-              <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${T3(l)}`}>Event Sensitivity</p>
-              <div className="flex flex-wrap gap-1.5">
-                {item.eventSensitivity.map(e => (
-                  <span key={e} className={`text-[10px] px-2.5 py-1 rounded-full ${CARD2(l)} ${T2(l)}`}>{e}</span>
-                ))}
-              </div>
-            </div>
-          )}
-          {/* Client positioning */}
-          {item.clientPositioning && (
-            <div className={`p-3 rounded-xl ${CARD2(l)}`}>
-              <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${T3(l)}`}>Client Category Positioning</p>
-              <div className="grid grid-cols-3 gap-2 text-center text-xs">
+
+            <div className="space-y-4">
+              {/* COT */}
+              {item.cot !== undefined && (
+                <div>
+                  <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${T3(l)}`}>CFTC COT Positioning</p>
+                  <COTBar cot={item.cot} l={l} />
+                </div>
+              )}
+              {/* Futures curve detail */}
+              {item.futuresCurve && item.futuresCurve.type !== "Unknown" && (
+                <div className={`p-3 rounded-xl ${CARD2(l)}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className={`text-[10px] font-bold uppercase tracking-widest ${T3(l)}`}>Futures Curve</p>
+                    <span className="text-xs font-bold" style={{ color: item.futuresCurve.color }}>{item.futuresCurve.type}</span>
+                  </div>
+                  <p className={`text-xs ${T2(l)}`}>{item.futuresCurve.desc}</p>
+                  <p className={`text-sm font-bold mt-1 ${T1(l)}`}>Spread: ${item.futuresCurve.spread >= 0 ? "+" : ""}{item.futuresCurve.spread}</p>
+                </div>
+              )}
+              {/* Risk metrics */}
+              <div className="grid grid-cols-2 gap-2">
                 {[
-                  { label: "Retail",        val: `${item.clientPositioning.retail}%`,        bias: item.clientPositioning.retailBias },
-                  { label: "HNI",           val: `${item.clientPositioning.hni}%`,            bias: item.clientPositioning.hniBias },
-                  { label: "Institutional", val: `${item.clientPositioning.institutional}%`,  bias: "" },
-                ].map(c => (
-                  <div key={c.label}>
-                    <p className={T3(l)}>{c.label}</p>
-                    <p className={`font-bold ${T1(l)}`}>{c.val}</p>
-                    {c.bias && <p className="text-[9px] text-[#5194F6]">{c.bias}</p>}
+                  { label: "Day Volatility", val: `${item.dayVolatility?.toFixed(2) ?? "—"}%`, color: "" },
+                  { label: "Max DD 1Y",      val: `${item.maxDrawdown1Y ?? "—"}%`,              color: "text-red-400" },
+                  { label: "Nifty Corr.",    val: `${(item.correlation ?? 0) > 0 ? "+" : ""}${item.correlation}`, color: (item.correlation ?? 0) > 0 ? "text-emerald-400" : "text-red-400" },
+                  { label: "Import Dep.",    val: item.importDep,                               color: "" },
+                ].map(m => (
+                  <div key={m.label} className={`p-2.5 rounded-xl ${CARD2(l)}`}>
+                    <p className={`text-[10px] mb-0.5 ${T3(l)}`}>{m.label}</p>
+                    <p className={`text-sm font-bold ${m.color || T1(l)}`}>{m.val}</p>
                   </div>
                 ))}
               </div>
+              {/* Seasonal */}
+              {item.seasonal && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className={`p-2.5 rounded-xl ${CARD2(l)}`}>
+                    <p className={`text-[10px] ${T3(l)}`}>Best months</p>
+                    <p className="text-sm font-bold text-emerald-400 mt-0.5">{item.seasonal.best}</p>
+                  </div>
+                  <div className={`p-2.5 rounded-xl ${CARD2(l)}`}>
+                    <p className={`text-[10px] ${T3(l)}`}>Weak months</p>
+                    <p className="text-sm font-bold text-red-400 mt-0.5">{item.seasonal.worst}</p>
+                  </div>
+                </div>
+              )}
+              {/* Events */}
+              {item.eventSensitivity && item.eventSensitivity.length > 0 && (
+                <div>
+                  <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${T3(l)}`}>Event Sensitivity</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {item.eventSensitivity.map(e => (
+                      <span key={e} className={`text-[10px] px-2.5 py-1 rounded-full ${CARD2(l)} ${T2(l)}`}>{e}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Client positioning */}
+              {item.clientPositioning && (
+                <div className={`p-3 rounded-xl ${CARD2(l)}`}>
+                  <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${T3(l)}`}>Client Category Positioning</p>
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                    {[
+                      { label: "Retail",        val: `${item.clientPositioning.retail}%`,        bias: item.clientPositioning.retailBias },
+                      { label: "HNI",           val: `${item.clientPositioning.hni}%`,            bias: item.clientPositioning.hniBias },
+                      { label: "Institutional", val: `${item.clientPositioning.institutional}%`,  bias: "" },
+                    ].map(c => (
+                      <div key={c.label}>
+                        <p className={T3(l)}>{c.label}</p>
+                        <p className={`font-bold ${T1(l)}`}>{c.val}</p>
+                        {c.bias && <p className="text-[9px] text-[#5194F6]">{c.bias}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Basis spread */}
+              {item.basisSpread != null && (
+                <div className={`flex justify-between items-center text-xs p-2.5 rounded-xl ${CARD2(l)}`}>
+                  <span className={T3(l)}>Basis Spread (Spot–Futures)</span>
+                  <span className={`font-bold ${T1(l)}`}>≈ {fmtINR(item.basisSpread)}</span>
+                </div>
+              )}
             </div>
-          )}
-          {/* Basis spread */}
-          {item.basisSpread != null && (
-            <div className={`flex justify-between items-center text-xs p-2.5 rounded-xl ${CARD2(l)}`}>
-              <span className={T3(l)}>Basis Spread (Spot–Futures)</span>
-              <span className={`font-bold ${T1(l)}`}>≈ {fmtINR(item.basisSpread)}</span>
-            </div>
-          )}
+          </div>
         </div>
       )}
     </div>
@@ -1119,9 +1138,7 @@ export default function CommoditiesView() {
                   <div className={`rounded-2xl p-3 ${CARD(l)}`}>
                     <div className="flex items-center justify-between mb-2">
                       <h3 className={`text-base font-black ${T1(l)}`}>CFTC COT Report Summary</h3>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(81,148,246,0.12)", color: "#5194F6" }}>
-                        Weekly
-                      </span>
+                     
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {Object.entries(intel.cotSummary).map(([key, val]) =>
@@ -1347,10 +1364,9 @@ export default function CommoditiesView() {
             {/* ══ TAB 4: Global ETFs ══ */}
             {tab === "global-etfs" && (
               <div className="space-y-8">
-                {/* FIX: removed long ticker subtitle line */}
                 <SecHead
                   title="Global ETFs (US Markets)"
-                  sub="Precious metals · Broad commodity · Energy ETFs — AUM · Expense Ratio · Tracking Efficiency · Risk-Adjusted Returns"
+                  sub="Precious metals · Broad commodity · Energy ETFs"
                 />
 
                 {loading && !data ? (
@@ -1640,7 +1656,7 @@ export default function CommoditiesView() {
                     style={{ background: `${regime.color}0a`, border: `1px solid ${regime.color}25` }}
                   >
                     <div className="flex items-start justify-between mb-1">
-                      <h3 className={`text-base font-black ${T1(l)}`}>
+                      <h3 className={`text-base font-black ${T1(l)}`} style={{ color: l ? undefined : "#ffffff" }}>
                         5. {regime.emoji} Regime Strategy: {regime.label}
                       </h3>
                       <a

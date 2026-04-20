@@ -20,47 +20,54 @@ const YF_HEADERS = {
 // ─────────────────────────────────────────────────────────────────────────────
 // PERIOD_PARAMS — matches Yahoo Finance's exact tab set:
 //   1D | 5D | 1M | 6M | YTD | 1Y | 5Y | MAX
-//
-// KEY DISTINCTION:
-//   "interval" = size of each individual candle bar
-//   "range"    = how far back in time we fetch data
-//
-// Yahoo Finance's free/unofficial API returns 15-min DELAYED data for
-// US equities. This is their policy — it cannot be bypassed without a
-// paid provider (Twelve Data Pro, Polygon.io, etc.).
-// We expose `dataDelayMinutes` in every response so the frontend can
-// show a "Prices delayed 15 min" disclaimer (standard industry practice).
 // ─────────────────────────────────────────────────────────────────────────────
 const PERIOD_PARAMS = {
-  // KEY      interval   range     candles you get        Yahoo Finance tab
   "1D":  { interval: "2m",   range: "1d"  },  // ~195 bars  → "1D"  tab
   "5D":  { interval: "15m",  range: "5d"  },  // ~130 bars  → "5D"  tab
   "1M":  { interval: "1d",   range: "1mo" },  // ~21 bars   → "1M"  tab
   "6M":  { interval: "1d",   range: "6mo" },  // ~126 bars  → "6M"  tab
   "YTD": { interval: "1d",   range: "ytd" },  // varies     → "YTD" tab
-  "1Y":  { interval: "1wk",  range: "1y"  },  // ~52 bars   → "1Y"  tab  ← was "1mo" (only 12 bars — wrong)
-  "5Y":  { interval: "1wk",  range: "5y"  },  // ~260 bars  → "5Y"  tab  ← was "3mo" (only 20 bars — too sparse)
+  "1Y":  { interval: "1wk",  range: "1y"  },  // ~52 bars   → "1Y"  tab
+  "5Y":  { interval: "1wk",  range: "5y"  },  // ~260 bars  → "5Y"  tab
   "MAX": { interval: "1mo",  range: "max" },  // all-time   → "MAX" tab
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CACHE TTL per period — intraday TTL is short (60s) so our server-side
-// cache doesn't add meaningfully to Yahoo's inherent 15-min delay.
-// Longer periods change slowly so longer TTLs are safe.
+// xAxisFormat hint — tells the frontend HOW to format X-axis labels
+// based on the period selected. Frontend must use `meta.timezone` for
+// correct exchange-local time display.
+//
+// FORMAT GUIDE for frontend:
+//   "time"     → HH:MM in exchange timezone  (1D, 5D)
+//   "date"     → "Apr 15" style              (1M, 6M, YTD)
+//   "monthyr"  → "Apr '24" style             (1Y, 5Y, MAX)
+// ─────────────────────────────────────────────────────────────────────────────
+const XAXIS_FORMAT = {
+  "1D":  "time",
+  "5D":  "time",
+  "1M":  "date",
+  "6M":  "date",
+  "YTD": "date",
+  "1Y":  "monthyr",
+  "5Y":  "monthyr",
+  "MAX": "monthyr",
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CACHE TTL per period
 // ─────────────────────────────────────────────────────────────────────────────
 const CACHE_TTL = {
-  "1D":   60  * 1000,         // 60 sec  — intraday: minimize added delay
-  "5D":   2   * 60 * 1000,   //  2 min
-  "1M":   30  * 60 * 1000,   // 30 min
-  "6M":   60  * 60 * 1000,   //  1 hr
-  "YTD":  60  * 60 * 1000,   //  1 hr
-  "1Y":   60  * 60 * 1000,   //  1 hr
-  "5Y":   60  * 60 * 1000,   //  1 hr
-  "MAX":  6   * 60 * 60 * 1000, // 6 hr — historical, almost never changes
+  "1D":   60  * 1000,
+  "5D":   2   * 60 * 1000,
+  "1M":   30  * 60 * 1000,
+  "6M":   60  * 60 * 1000,
+  "YTD":  60  * 60 * 1000,
+  "1Y":   60  * 60 * 1000,
+  "5Y":   60  * 60 * 1000,
+  "MAX":  6   * 60 * 60 * 1000,
 };
 
 // Yahoo's free API delays intraday data by 15 minutes for US equities.
-// We surface this so the frontend can show a disclaimer.
 const DATA_DELAY_MINUTES = 15;
 
 // Per-period cache: key = "SYMBOL_PERIOD"
@@ -91,6 +98,12 @@ async function fetchYahooHistory(symbol, period) {
       const timestamps = result.timestamp || [];
       const q          = result.indicators?.quote?.[0] || {};
 
+      // ── FIX: filter out pre-market / after-hours candles for intraday ──
+      // Yahoo sometimes returns candles outside regular trading hours.
+      // For 1D/5D we only show regular session: use meta.tradingPeriods if available.
+      const regularStart = result.meta?.currentTradingPeriod?.regular?.start ?? 0;
+      const regularEnd   = result.meta?.currentTradingPeriod?.regular?.end   ?? Infinity;
+
       const candles = timestamps
         .map((ts, i) => {
           const o = q.open?.[i];
@@ -98,6 +111,13 @@ async function fetchYahooHistory(symbol, period) {
           const l = q.low?.[i];
           const c = q.close?.[i];
           if (o == null || h == null || l == null || c == null) return null;
+
+          // ── FIX: For 1D/5D, skip candles outside regular market hours ──
+          if ((period === "1D" || period === "5D") && regularStart > 0) {
+            // ts is in seconds; regularStart/End are also seconds
+            if (ts < regularStart || ts > regularEnd) return null;
+          }
+
           // Decimal precision based on price magnitude
           const dp = c > 1000 ? 2 : c > 10 ? 3 : 4;
           return {
@@ -122,16 +142,22 @@ async function fetchYahooHistory(symbol, period) {
         interval,
         range,
         candles,
-        // Surface the delay so frontend shows a disclaimer
         dataDelayMinutes: DATA_DELAY_MINUTES,
+        // ── FIX: xAxisFormat tells frontend how to label X axis ──
+        xAxisFormat: XAXIS_FORMAT[period],
         meta: {
           price:         meta.regularMarketPrice,
           previousClose: meta.chartPreviousClose ?? meta.previousClose,
           high:          meta.regularMarketDayHigh,
           low:           meta.regularMarketDayLow,
           currency:      meta.currency,
+          // ── FIX: timezone is CRITICAL — frontend must use this ──
+          // e.g. "America/New_York" for US, "Europe/London" for LSE, "Asia/Tokyo" for TSE
           timezone:      meta.timezone,
           exchangeName:  meta.exchangeName,
+          // ── FIX: expose regular session start/end in ms for frontend ──
+          regularMarketStart: (meta.currentTradingPeriod?.regular?.start ?? 0) * 1000,
+          regularMarketEnd:   (meta.currentTradingPeriod?.regular?.end   ?? 0) * 1000,
         },
       };
     } catch (e) {
@@ -170,7 +196,6 @@ router.get("/history/:symbol", async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error(`[History] Failed ${symbol} ${period}:`, err.message);
-    // Return stale cache rather than a hard error — better UX
     if (cached) {
       console.log(`[History] Returning stale cache for ${cacheKey}`);
       return res.json({ ...cached.data, stale: true });

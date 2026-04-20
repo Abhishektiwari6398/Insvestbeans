@@ -9,16 +9,16 @@ import { IndexQuote, BondYield, RegionSummary, CandlePoint } from "@/services/gl
 import {
   TrendingUp, TrendingDown, Activity, Globe, Clock, MapPin,
   RefreshCw, AlertCircle, BarChart3, LineChart, Landmark,
-  Menu, X, ChevronRight, AlertTriangle,
+  Menu, X, ChevronRight, AlertTriangle, ExternalLink,
 } from "lucide-react";
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { useTheme } from "@/controllers/Themecontext";
 
-// ── Backend base URL (same as globalMarketsService) ──────────────
+// ── Backend base URL ──────────────────────────────────────────────
 const API_BASE = (import.meta.env.VITE_API_URL as string) || "http://localhost:8000";
 
-// ── Period tab definitions — mirrors Yahoo Finance exactly ────────
+// ── Period tab definitions ────────────────────────────────────────
 const PERIODS = [
   { key: "1D",  label: "1D"  },
   { key: "5D",  label: "5D"  },
@@ -42,6 +42,7 @@ const MARKETS: MktInfo[] = [
   { name:"London (LSE)",      short:"London",    flag:"🇬🇧", code:"GB", tz:"GMT (UTC+0)",    localTime:"08:00–16:30", openUTC:480, closeUTC:990,  color:"#8e44ad" },
   { name:"NYSE / NASDAQ",     short:"New York",  flag:"🇺🇸", code:"US", tz:"EST (UTC-5)",    localTime:"09:30–16:00", openUTC:870, closeUTC:1260, color:"#2563eb" },
 ];
+
 function mktSt(m: MktInfo): "open"|"pre"|"closed" {
   const n = new Date(), day = n.getUTCDay();
   if (day===0||day===6) return "closed";
@@ -50,11 +51,21 @@ function mktSt(m: MktInfo): "open"|"pre"|"closed" {
   if (mins>=m.openUTC-30&&mins<m.openUTC) return "pre";
   return "closed";
 }
+
 function localNow(m: MktInfo): string {
   const off: Record<string,number> = {"JST (UTC+9)":9,"CST (UTC+8)":8,"HKT (UTC+8)":8,"IST (UTC+5:30)":5.5,"CET (UTC+1)":1,"GMT (UTC+0)":0,"EST (UTC-5)":-5};
   const d = new Date(Date.now()+(off[m.tz]??0)*3_600_000);
   return d.getUTCHours().toString().padStart(2,"0")+":"+d.getUTCMinutes().toString().padStart(2,"0");
 }
+
+// ── FIX: Correct tzOffset per region for chart X-axis ─────────────
+// These map to the primary exchange timezone in each region.
+// US  = EST  = UTC-5  (NYSE/NASDAQ: 09:30–16:00 EST)
+// EU  = CET  = UTC+1  (XETRA/LSE: 08:00–17:30 local)
+// Asia= CST  = UTC+8  (SSE/HKEX: 09:30–16:00 CST), JST=UTC+9 for Nikkei
+// We pass -5 for US, +1 for Europe, +8 for Asia (most markets)
+// Nikkei uses +9 but since MktSelector groups them, we use +8 as average.
+// Individual overrides can be added if needed.
 
 const NAV_SECTIONS = [
   { id:"section-hours",   label:"Market Hours",   icon: Globe     },
@@ -69,7 +80,7 @@ function jumpTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior:"smooth", block:"start" });
 }
 
-// ── Theme tokens — identical to DomesticView ──────────────────────
+// ── Theme tokens ──────────────────────────────────────────────────
 const useIL = () => { const { theme } = useTheme(); return theme === "light"; };
 const tx = {
   bg:      (l:boolean) => l ? "bg-[#f5f4f0]"   : "bg-[#07111b]",
@@ -124,10 +135,6 @@ function SecHead({ id, icon:Icon, title, sub }: { id:string; icon:any; title:str
   );
 }
 
-// ── (Chart handled by CleanChart component from backend candles) ──
-
-
-
 // ══════════════════════════════════════════════════════════════════
 // SIDEBAR
 // ══════════════════════════════════════════════════════════════════
@@ -138,24 +145,10 @@ function SideNav({ active, onSelect, usMarkets, euMarkets, asMarkets, refreshing
 }) {
   const l = useIL();
   const ago = (ts:number) => { const s=Math.floor((Date.now()-ts)/1000); if(s<60) return `${s}s ago`; return `${Math.floor(s/60)}m ago`; };
-
-  // Collapsible state for each market group
   const [openGroups, setOpenGroups] = useState<Record<string,boolean>>({ "🇺🇸 US": false, "🇪🇺 Europe": false, "🌏 Asia": false });
- 
-
-
 
   return (
     <div className="flex flex-col h-full py-1.5 ">
-      {/* Live badge */}
-      {/* <div className={`mx-3 mb-1.5 rounded-lg border px-3 py-1.5 ${l?"bg-gray-50 border-gray-100":"bg-[#0a1826] border-[#1a2d3f]"}`}>
-        <div className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#0A3656] dark:bg-[#74A8C9] animate-pulse"/>
-          <span className={`text-[9px] font-black uppercase tracking-widest ${l?"text-gray-600":"text-[#c0d8ea]"}`}>Global Markets</span>
-          {lastUpdated && <span className={`text-[9px] ml-auto ${l?"text-gray-400":"text-[#7a9ab5]"}`}>{ago(lastUpdated)}</span>}
-        </div>
-      </div> */}
-
       <nav className="space-y-px px-2 mt-3">
         {NAV_SECTIONS.map(s => (
           <button key={s.id}
@@ -172,9 +165,7 @@ function SideNav({ active, onSelect, usMarkets, euMarkets, asMarkets, refreshing
         ))}
       </nav>
 
-     
-
-      <div className={`shrink-0 border-t px-3 py-3 ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
+      <div className={`shrink-0 border-t px-3 py-3 mt-auto ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
         <button onClick={onRefresh} disabled={refreshing}
           className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-bold text-white disabled:opacity-50 bg-[#0A3656] hover:bg-[#072a42] transition-colors">
           <RefreshCw className={`w-3 h-3 ${refreshing?"animate-spin":""}`}/> Refresh
@@ -196,7 +187,6 @@ function MktHoursSection() {
     <div id="section-hours" className="scroll-mt-24 mb-8">
       <SecHead id="section-hours-h" icon={Globe} title="World Market Hours"/>
       <Card className="overflow-hidden">
-        {/* Mobile: horizontal scroll strip. Desktop: 7-col grid */}
         <div className={`flex lg:grid lg:grid-cols-7 overflow-x-auto scrollbar-none divide-x ${l?"divide-gray-100":"divide-[#1a2d3f]"}`}>
           {MARKETS.map(m => {
             const st = mktSt(m);
@@ -208,7 +198,6 @@ function MktHoursSection() {
                   : isPre ? l?"bg-amber-50/50":"bg-amber-900/10" : ""
                 } ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
 
-                {/* Flag badge — uses flagcdn.com image so it renders on ALL browsers/OS including Windows Chrome */}
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-1.5 overflow-hidden border
                   ${isOpen ? "border-emerald-500/40 ring-1 ring-emerald-500/20"
                   : isPre  ? "border-amber-500/40 ring-1 ring-amber-500/20"
@@ -222,32 +211,23 @@ function MktHoursSection() {
                     height={30}
                     style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                     onError={(e) => {
-                      // Fallback to emoji text if CDN image fails
                       const t = e.currentTarget.parentElement;
                       if (t) t.innerHTML = `<span class="market-flag">${m.flag}</span>`;
                     }}
                   />
                 </div>
 
-                {/* City name */}
                 <p className={`text-[11px] font-extrabold leading-none mb-0.5 ${l?"text-gray-800":"text-white"}`}>{m.short}</p>
-                {/* Timezone */}
                 <p className={`text-[9px] font-medium mb-1.5 leading-tight ${l?"text-gray-500":"text-[#7a9ab5]"}`}>{m.tz}</p>
 
-                {/* Status pill */}
                 <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wide mb-1.5 ${
                   isOpen ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/40" :
                   isPre  ? "bg-amber-500/25 text-amber-300 border border-amber-500/40" :
                   l      ? "bg-gray-100 text-gray-600 border border-gray-200" : "bg-white/10 text-[#8ab0cc] border border-white/15"
                 }`}>{isOpen?"● OPEN":isPre?"◐ PRE":"CLOSED"}</span>
 
-                {/* Clock time */}
                 <p className={`text-[13px] font-black tabular-nums leading-none ${isOpen?"text-emerald-400":isPre?"text-amber-400":l?"text-gray-700":"text-[#9ec4dc]"}`}>{localNow(m)}</p>
-
-                {/* Trading hours */}
                 <p className={`text-[8px] mt-0.5 font-medium ${l?"text-gray-400":"text-[#5a7a92]"}`}>{m.localTime}</p>
-
-                {/* Color bar */}
                 <div className="h-0.5 w-full rounded-full mt-2" style={{ background: isOpen?m.color:isPre?"#f59e0b":l?"#e5e7eb":"rgba(255,255,255,0.07)", opacity: isOpen?1:0.35 }}/>
               </div>
             );
@@ -259,7 +239,7 @@ function MktHoursSection() {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// MARKET SELECTOR — with period tabs + history fetch + delay badge
+// MARKET SELECTOR
 // ══════════════════════════════════════════════════════════════════
 function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym, tzOffset = 0, regionSummary }: {
   sectionId:string; navId:string; title:string; markets:IndexQuote[]; icon?:any;
@@ -270,28 +250,21 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym,
   const l = useIL();
   const [sel, setSel]           = useState(0);
   const [period, setPeriod]     = useState<Period>("1D");
-  // chartCandles: what the chart actually renders. Starts as the candles
-  // that arrived with the global snapshot (already 1D data), then
-  // gets swapped out whenever the user picks a different period tab.
   const [chartCandles, setChartCandles]   = useState<CandlePoint[]>([]);
   const [chartLoading, setChartLoading]   = useState(false);
   const [fetchError,   setFetchError]     = useState(false);
-  // Track the most recent fetch so stale responses are discarded
   const fetchIdRef = useRef(0);
 
-  // Auto-select market when parent passes a symbol
   useEffect(() => {
     if (!autoSym) return;
     const i = markets.findIndex(m => m.symbol === autoSym);
     if (i !== -1) setSel(i);
   }, [autoSym, markets]);
 
-  // Seed with whatever the global snapshot already provides (fast first paint)
   useEffect(() => {
     setChartCandles(markets[sel]?.candles ?? []);
   }, [sel, markets]);
 
-  // ── Fetch candles from the history endpoint whenever symbol or period changes
   const fetchCandles = useCallback(async (symbol: string, p: Period) => {
     const id = ++fetchIdRef.current;
     setChartLoading(true);
@@ -302,20 +275,17 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym,
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-      // Discard if a newer fetch has started
       if (id !== fetchIdRef.current) return;
       setChartCandles(json.candles ?? []);
     } catch (e) {
       if (id !== fetchIdRef.current) return;
       console.error(`[MktSelector] history fetch failed ${symbol} ${p}:`, e);
       setFetchError(true);
-      // Keep whatever candles we already have — don't go blank
     } finally {
       if (id === fetchIdRef.current) setChartLoading(false);
     }
   }, []);
 
-  // Trigger fetch on market switch or period change
   useEffect(() => {
     const sym = markets[sel]?.symbol;
     if (!sym) return;
@@ -366,7 +336,6 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym,
 
         {/* ── Period tab row + delay badge ────────────────────── */}
         <div className={`flex items-center justify-between px-4 pt-3 pb-2 border-b ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
-          {/* Period tabs — matches Yahoo Finance */}
           <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-none">
             {PERIODS.map(({ key, label }) => (
               <button
@@ -387,7 +356,7 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym,
             ))}
           </div>
 
-          {/* ── 15-min delay badge — always visible, honest ────── */}
+          {/* ── 15-min delay badge ────── */}
           <div className={`flex items-center gap-1 shrink-0 ml-3 px-2 py-0.5 rounded-md border text-[9px] font-bold uppercase tracking-wide
             ${l
               ? "bg-amber-50 border-amber-200 text-amber-700"
@@ -404,7 +373,6 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym,
           className="cursor-pointer relative"
           title="Tap to open full TradingView chart"
         >
-          {/* Loading shimmer overlay — shown while fetching new period */}
           {chartLoading && (
             <div className={`absolute inset-0 z-10 flex items-center justify-center rounded-b-xl
               ${l ? "bg-white/70" : "bg-[#07111b]/70"} backdrop-blur-[2px]`}>
@@ -417,7 +385,6 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym,
             </div>
           )}
 
-          {/* Fetch error banner — non-blocking, chart still shows stale data */}
           {fetchError && !chartLoading && (
             <div className={`mx-4 mt-3 flex items-center gap-2 px-3 py-2 rounded-lg border text-[10px] font-semibold
               ${l
@@ -457,7 +424,6 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym,
         </div>
       </Card>
 
-      {/* ── Regional Summary (Fix 5: show per-region performance here) ── */}
       {regionSummary && <div className="mt-4">{regionSummary}</div>}
     </div>
   );
@@ -521,7 +487,19 @@ export default function GlobalView() {
   const asM  = useMemo(()=>data?.indices?.asia   || [], [data?.indices?.asia]);
   const bnds = useMemo(()=>data?.bonds           || [], [data?.bonds]);
   const regs = useMemo(()=>data?.regions         || [], [data?.regions]);
-  const evts = useMemo(()=>data?.events          || [], [data?.events]);
+
+  // ── FIX: Filter events to next 365 days from today ───────────────
+  const evts = useMemo(() => {
+    const all = data?.events || [];
+    const today     = new Date(); today.setHours(0,0,0,0);
+    const yearAhead = new Date(); yearAhead.setDate(today.getDate()+365); yearAhead.setHours(23,59,59,999);
+    return all
+      .filter(ev => {
+        const d = new Date(ev.date);
+        return !isNaN(d.getTime()) && d >= today && d <= yearAhead;
+      })
+      .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [data?.events]);
 
   const doRefresh = async () => {
     setRefreshing(true);
@@ -542,10 +520,10 @@ export default function GlobalView() {
           display: inline-block;
           font-size: 22px;
           line-height: 1;
-          /* Force color emoji rendering — prevents monochrome fallback */
           -webkit-text-stroke: 0;
           text-rendering: optimizeLegibility;
         }
+        .event-card-link:hover { opacity: 0.85; }
       `}</style>
       <div className={`min-h-screen ${tx.bg(l)}`}>
 
@@ -562,11 +540,10 @@ export default function GlobalView() {
                 l?"bg-[#0A3656]/10 border-[#0A3656]/30 text-[#0A3656]":"bg-[#74A8C9]/10 border-[#74A8C9]/25 text-[#74A8C9]"
               }`}>● LIVE</span>
               <h1 className={`text-sm font-black hidden sm:block ${tx.t1(l)}`}>
-                Global Markets 
+                Global Markets
               </h1>
             </div>
             <div className="flex items-center gap-2">
-              {/* ── Global delayed data notice in topbar ── */}
               <span className={`hidden md:flex items-center gap-1 text-[9px] font-bold px-2 py-1 rounded-md border
                 ${l
                   ? "bg-amber-50 border-amber-200 text-amber-700"
@@ -611,14 +588,13 @@ export default function GlobalView() {
 
             <MktHoursSection/>
 
-            {/* US Markets + Bonds & VIX (Fix 4: bonds move here) */}
+            {/* US Markets */}
             {isLoading ? <div className={`h-96 rounded-xl animate-pulse mb-8 ${l?"bg-gray-100":"bg-[#1a2d3f]/40"}`}/> :
               <MktSelector sectionId="section-us" navId="section-us-h" title="United States Markets"
                 markets={usM} icon={BarChart3} onChart={openChart} autoSym={tickerSym??undefined}
-                tzOffset={-5}
+                tzOffset={-5}  // ── FIX: EST = UTC-5 → shows 09:30 for NYSE open ──
                 regionSummary={
                   <div>
-                    {/* Fix 5: US Regional Summary */}
                     {regs.filter(r=>r.name==="United States").map((r:RegionSummary) => {
                       const p = r.avgChange>=0;
                       return (
@@ -649,7 +625,7 @@ export default function GlobalView() {
                         </Card>
                       );
                     })}
-                    {/* Fix 4: Bonds & VIX under US section */}
+                    {/* Bonds & VIX under US section */}
                     <div id="section-bonds" className="scroll-mt-24">
                       <SecHead id="section-bonds-h" icon={Landmark} title="Bonds & Volatility"/>
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -708,7 +684,7 @@ export default function GlobalView() {
             {isLoading ? <div className={`h-96 rounded-xl animate-pulse mb-8 ${l?"bg-gray-100":"bg-[#1a2d3f]/40"}`}/> :
               <MktSelector sectionId="section-europe" navId="section-europe-h" title="European Markets"
                 markets={euM} icon={LineChart} onChart={openChart} autoSym={tickerSym??undefined}
-                tzOffset={1}
+                tzOffset={1}  // ── FIX: CET = UTC+1 → shows 09:00 for XETRA open ──
                 regionSummary={
                   regs.filter(r=>r.name==="Europe").map((r:RegionSummary) => {
                     const p = r.avgChange>=0;
@@ -748,7 +724,7 @@ export default function GlobalView() {
             {isLoading ? <div className={`h-96 rounded-xl animate-pulse mb-8 ${l?"bg-gray-100":"bg-[#1a2d3f]/40"}`}/> :
               <MktSelector sectionId="section-asia" navId="section-asia-h" title="Asia Pacific Markets"
                 markets={asM} icon={Globe} onChart={openChart} autoSym={tickerSym??undefined}
-                tzOffset={8}
+                tzOffset={8}  // ── FIX: CST/HKT = UTC+8 → shows 09:30 for SSE/HKEX open ──
                 regionSummary={
                   regs.filter(r=>r.name==="Asia").map((r:RegionSummary) => {
                     const p = r.avgChange>=0;
@@ -784,30 +760,72 @@ export default function GlobalView() {
               />
             }
 
-            {/* Events — Fix 6: show next 365 days, no slice limit */}
-            {evts.length>0 && (
+            {/* ── FIX: Events Calendar — next 365 days, clickable ── */}
+            {evts.length > 0 && (
               <div className="mb-8">
-                <SecHead id="section-events" icon={Activity} title="Global Events Calendar"/>
-                <p className={`text-xs mb-3 ${tx.t2(l)}`}>Showing events for the next 365 days from today</p>
+                <SecHead id="section-events" icon={Activity} title="Global Events Calendar"
+                  sub={`Next 365 days · ${evts.length} events`}/>
+                <p className={`text-xs mb-3 ${tx.t2(l)}`}>
+                  Showing all events from today through the next 365 days · Click any event to learn more
+                </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {evts.map((ev:any, i:number) => {
+                  {evts.map((ev: any, i: number) => {
                     const impCls: Record<string,{bg:string;tc:string}> = {
-                      High:   { bg:l?"bg-red-50 border-red-200":"bg-red-900/10 border-red-800/20",      tc:l?"text-red-700":"text-red-400"     },
-                      Medium: { bg:l?"bg-amber-50 border-amber-200":"bg-amber-900/10 border-amber-800/20", tc:l?"text-amber-700":"text-amber-400" },
+                      High:   { bg:l?"bg-red-50 border-red-200":"bg-red-900/10 border-red-800/20",            tc:l?"text-red-700":"text-red-400"     },
+                      Medium: { bg:l?"bg-amber-50 border-amber-200":"bg-amber-900/10 border-amber-800/20",    tc:l?"text-amber-700":"text-amber-400" },
                       Low:    { bg:l?"bg-emerald-50 border-emerald-200":"bg-emerald-900/10 border-emerald-800/20", tc:l?"text-emerald-700":"text-emerald-400" },
                     };
-                    const s = impCls[ev.impact]||impCls.Low;
+                    const s = impCls[ev.impact] || impCls.Low;
                     const d = new Date(ev.date);
-                    const ds = isNaN(d.getTime())?ev.date:d.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
+                    const ds = isNaN(d.getTime())
+                      ? ev.date
+                      : d.toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" });
+
+                    // ── FIX: Generate Google search URL if no url provided ──
+                    const eventUrl = ev.url ||
+                      `https://www.google.com/search?q=${encodeURIComponent(ev.title + ' ' + ds)}`;
+
                     return (
-                      <Card key={i} className="p-3.5">
-                        <div className="flex items-center gap-2 flex-wrap mb-2">
-                          <span className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full border ${s.bg} ${s.tc}`}>{ev.impact}</span>
-                          <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full border ${l?"bg-gray-50 text-gray-600 border-gray-100":"bg-white/5 text-[#5a7a92] border-[#1a2d3f]"}`}>{ev.region}</span>
-                          <span className={`ml-auto text-xs ${tx.t3(l)}`}>{ds}</span>
-                        </div>
-                        <p className={`font-semibold text-sm leading-snug ${tx.t1(l)}`}>{ev.title}</p>
-                      </Card>
+                      // ── FIX: Entire card is now a clickable link ──────────
+                      <a
+                        key={i}
+                        href={eventUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="event-card-link block no-underline transition-opacity"
+                        title={`Search: ${ev.title}`}
+                      >
+                        <Card className="p-3.5 cursor-pointer hover:shadow-md transition-shadow">
+                          <div className="flex items-center gap-2 flex-wrap mb-2">
+                            <span className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full border ${s.bg} ${s.tc}`}>
+                              {ev.impact}
+                            </span>
+                            <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full border ${l?"bg-gray-50 text-gray-600 border-gray-100":"bg-white/5 text-[#5a7a92] border-[#1a2d3f]"}`}>
+                              {ev.region}
+                            </span>
+                            <span className={`ml-auto text-xs ${tx.t3(l)}`}>{ds}</span>
+                          </div>
+                          <div className="flex items-start justify-between gap-2">
+                            <p className={`font-semibold text-sm leading-snug ${tx.t1(l)}`}>{ev.title}</p>
+                            {/* ── FIX: External link icon shows clickability ── */}
+                            <ExternalLink className={`w-3 h-3 shrink-0 mt-0.5 ${tx.t3(l)}`}/>
+                          </div>
+                          {(ev.actual || ev.forecast) && (
+                            <div className="flex gap-3 mt-2">
+                              {ev.forecast && (
+                                <span className={`text-[10px] ${tx.t3(l)}`}>
+                                  Forecast: <span className="font-bold">{ev.forecast}</span>
+                                </span>
+                              )}
+                              {ev.actual && (
+                                <span className={`text-[10px] font-bold ${ev.actual >= ev.forecast ? "text-emerald-500" : "text-red-500"}`}>
+                                  Actual: {ev.actual}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </Card>
+                      </a>
                     );
                   })}
                 </div>

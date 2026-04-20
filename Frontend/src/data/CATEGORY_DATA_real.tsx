@@ -1,9 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// CATEGORY_DATA — All real Supabase paths + real YouTube links
-//
-// handleDownload mein public URL banao:
-// `https://vhutfmztepdlgkqejpvh.supabase.co/storage/v1/object/public/Investbeans/${mod.pdfUrl}`
-// ─────────────────────────────────────────────────────────────────────────────
 
 const CATEGORY_DATA: Record<string, any> = {
 
@@ -18,11 +12,11 @@ const CATEGORY_DATA: Record<string, any> = {
       accentGrad: 'linear-gradient(135deg,#3B82F6,#4F46E5)',
       contentType: 'ebook',
       description:
-        'HD video tutorials covering chart reading, technical analysis, financial learning — taught by certified practicing traders',
+        'Smart, simplified content for better market decisions',
       stats: { rating: '4.9', reviews: '312', duration: '40 PDFs', modules: 40 },
       instructor: {
-        name: 'NISM & InvestBeans Research Team',
-        role: 'SEBI-Registered & NISM-Certified Experts',
+        name: 'InvestBeans Research Team',
+        role: 'NISM certified',
         avatar: '📊',
       },
       whatYouLearn: [

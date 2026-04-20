@@ -6,7 +6,7 @@ import crypto         from "crypto";
 import * as OTPAuth   from "otpauth";
 import { wrapper }    from "axios-cookiejar-support";
 import { CookieJar }  from "tough-cookie";
-import { kiteWS }     from "./kiteWebSocket.js";
+import { kiteWS, registerAutoLogin } from "./kiteWebSocket.js";
 import { TokenModel } from "../models/TokenModel.js";
 
 // ── env vars runtime pe read karo ─────────────────────────────────────────
@@ -127,8 +127,6 @@ export async function autoLoginKite() {
     console.log(`✅ Step 2 — enctoken mila`);
 
     // ── Step 3: request_token — redirect follow karo lekin callback pe RUKKO ─
-    // maxRedirects: 0 — pehli redirect mein hi request_token milega
-    // callback URL follow mat karo — woh token consume kar leta hai
     let reqToken = null;
 
     const connectRes = await client.get(
@@ -142,10 +140,9 @@ export async function autoLoginKite() {
     const location3a = connectRes.headers?.location || "";
     console.log("📋 Step 3a location:", location3a);
 
-    // request_token seedha pehle redirect mein aa sakta hai
     try { reqToken = new URL(location3a).searchParams.get("request_token"); } catch (_) {}
 
-    // sess_id wala intermediate redirect — follow karo maxRedirects:0 ke saath
+    // sess_id wala intermediate redirect — follow karo
     if (!reqToken && location3a.includes("sess_id")) {
       console.log("🔄 sess_id intermediate — follow kar raha hoon...");
       const sessRes = await client.get(location3a, {
@@ -178,7 +175,7 @@ export async function autoLoginKite() {
 
     // ── Step 5: Save + reconnect ───────────────────────────────────────────
     await saveTokenToDB(accessToken);
-    kiteWS.connect(API_KEY, accessToken);   // ← updateToken ki jagah connect use karo
+    kiteWS.connect(API_KEY, accessToken);
     console.log("🚀 Auto-login complete! WebSocket reconnected.");
 
     return accessToken;
@@ -188,3 +185,8 @@ export async function autoLoginKite() {
     return null;
   }
 }
+
+// ── Register autoLoginKite with kiteWebSocket (no circular dep) ───────────
+// kiteWebSocket.js ne registerAutoLogin export kiya hai sirf is purpose ke liye.
+// Ye line module load hone ke baad turant execute hoti hai.
+registerAutoLogin(autoLoginKite);

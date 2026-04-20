@@ -181,6 +181,13 @@ const FiiDiiCard = ({ cardBg, cardBorder, cardShadow, isLight, fiiNet, diiNet, f
   const total    = absFii + absDii || 1;
   const fiiPct   = Math.round((absFii / total) * 100);
   const diiPct   = 100 - fiiPct;
+  // ── BUG FIX: derive buying/selling direction from actual net values ──
+  const fiiBuying = (fiiNet ?? 0) >= 0;
+  const diiBuying = (diiNet ?? 0) >= 0;
+  const fiiBarGrad = fiiBuying ? "linear-gradient(90deg,#22c55e,#86efac)" : "linear-gradient(90deg,#ef4444,#f87171)";
+  const diiBarGrad = diiBuying ? "linear-gradient(90deg,#a855f7,#22c55e)" : "linear-gradient(90deg,#f87171,#ef4444)";
+  const fiiValueColor = fiiBuying ? "#4ade80" : "#f87171";
+  const diiValueColor = diiBuying ? "#4ade80" : "#f87171";
 
   // Format: e.g. -1240.5 → "−₹1,240 Cr"  |  +1980.2 → "+₹1,980 Cr"
   const fmt = (v) => {
@@ -208,29 +215,29 @@ const FiiDiiCard = ({ cardBg, cardBorder, cardShadow, isLight, fiiNet, diiNet, f
           </div>
         ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 8 }}>
-          <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, padding: "5px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ background: fiiBuying ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${fiiBuying ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`, borderRadius: 8, padding: "5px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
-              <div style={{ fontSize: "8px", fontWeight: 700, color: "rgba(239,68,68,0.7)", marginBottom: 1 }}>FII {(fiiNet ?? 0) < 0 ? "SELL" : "BUY"}</div>
-              <div style={{ fontSize: "8px", color: "rgba(239,68,68,0.6)" }}>{(fiiNet ?? 0) < 0 ? "outflow" : "inflow"}</div>
+              <div style={{ fontSize: "8px", fontWeight: 700, color: fiiBuying ? "rgba(34,197,94,0.7)" : "rgba(239,68,68,0.7)", marginBottom: 1 }}>FII {fiiBuying ? "BUY" : "SELL"}</div>
+              <div style={{ fontSize: "8px", color: fiiBuying ? "rgba(34,197,94,0.6)" : "rgba(239,68,68,0.6)" }}>{fiiBuying ? "inflow" : "outflow"}</div>
             </div>
-            <div style={{ fontSize: "12px", fontWeight: 800, color: "#f87171" }}>{fiiLabel}</div>
+            <div style={{ fontSize: "12px", fontWeight: 800, color: fiiValueColor }}>{fiiLabel}</div>
           </div>
-          <div style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 8, padding: "5px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ background: diiBuying ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${diiBuying ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`, borderRadius: 8, padding: "5px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
-              <div style={{ fontSize: "8px", fontWeight: 700, color: "rgba(34,197,94,0.7)", marginBottom: 1 }}>DII {(diiNet ?? 0) >= 0 ? "BUY" : "SELL"}</div>
-              <div style={{ fontSize: "8px", color: "rgba(34,197,94,0.6)" }}>{(diiNet ?? 0) >= 0 ? "inflow" : "outflow"}</div>
+              <div style={{ fontSize: "8px", fontWeight: 700, color: diiBuying ? "rgba(34,197,94,0.7)" : "rgba(239,68,68,0.7)", marginBottom: 1 }}>DII {diiBuying ? "BUY" : "SELL"}</div>
+              <div style={{ fontSize: "8px", color: diiBuying ? "rgba(34,197,94,0.6)" : "rgba(239,68,68,0.6)" }}>{diiBuying ? "inflow" : "outflow"}</div>
             </div>
-            <div style={{ fontSize: "12px", fontWeight: 800, color: "#4ade80" }}>{diiLabel}</div>
+            <div style={{ fontSize: "12px", fontWeight: 800, color: diiValueColor }}>{diiLabel}</div>
           </div>
         </div>
         )}
         <div style={{ height: 5, borderRadius: 99, overflow: "hidden", display: "flex", gap: 2 }}>
-          <div style={{ width: `${fiiPct}%`, background: "linear-gradient(90deg,#ef4444,#f87171)", borderRadius: 99 }} />
-          <div style={{ flex: 1, background: "linear-gradient(90deg,#a855f7,#22c55e)", borderRadius: 99 }} />
+          <div style={{ width: `${fiiPct}%`, background: fiiBarGrad, borderRadius: 99 }} />
+          <div style={{ flex: 1, background: diiBarGrad, borderRadius: 99 }} />
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-          <span style={{ fontSize: "8px", color: "rgba(248,113,113,0.8)", fontWeight: 600 }}>{fiiPct}% selling</span>
-          <span style={{ fontSize: "8px", color: "rgba(74,222,128,0.8)", fontWeight: 600 }}>{diiPct}% buying</span>
+          <span style={{ fontSize: "8px", color: fiiBuying ? "rgba(74,222,128,0.8)" : "rgba(248,113,113,0.8)", fontWeight: 600 }}>{fiiPct}% {fiiBuying ? "buying" : "selling"}</span>
+          <span style={{ fontSize: "8px", color: diiBuying ? "rgba(74,222,128,0.8)" : "rgba(248,113,113,0.8)", fontWeight: 600 }}>{diiPct}% {diiBuying ? "buying" : "selling"}</span>
         </div>
         {dateLabel && (
           <div style={{ fontSize: "8px", marginTop: 6, color: isLight ? "rgba(4,20,33,0.35)" : "rgba(255,255,255,0.30)", fontWeight: 500 }}>
@@ -254,16 +261,16 @@ const FiiDiiCard = ({ cardBg, cardBorder, cardShadow, isLight, fiiNet, diiNet, f
           </div>
         ) : (<>
         <div className="flex justify-between items-end mb-2">
-          <div><div className={`text-[11px] font-semibold mb-1 ${isLight ? "text-navy/50" : "text-white/40"}`}>FII</div><div className="text-base md:text-lg font-bold text-red-400">{fiiLabel}</div></div>
-          <div className="text-right"><div className={`text-[11px] font-semibold mb-1 ${isLight ? "text-navy/50" : "text-white/40"}`}>DII</div><div className="text-base md:text-lg font-bold text-emerald-400">{diiLabel}</div></div>
+          <div><div className={`text-[11px] font-semibold mb-1 ${isLight ? "text-navy/50" : "text-white/40"}`}>FII</div><div className={`text-base md:text-lg font-bold ${fiiBuying ? "text-emerald-400" : "text-red-400"}`}>{fiiLabel}</div></div>
+          <div className="text-right"><div className={`text-[11px] font-semibold mb-1 ${isLight ? "text-navy/50" : "text-white/40"}`}>DII</div><div className={`text-base md:text-lg font-bold ${diiBuying ? "text-emerald-400" : "text-red-400"}`}>{diiLabel}</div></div>
         </div>
         <div className="h-2.5 rounded-full overflow-hidden flex" style={{ background: isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)" }}>
-          <div style={{ width: `${fiiPct}%`, background: "linear-gradient(90deg,#ef4444,#f87171)", borderRadius: "999px 0 0 999px" }} />
-          <div style={{ width: `${diiPct}%`, background: "linear-gradient(90deg,#a855f7,#22c55e)", borderRadius: "0 999px 999px 0" }} />
+          <div style={{ width: `${fiiPct}%`, background: fiiBarGrad, borderRadius: "999px 0 0 999px" }} />
+          <div style={{ width: `${diiPct}%`, background: diiBarGrad, borderRadius: "0 999px 999px 0" }} />
         </div>
         <div className="flex justify-between mt-1.5">
-          <span className="text-[10px] text-red-400/80">{`${fiiPct}% selling`}</span>
-          <span className="text-[10px] text-emerald-400/80">{`${diiPct}% buying`}</span>
+          <span className={`text-[10px] font-semibold ${fiiBuying ? "text-emerald-400/80" : "text-red-400/80"}`}>{`${fiiPct}% ${fiiBuying ? "buying" : "selling"}`}</span>
+          <span className={`text-[10px] font-semibold ${diiBuying ? "text-emerald-400/80" : "text-red-400/80"}`}>{`${diiPct}% ${diiBuying ? "buying" : "selling"}`}</span>
         </div>
         {dateLabel && <div className={`text-[9px] mt-1.5 ${isLight ? "text-navy/35" : "text-white/30"}`}>{dateLabel}</div>}
         </>)}
@@ -392,7 +399,7 @@ const GiftNiftyCard = ({ cardBg, cardBorder, cardShadow, isLight, liveGiftNifty,
 // Mirrors Domestic page MacroSection exactly:
 //   rate → toFixed(4)  e.g. ₹85.8210
 //   change_pct → toFixed(3)  e.g. +0.592%
-const UsdInrCard = ({ cardBg, cardBorder, cardShadow, isLight, liveValue, liveChange }) => {
+const UsdInrCard = ({ cardBg, cardBorder, cardShadow, isLight, liveValue, liveChange, source = "kite-cds" }) => {
   const rate = liveValue ?? null;
   const changeVal = liveChange ?? null;
   const pos = (changeVal ?? 0) >= 0;
@@ -406,13 +413,26 @@ const UsdInrCard = ({ cardBg, cardBorder, cardShadow, isLight, liveValue, liveCh
     ? `${pos ? "+" : ""}${changeVal.toFixed(3)}%`
     : "···";
   const sliderPct = rate != null ? Math.min(100, Math.max(0, ((rate - 82) / 28) * 100)) : 50;
+  // Source badge label
+  const sourceLabel = source === "kite-cds" ? "via Kite CDS"
+    : source === "nse-cd" || source === "nse-cd2" ? "via NSE"
+    : "via Yahoo Finance";
+  const sourceBadgeColor = source?.startsWith("kite") ? "#0ea5e9"
+    : source?.startsWith("nse") ? "#f59e0b"
+    : "#6366f1";
+  const sourceBadgeBg = source?.startsWith("kite") ? "rgba(14,165,233,0.1)"
+    : source?.startsWith("nse") ? "rgba(245,158,11,0.1)"
+    : "rgba(99,102,241,0.1)";
+  const sourceBadgeBorder = source?.startsWith("kite") ? "rgba(14,165,233,0.25)"
+    : source?.startsWith("nse") ? "rgba(245,158,11,0.25)"
+    : "rgba(99,102,241,0.25)";
   return (
     <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }} className="rounded-2xl relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer md:p-3">
       <div className="md:hidden" style={{ padding: "10px 10px 10px 14px", position: "relative" }}>
         <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: isLight ? "#0A3656" : "#1F5F89", borderRadius: "8px 0 0 8px" }} />
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
           <span style={{ fontSize: "8px", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: isLight ? "#0A3656" : "#74A8C9" }}>USD / INR</span>
-          <span style={{ fontSize: "7px", fontWeight: 600, color: "#6366f1", background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: 3, padding: "1px 4px", whiteSpace: "nowrap" }}>via Yahoo Finance</span>
+          <span style={{ fontSize: "7px", fontWeight: 600, color: sourceBadgeColor, background: sourceBadgeBg, border: `1px solid ${sourceBadgeBorder}`, borderRadius: 3, padding: "1px 4px", whiteSpace: "nowrap" }}>{sourceLabel}</span>
         </div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 3, marginBottom: 4 }}>
           <span style={{ fontSize: "11px", fontWeight: 700, color: isLight ? "rgba(13,37,64,0.5)" : "rgba(255,255,255,0.4)" }}>₹</span>
@@ -440,7 +460,7 @@ const UsdInrCard = ({ cardBg, cardBorder, cardShadow, isLight, liveValue, liveCh
             <span style={{ width: 7, height: 7, borderRadius: "50%", background: isLight ? "#0A3656" : "#74A8C9", display: "inline-block", boxShadow: isLight ? "0 0 6px rgba(10,54,86,0.45)" : "0 0 6px rgba(116,168,201,0.45)" }} />
             <span style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: isLight ? "#1f455f" : "#ffffff" }}>USD / INR</span>
           </div>
-          <span style={{ fontSize: "8px", fontWeight: 600, color: "#6366f1", background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap" }}>via Yahoo Finance</span>
+          <span style={{ fontSize: "8px", fontWeight: 600, color: sourceBadgeColor, background: sourceBadgeBg, border: `1px solid ${sourceBadgeBorder}`, borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap" }}>{sourceLabel}</span>
         </div>
         <div className="flex items-end justify-between mb-2">
           <div>
@@ -478,8 +498,8 @@ const GoldSilverCard = ({ cardBg, cardBorder, cardShadow, isLight, liveGold, liv
   // Gold is ₹/10g (integers from MCX), Silver is ₹/kg (integers from MCX) — no decimals needed for Indian MCX
   const fmtPrice = (v) => v ? `₹${Math.round(v).toLocaleString("en-IN")}` : "···";
   const fmtChg = (v, pos) => v != null ? `${pos ? "▲ +" : "▼ "}${Math.abs(v).toFixed(2)}%` : "···";
-  const srcLabel = (src) => src === "kite-ws" ? "Live MCX" : src === "kite-rest" ? "MCX REST" : src === "yahoo" ? "Yahoo est." : null;
-  const srcColor = (src) => src === "kite-ws" ? "#22c55e" : src === "kite-rest" ? (isLight ? "#0A3656" : "#74A8C9") : "#f59e0b";
+  const srcLabel = (src) => src === "kite-ws" ? "Live MCX" : src === "kite-rest" ? "MCX REST" : src === "yahoo" ? "Yahoo Finance" : null;
+  const srcColor = (src) => src === "kite-ws" ? "#22c55e" : src === "kite-rest" ? (isLight ? "#0A3656" : "#74A8C9") : "#6366f1";
   return (
     <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }} className="rounded-2xl relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer md:p-3">
       <div className="md:hidden" style={{ padding: "10px", position: "relative" }}>
@@ -638,6 +658,7 @@ const Hero = () => {
     giftNiftyChange: null,
     usdInr: null,
     usdInrChange: null,
+    usdInrSource: null,  // "kite-cds" | "nse-cd" | "yahoo"
     goldInr: null,       // MCX Gold ₹/10g — Kite WS > Kite REST > Yahoo
     goldChange: null,
     goldSource: null,    // "kite-ws" | "kite-rest" | "yahoo"
@@ -754,33 +775,42 @@ const Hero = () => {
       .catch(() => {});
   }, [API]);
 
+  // ── USD/INR — dedicated accurate route (Kite CDS futures → NSE → Yahoo) ───
+  // Uses Kite CDS USDINR near-month futures: exact same % change as Zerodha/NSE
   useEffect(() => {
-    fetch(`${API}/kite/macro`)
-      .then(r => r.json())
-      .then(json => {
-        const fx = json?.data?.inr_usd;
-  
-        const fmt = (v) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
-  
-        // 👉 US CARD (USD/INR fix)
+    const load = async () => {
+      try {
+        const r   = await fetch(`${API}/kite/usdinr`);
+        const json = await r.json();
+        const fx   = json?.data;
+        if (!fx) return;
+
+        const fmt = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+
+        // US Stats card
+        // ✅ FIX: rate=0 aur change_pct=null dono guard karo
         setUsData(prev => ({
           ...prev,
-          usdInr: fx?.change_pct != null ? fmt(fx.change_pct) : "N/A",
-          usdInrPos: fx?.change_pct != null ? fx.change_pct >= 0 : null,
-          usdInrRate: fx?.rate ?? null,
-          usdInrAbsPrice: fx?.rate ?? null,
+          usdInr:        fx.change_pct != null ? fmt(fx.change_pct) : prev.usdInr,
+          usdInrPos:     fx.change_pct != null ? fx.change_pct >= 0 : prev.usdInrPos,
+          usdInrRate:    (fx.rate && fx.rate > 0) ? fx.rate : prev.usdInrRate,
+          usdInrAbsPrice: (fx.rate && fx.rate > 0) ? fx.rate : prev.usdInrAbsPrice,
         }));
-  
-        // 👉 BHARAT CARD (same source)
+
+        // Bharat card USD/INR widget
+        // ✅ FIX: rate=0 reject karo (CDS band hone pe 0 aata hai) — prev value rakhho
         setBharatData(prev => ({
           ...prev,
-          usdInr: fx?.rate ?? prev.usdInr,
-          usdInrChange: fx?.change_pct ?? prev.usdInrChange,
+          usdInr:       (fx.rate && fx.rate > 0)       ? fx.rate       : prev.usdInr,
+          usdInrChange: (fx.change_pct != null)         ? fx.change_pct : prev.usdInrChange,
+          usdInrSource: fx.source                      ?? prev.usdInrSource,
         }));
-      })
-      .catch(err => {
-        console.error("Macro API error:", err);
-      });
+      } catch (_) {}
+    };
+    load();
+    // NSE CDS is open 9:00–17:00 IST; refresh every 30s
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
   }, [API]);
   
   // ── GIFT NIFTY — Kite NSE_IFSC near-month futures ───────────────────────
@@ -803,7 +833,9 @@ const Hero = () => {
     return () => clearInterval(t);
   }, [API]);
 
-  // ── Gold & Silver — Kite MCX near-month futures ──────────────────────────
+  // ── Gold & Silver — MCX Kite (most accurate: actual Indian MCX futures) ────
+  // Priority: Kite WebSocket → Kite REST → Yahoo fallback (all in backend)
+  // /commodities route uses MCX near-month futures — REAL Indian market price
   useEffect(() => {
     const load = async () => {
       try {
@@ -815,16 +847,17 @@ const Hero = () => {
             ...prev,
             goldInr:      gold?.price_per_10g   ?? prev.goldInr,
             goldChange:   gold?.change_percent  ?? prev.goldChange,
-            goldSource:   gold?.source          ?? prev.goldSource,
+            goldSource:   gold?.source          ?? "kite-mcx",
             silverInr:    silver?.price_per_kg  ?? prev.silverInr,
             silverChange: silver?.change_percent ?? prev.silverChange,
-            silverSource: silver?.source         ?? prev.silverSource,
+            silverSource: silver?.source        ?? "kite-mcx",
           }));
         }
       } catch (_) {}
     };
     load();
-    const t = setInterval(load, 60000);   // MCX data every 60 s
+    // MCX market hours: refresh every 30s during market, 5min otherwise
+    const t = setInterval(load, 30000);
     return () => clearInterval(t);
   }, [API]);
 
@@ -1037,9 +1070,26 @@ const Hero = () => {
             <div className="hero-stat-grid mt-4 md:mt-5 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 max-w-5xl mx-auto px-1 sm:px-0">
               <USStatCard label="NASDAQ" value={usData.nasdaq} absPrice={usData.nasdaqPrice} positive={usData.nasdaqPos} cardBg={cardBg} cardBorder={cardBorder} cardShadow={cardShadow} isLight={isLight}
                 path="/global" section="section-us" onNavigate={(p, s) => navigate(`${p}?scrollTo=${s}`)} />
-              <USStatCard label="USD / INR" value={usData.usdInr} absPrice={usData.usdInrAbsPrice} absPricePrefix="₹" positive={usData.usdInrPos} cardBg={cardBg} cardBorder={cardBorder} cardShadow={cardShadow} isLight={isLight}
+              <USStatCard label="USD / INR"
+                value={(() => {
+                  const v = usData.usdInr;
+                  return v && v !== "N/A" ? v : (bharatData.usdInrChange != null ? `${bharatData.usdInrChange >= 0 ? "+" : ""}${bharatData.usdInrChange.toFixed(2)}%` : "N/A");
+                })()}
+                absPrice={usData.usdInrAbsPrice ?? bharatData.usdInr}
+                absPricePrefix="₹"
+                positive={usData.usdInrPos ?? (bharatData.usdInrChange != null ? bharatData.usdInrChange >= 0 : null)}
+                cardBg={cardBg} cardBorder={cardBorder} cardShadow={cardShadow} isLight={isLight}
                 path="/global" section="section-forex" onNavigate={(p, s) => navigate(`${p}?scrollTo=${s}`)} />
-              <USStatCard label="Gold" value={usData.gold} absPrice={bharatData.goldInr ?? usData.goldPrice} absPricePrefix={bharatData.goldInr ? "₹" : "$"} positive={usData.goldPos} cardBg={cardBg} cardBorder={cardBorder} cardShadow={cardShadow} isLight={isLight}
+              {/* ✅ FIX: US tab Gold — use MCX bharatData.goldChange if available (more accurate for Indian users) */}
+              {/* Falls back to Yahoo GC=F if MCX data not available */}
+              <USStatCard label="Gold"
+                value={bharatData.goldChange != null
+                  ? `${bharatData.goldChange >= 0 ? "+" : ""}${bharatData.goldChange.toFixed(2)}%`
+                  : usData.gold}
+                absPrice={bharatData.goldInr ?? usData.goldPrice}
+                absPricePrefix={bharatData.goldInr ? "₹" : "$"}
+                positive={bharatData.goldChange != null ? bharatData.goldChange >= 0 : usData.goldPos}
+                cardBg={cardBg} cardBorder={cardBorder} cardShadow={cardShadow} isLight={isLight}
                 path="/global" section="section-commodities" onNavigate={(p, s) => navigate(`${p}?scrollTo=${s}`)} />
               <USStatCard label="Dow Jones" value={usData.dow} absPrice={usData.dowPrice} positive={usData.dowPos} cardBg={cardBg} cardBorder={cardBorder} cardShadow={cardShadow} isLight={isLight}
                 path="/global" section="section-us" onNavigate={(p, s) => navigate(`${p}?scrollTo=${s}`)} />
