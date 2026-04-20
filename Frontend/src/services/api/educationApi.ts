@@ -11,7 +11,7 @@
  * Place in: src/api/educationApi.ts  (or src/services/api/educationApi.ts)
  */
 
-const BASE           = import.meta.env.VITE_API_BASE_URL || "";
+const BASE           = import.meta.env.VITE_API_URL || "";
 const ADMIN_SEGMENT  = import.meta.env.VITE_ADMIN_SEGMENT || "xp-insights-42";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
