@@ -314,12 +314,18 @@ function PdfModuleCard({ mod, data, isLight, cardBg, border, ls, textPrimary, te
 
 // ════════════════════════════════════════════════════════════════════════
 // VIDEO MODULE CARD — mobile-first
+// • No "Watch Now" button — each segment row is individually clickable
+// • Each segment has its own videoUrl (paid/free)
+// • Highlights and previewTopics displayed
 // ════════════════════════════════════════════════════════════════════════
-function ModuleCard({ mod, data, isLight, cardBg, border, ls, textPrimary, textMuted, textFaint, locked, onUnlock }: any) {
-  const handleWatch = () => {
-    if (locked) { onUnlock(); return; }
-    if (mod.videoUrl) window.open(mod.videoUrl, '_blank', 'noopener,noreferrer');
-    else alert('No video URL set for this module yet.');
+function ModuleCard({ mod, data, isLight, cardBg, border, ls, textPrimary, textMuted, textFaint, locked, hasAccess, onUnlock }: any) {
+  const handleSegmentClick = (ch: any) => {
+    // Segment is locked if: it's marked paid (!ch.free) AND user has no access
+    const chLocked = !ch.free && !hasAccess;
+    if (chLocked) { onUnlock(); return; }
+    const url = ch.videoUrl || mod.videoUrl || '';
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+    else alert('No video URL set for this segment yet.');
   };
 
   return (
@@ -334,21 +340,58 @@ function ModuleCard({ mod, data, isLight, cardBg, border, ls, textPrimary, textM
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
               style={{ background: ls.bg, color: ls.text }}>{mod.level}</span>
-            <span className="text-[10px] flex items-center gap-1" style={{ color: textFaint }}><SvgClock /> {mod.pages}</span>
+            {mod.isPaid
+              ? <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(81,148,246,0.12)', color: '#5194F6' }}>PREMIUM</span>
+              : <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399' }}>FREE</span>
+            }
           </div>
         </div>
         <p className="text-sm leading-relaxed" style={{ color: textMuted }}>{mod.description}</p>
+
+        {/* Highlights */}
+        {mod.highlights?.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {mod.highlights.map((h: string, j: number) => (
+              <span key={j} className="text-[10px] px-2 py-0.5 rounded-full"
+                style={{ background: isLight ? `${data.accent}08` : `${data.accent}12`, color: data.accent, border: `1px solid ${data.accent}20` }}>{h}</span>
+            ))}
+          </div>
+        )}
       </div>
 
+      {/* Preview Topics */}
+      {mod.previewTopics?.length > 0 && (
+        <>
+          <div className="mx-4 md:mx-6" style={{ height: 1, background: `linear-gradient(90deg,${data.accent}15,transparent)` }} />
+          <div className="px-4 md:px-6 py-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: textFaint }}>What's inside</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4">
+              {mod.previewTopics.map((topic: string, j: number) => (
+                <div key={j} className="flex items-start gap-2">
+                  <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                    style={{ background: `${data.accent}15`, color: data.accent }}><SvgCheck /></div>
+                  <span className="text-xs leading-relaxed" style={{ color: textMuted }}>{topic}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Segments — each row is clickable, opens its own videoUrl */}
       {mod.chapters?.length > 0 && (
         <>
           <div className="mx-4 md:mx-6" style={{ height: 1, background: `linear-gradient(90deg,${data.accent}25,transparent)` }} />
           <div className="px-4 md:px-6 pb-4 pt-3">
             <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: textFaint }}>Segments</p>
             {mod.chapters.map((ch: any, j: number) => {
-              const chLocked = !ch.free && locked;
+              const chLocked = !ch.free && !hasAccess;
+              const hasUrl = !!(ch.videoUrl || mod.videoUrl);
               return (
-                <div key={j} className="flex items-center gap-2 py-2"
+                <button
+                  key={j}
+                  onClick={() => handleSegmentClick(ch)}
+                  className="w-full flex items-center gap-2 py-2 text-left transition-all hover:opacity-80"
                   style={{ borderBottom: j < mod.chapters.length - 1 ? `1px solid ${isLight ? 'rgba(226,232,240,0.6)' : 'rgba(255,255,255,0.05)'}` : 'none' }}>
                   <div className="w-6 h-6 rounded-lg flex-shrink-0 flex items-center justify-center"
                     style={{ background: chLocked ? (isLight ? 'rgba(226,232,240,0.7)' : 'rgba(255,255,255,0.06)') : `${data.accent}18`, color: chLocked ? textFaint : data.accent }}>
@@ -356,23 +399,30 @@ function ModuleCard({ mod, data, isLight, cardBg, border, ls, textPrimary, textM
                   </div>
                   <p className="text-xs font-medium flex-1 truncate" style={{ color: chLocked ? textFaint : textPrimary, opacity: chLocked ? 0.65 : 1 }}>{ch.title}</p>
                   <span className="text-[10px] flex-shrink-0 font-mono" style={{ color: textFaint }}>{ch.ref}</span>
-                  {ch.free && <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399' }}>FREE</span>}
-                </div>
+                  {ch.free
+                    ? <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399' }}>FREE</span>
+                    : <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'rgba(81,148,246,0.10)', color: '#5194F6' }}>PAID</span>
+                  }
+                  {!chLocked && hasUrl && (
+                    <span className="text-[9px] flex-shrink-0" style={{ color: data.accent }}>▶</span>
+                  )}
+                </button>
               );
             })}
           </div>
         </>
       )}
 
-      <div className="px-4 md:px-6 pb-4">
-        <button onClick={handleWatch}
-          className="w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:opacity-80"
-          style={locked
-            ? { background: data.accentGrad, color: '#fff' }
-            : { background: isLight ? `${data.accent}10` : `${data.accent}15`, color: data.accent, border: `1px solid ${data.accent}25` }}>
-          {locked ? <><SvgLockSm /> Unlock</> : <><SvgPlay /> Watch Now</>}
-        </button>
-      </div>
+      {/* Locked unlock prompt — only when module-level locked and no chapters */}
+      {locked && !mod.chapters?.length && (
+        <div className="px-4 md:px-6 pb-4">
+          <button onClick={onUnlock}
+            className="w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:opacity-80 text-white"
+            style={{ background: data.accentGrad }}>
+            <SvgLockSm /> Unlock to Watch
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -380,7 +430,7 @@ function ModuleCard({ mod, data, isLight, cardBg, border, ls, textPrimary, textM
 // ════════════════════════════════════════════════════════════════════════
 // CERT MODULE CARD — mobile-first
 // ════════════════════════════════════════════════════════════════════════
-function CertModuleCard({ mod, data, isLight, cardBg, border, textPrimary, textMuted, textFaint, hasAccess, isAdmin: adminFlag, isSubscriber: subFlag, onUnlock }: any) {
+function CertModuleCard({ mod, data, isLight, cardBg, border, textPrimary, textMuted, textFaint, hasAccess, isAdmin: adminFlag, isSubscriber: subFlag, onUnlock, categoryId, onCertPdfAdded, onCertPdfDeleted }: any) {
   const ls = levelStyleMap[mod.level] ?? levelStyleMap['Beginner'];
   const handlePdfOpen = (pdfUrl: string) => {
     const url = resolvePdfUrl(pdfUrl);
@@ -388,6 +438,49 @@ function CertModuleCard({ mod, data, isLight, cardBg, border, textPrimary, textM
   };
   const freePdfs    = (mod.pdfs || []).filter((p: any) => p.isFreePreview);
   const premiumPdfs = (mod.pdfs || []).filter((p: any) => !p.isFreePreview);
+
+  // ── Admin: Add PDF to this cert module ───────────────────────────────
+  const certPdfInputRef = useRef<HTMLInputElement>(null);
+  const [addingPdf, setAddingPdf] = useState(false);
+
+  const handleAddCertPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !categoryId || !mod._id) return;
+    const pdfTitle = window.prompt('PDF Title (e.g. NISM V-A Workbook Nov 2025):', '');
+    if (!pdfTitle?.trim()) return;
+    const pdfSubtitle = window.prompt('PDF Subtitle (e.g. Latest English edition):', '') || '';
+    const isFreeStr   = window.confirm('Is this PDF free preview? (OK = FREE, Cancel = PAID)');
+    setAddingPdf(true);
+    try {
+      const fd = new FormData();
+      fd.append('pdf', file);
+      fd.append('title',         pdfTitle.trim());
+      fd.append('subtitle',      pdfSubtitle.trim());
+      fd.append('isFreePreview', String(isFreeStr));
+      const res  = await fetch(`/api/v1/admin/education/categories/${categoryId}/modules/${mod._id}/cert-pdfs`, { method: 'POST', body: fd, credentials: 'include' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || 'Upload failed');
+      onCertPdfAdded?.(json.data);
+      alert('✅ PDF added successfully!');
+    } catch (err: any) {
+      alert(`❌ ${err.message}`);
+    } finally {
+      setAddingPdf(false);
+      if (certPdfInputRef.current) certPdfInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteCertPdf = async (pdfIndex: number, pdfTitle: string) => {
+    if (!window.confirm(`Delete "${pdfTitle}"?\nThis will remove it from Cloudinary too.`)) return;
+    try {
+      const res  = await fetch(`/api/v1/admin/education/categories/${categoryId}/modules/${mod._id}/cert-pdfs/${pdfIndex}`, { method: 'DELETE', credentials: 'include' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || 'Delete failed');
+      onCertPdfDeleted?.(pdfIndex);
+    } catch (err: any) {
+      alert(`❌ ${err.message}`);
+    }
+  };
 
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: cardBg, border: `1px solid ${border}`, boxShadow: isLight ? '0 2px 20px rgba(0,0,0,0.05)' : 'none' }}>
@@ -415,34 +508,88 @@ function CertModuleCard({ mod, data, isLight, cardBg, border, textPrimary, textM
           </div>
         </div>
         <p className="text-sm leading-relaxed" style={{ color: textMuted }}>{mod.description}</p>
+
+        {/* ── Fix 4: Highlights ───────────────────────────────────────── */}
+        {mod.highlights?.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {mod.highlights.map((h: string, j: number) => (
+              <span key={j} className="text-[10px] px-2 py-0.5 rounded-full"
+                style={{ background: isLight ? `${data.accent}08` : `${data.accent}12`, color: data.accent, border: `1px solid ${data.accent}20` }}>{h}</span>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* ── Fix 4: Preview Topics ─────────────────────────────────────── */}
+      {mod.previewTopics?.length > 0 && (
+        <>
+          <div className="mx-4 md:mx-6" style={{ height: 1, background: `linear-gradient(90deg,${data.accent}15,transparent)` }} />
+          <div className="px-4 md:px-6 py-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: textFaint }}>Program Covers</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4">
+              {mod.previewTopics.map((topic: string, j: number) => (
+                <div key={j} className="flex items-start gap-2">
+                  <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                    style={{ background: `${data.accent}15`, color: data.accent }}><SvgCheck /></div>
+                  <span className="text-xs leading-relaxed" style={{ color: textMuted }}>{topic}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="mx-4 md:mx-6" style={{ height: 1, background: `linear-gradient(90deg,${data.accent}20,transparent)` }} />
       <div className="px-4 md:px-6 py-4">
         <div className="flex items-center justify-between mb-3">
           <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: textFaint }}>Included PDFs</p>
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: `${data.accent}10`, color: data.accent }}>{(mod.pdfs || []).length} PDFs</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: `${data.accent}10`, color: data.accent }}>{(mod.pdfs || []).length} PDFs</span>
+            {/* ── Fix 3: Admin Add PDF button ─────────────────────────── */}
+            {adminFlag && (
+              <>
+                <button type="button"
+                  onClick={() => certPdfInputRef.current?.click()}
+                  disabled={addingPdf}
+                  className="text-[10px] px-2.5 py-1 rounded-lg font-bold disabled:opacity-50"
+                  style={{ background: 'rgba(168,85,247,0.10)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.25)' }}>
+                  {addingPdf ? '⏳ Uploading…' : '+ Add PDF'}
+                </button>
+                <input ref={certPdfInputRef} type="file" accept="application/pdf" className="hidden" onChange={handleAddCertPdf} />
+              </>
+            )}
+          </div>
         </div>
         <div className="space-y-2">
-          {freePdfs.map((pdf: any, j: number) => (
-            <div key={j} className="flex items-center justify-between gap-2 p-2.5 rounded-xl"
-              style={{ background: isLight ? 'rgba(16,185,129,0.04)' : 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.18)' }}>
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399' }}><SvgFileText /></div>
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold truncate" style={{ color: textPrimary }}>{pdf.title}</p>
-                  <p className="text-[10px] truncate" style={{ color: textMuted }}>{pdf.subtitle}</p>
+          {freePdfs.map((pdf: any, j: number) => {
+            const globalIdx = (mod.pdfs || []).indexOf(pdf);
+            return (
+              <div key={j} className="flex items-center justify-between gap-2 p-2.5 rounded-xl"
+                style={{ background: isLight ? 'rgba(16,185,129,0.04)' : 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.18)' }}>
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399' }}><SvgFileText /></div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold truncate" style={{ color: textPrimary }}>{pdf.title}</p>
+                    <p className="text-[10px] truncate" style={{ color: textMuted }}>{pdf.subtitle}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full hidden sm:block" style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399' }}>FREE</span>
+                  <button onClick={() => handlePdfOpen(pdf.pdfUrl)}
+                    className="flex items-center gap-1 text-[11px] font-bold px-2.5 py-1.5 rounded-lg text-white"
+                    style={{ background: 'rgba(16,185,129,0.85)' }}><SvgDownload /> <span className="hidden sm:inline">PDF</span></button>
+                  {/* ── Fix 3: Admin Delete button ───────────────────── */}
+                  {adminFlag && (
+                    <button onClick={() => handleDeleteCertPdf(globalIdx, pdf.title)}
+                      className="text-[10px] px-2 py-1.5 rounded-lg font-bold"
+                      style={{ background: 'rgba(239,68,68,0.10)', color: '#f87171', border: '1px solid rgba(239,68,68,0.20)' }}>🗑️</button>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full hidden sm:block" style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399' }}>FREE</span>
-                <button onClick={() => handlePdfOpen(pdf.pdfUrl)}
-                  className="flex items-center gap-1 text-[11px] font-bold px-2.5 py-1.5 rounded-lg text-white"
-                  style={{ background: 'rgba(16,185,129,0.85)' }}><SvgDownload /> <span className="hidden sm:inline">PDF</span></button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
           {premiumPdfs.map((pdf: any, j: number) => {
+            const globalIdx = (mod.pdfs || []).indexOf(pdf);
             if (!hasAccess) {
               return (
                 <div key={j} className="flex items-center justify-between gap-2 p-2.5 rounded-xl"
@@ -468,9 +615,17 @@ function CertModuleCard({ mod, data, isLight, cardBg, border, textPrimary, textM
                     <p className="text-[10px] truncate" style={{ color: textMuted }}>{pdf.subtitle}</p>
                   </div>
                 </div>
-                <button onClick={() => handlePdfOpen(pdf.pdfUrl)}
-                  className="flex items-center gap-1 text-[11px] font-bold px-2.5 py-1.5 rounded-lg text-white flex-shrink-0"
-                  style={{ background: data.accentGrad }}><SvgDownload /> <span className="hidden sm:inline">PDF</span></button>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button onClick={() => handlePdfOpen(pdf.pdfUrl)}
+                    className="flex items-center gap-1 text-[11px] font-bold px-2.5 py-1.5 rounded-lg text-white flex-shrink-0"
+                    style={{ background: data.accentGrad }}><SvgDownload /> <span className="hidden sm:inline">PDF</span></button>
+                  {/* ── Fix 3: Admin Delete button ───────────────────── */}
+                  {adminFlag && (
+                    <button onClick={() => handleDeleteCertPdf(globalIdx, pdf.title)}
+                      className="text-[10px] px-2 py-1.5 rounded-lg font-bold"
+                      style={{ background: 'rgba(239,68,68,0.10)', color: '#f87171', border: '1px solid rgba(239,68,68,0.20)' }}>🗑️</button>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -555,7 +710,168 @@ function AdminModal({ title, onClose, onSave, saving, children }: any) {
   );
 }
 
+// ════════════════════════════════════════════════════════════════════════
+// CERT ITEM EDITORS — inline PDF list + Video URL list for certification
+// ════════════════════════════════════════════════════════════════════════
+
+function CertPdfEditor({ items, setItems, isLight, border, primary, muted, faint }: any) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [pendingIdx, setPendingIdx] = useState<number | null>(null);
+
+  const addItem = () =>
+    setItems((prev: any[]) => [...prev, { title: '', subtitle: '', isFreePreview: true, _file: null, pdfUrl: '', pdfPublicId: '' }]);
+
+  const update = (idx: number, key: string, val: any) =>
+    setItems((prev: any[]) => prev.map((it, i) => i === idx ? { ...it, [key]: val } : it));
+
+  const remove = (idx: number) =>
+    setItems((prev: any[]) => prev.filter((_: any, i: number) => i !== idx));
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>, idx: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    update(idx, '_file', file);
+    if (inputRef.current) inputRef.current.value = '';
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <label className="text-[11px] font-bold uppercase tracking-wide" style={{ color: muted }}>
+          📄 PDF Items ({items.length})
+        </label>
+        <button type="button" onClick={addItem}
+          className="text-[10px] px-2.5 py-1 rounded-lg font-bold"
+          style={{ background: 'rgba(16,185,129,0.10)', color: '#34D399', border: '1px solid rgba(16,185,129,0.25)' }}>
+          + Add PDF
+        </button>
+      </div>
+
+      {items.length === 0 && (
+        <p className="text-[11px] px-3 py-2 rounded-lg" style={{ color: faint, background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)', border: `1px dashed ${border}` }}>
+          No PDFs yet. Click "+ Add PDF" to add.
+        </p>
+      )}
+
+      {items.map((it: any, idx: number) => (
+        <div key={idx} className="flex flex-col gap-1.5 p-3 rounded-xl"
+          style={{ background: isLight ? 'rgba(16,185,129,0.03)' : 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.18)' }}>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold flex-shrink-0" style={{ color: '#34D399' }}>PDF #{idx + 1}</span>
+            <input value={it.title} placeholder="PDF Title (e.g. NISM V-A Workbook Nov 2025)"
+              onChange={e => update(idx, 'title', e.target.value)}
+              className="flex-1 rounded-lg px-3 py-1.5 text-xs outline-none"
+              style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }} />
+            <button type="button" onClick={() => remove(idx)}
+              className="w-6 h-6 flex items-center justify-center rounded-lg text-xs font-bold flex-shrink-0"
+              style={{ background: 'rgba(239,68,68,0.10)', color: '#f87171', border: '1px solid rgba(239,68,68,0.20)' }}>✕</button>
+          </div>
+          <input value={it.subtitle} placeholder="Subtitle (e.g. Latest English edition)"
+            onChange={e => update(idx, 'subtitle', e.target.value)}
+            className="rounded-lg px-3 py-1.5 text-xs outline-none w-full"
+            style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }} />
+          <div className="flex items-center gap-2">
+            <select value={it.isFreePreview ? 'free' : 'paid'}
+              onChange={e => update(idx, 'isFreePreview', e.target.value === 'free')}
+              className="rounded-lg px-2 py-1.5 text-xs outline-none flex-shrink-0"
+              style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }}>
+              <option value="free">FREE</option>
+              <option value="paid">PAID</option>
+            </select>
+            {/* File picker */}
+            <label className="flex-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all hover:opacity-80"
+              style={{ background: it._file ? 'rgba(81,148,246,0.10)' : (it.pdfUrl ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.05)'), border: `1px solid ${it._file ? 'rgba(81,148,246,0.25)' : (it.pdfUrl ? 'rgba(16,185,129,0.20)' : border)}`, color: it._file ? '#5194F6' : (it.pdfUrl ? '#34D399' : muted) }}>
+              <SvgUpload />
+              <span className="truncate">
+                {it._file ? it._file.name : it.pdfUrl ? '✓ PDF saved — replace?' : 'Upload PDF'}
+              </span>
+              <input type="file" accept="application/pdf" className="hidden"
+                onChange={e => handleFile(e, idx)} />
+            </label>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CertVideoEditor({ items, setItems, isLight, border, primary, muted, faint }: any) {
+  const addItem = () =>
+    setItems((prev: any[]) => [...prev, { title: '', videoUrl: '', isFreePreview: true }]);
+
+  const update = (idx: number, key: string, val: any) =>
+    setItems((prev: any[]) => prev.map((it: any, i: number) => i === idx ? { ...it, [key]: val } : it));
+
+  const remove = (idx: number) =>
+    setItems((prev: any[]) => prev.filter((_: any, i: number) => i !== idx));
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <label className="text-[11px] font-bold uppercase tracking-wide" style={{ color: muted }}>
+          🎥 Video URLs ({items.length})
+        </label>
+        <button type="button" onClick={addItem}
+          className="text-[10px] px-2.5 py-1 rounded-lg font-bold"
+          style={{ background: 'rgba(81,148,246,0.10)', color: '#5194F6', border: '1px solid rgba(81,148,246,0.25)' }}>
+          + Add Video
+        </button>
+      </div>
+
+      {items.length === 0 && (
+        <p className="text-[11px] px-3 py-2 rounded-lg" style={{ color: faint, background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)', border: `1px dashed ${border}` }}>
+          No videos yet. Click "+ Add Video" to add.
+        </p>
+      )}
+
+      {items.map((it: any, idx: number) => (
+        <div key={idx} className="flex flex-col gap-1.5 p-3 rounded-xl"
+          style={{ background: isLight ? 'rgba(81,148,246,0.03)' : 'rgba(81,148,246,0.06)', border: '1px solid rgba(81,148,246,0.18)' }}>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold flex-shrink-0" style={{ color: '#5194F6' }}>VID #{idx + 1}</span>
+            <input value={it.title} placeholder="Video Title (e.g. Week 1 — Introduction)"
+              onChange={e => update(idx, 'title', e.target.value)}
+              className="flex-1 rounded-lg px-3 py-1.5 text-xs outline-none"
+              style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }} />
+            <button type="button" onClick={() => remove(idx)}
+              className="w-6 h-6 flex items-center justify-center rounded-lg text-xs font-bold flex-shrink-0"
+              style={{ background: 'rgba(239,68,68,0.10)', color: '#f87171', border: '1px solid rgba(239,68,68,0.20)' }}>✕</button>
+          </div>
+          <input value={it.videoUrl} placeholder="YouTube / Vimeo URL"
+            onChange={e => update(idx, 'videoUrl', e.target.value)}
+            className="rounded-lg px-3 py-1.5 text-xs outline-none w-full"
+            style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }} />
+          <select value={it.isFreePreview ? 'free' : 'paid'}
+            onChange={e => update(idx, 'isFreePreview', e.target.value === 'free')}
+            className="rounded-lg px-2 py-1.5 text-xs outline-none w-fit"
+            style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }}>
+            <option value="free">FREE</option>
+            <option value="paid">PAID</option>
+          </select>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// ADMIN EDIT MODAL
+// ════════════════════════════════════════════════════════════════════════
 function AdminEditModal({ mod, contentType, onSave, onClose, isLight }: any) {
+  const isCertContent = contentType === 'certification';
+  const isVideo = contentType === 'video';
+
+  // ── For certification: inline PDF + Video lists ───────────────────────
+  // certPdfs: existing pdfs from DB — we only let admin add NEW ones here
+  // (delete existing ones via the card's 🗑️ button as before)
+  const [certPdfItems,   setCertPdfItems]   = useState<any[]>([]);  // new PDFs to upload
+  const [certVideoItems, setCertVideoItems] = useState<any[]>(
+    // pre-fill chapters as videos if they have videoUrl
+    Array.isArray(mod.chapters)
+      ? mod.chapters.map((ch: any) => ({ title: ch.title || '', videoUrl: ch.videoUrl || '', isFreePreview: ch.free ?? true }))
+      : []
+  );
+
   const [form, setForm] = useState({
     title:         mod.title         || '',
     subtitle:      mod.subtitle      || '',
@@ -566,6 +882,9 @@ function AdminEditModal({ mod, contentType, onSave, onClose, isLight }: any) {
     pdfUrl:        mod.pdfUrl        || '',
     highlights:    Array.isArray(mod.highlights)    ? mod.highlights.join(', ')    : '',
     previewTopics: Array.isArray(mod.previewTopics) ? mod.previewTopics.join(', ') : '',
+    chapters: Array.isArray(mod.chapters)
+      ? mod.chapters.map((ch: any) => ({ title: ch.title || '', ref: ch.ref || '', free: ch.free ?? true, videoUrl: ch.videoUrl || '' }))
+      : [],
   });
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [saving,  setSaving]  = useState(false);
@@ -575,7 +894,6 @@ function AdminEditModal({ mod, contentType, onSave, onClose, isLight }: any) {
   const primary = isLight ? '#0f172a' : '#f1f5f9';
   const muted   = isLight ? '#64748b' : '#94a3b8';
   const faint   = isLight ? '#94a3b8' : '#475569';
-  const isVideo = contentType === 'video';
 
   const cssVars = { '--modal-bg': cardBg, '--modal-border': border, '--modal-muted': muted, '--modal-btn-bg': isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.07)' } as any;
 
@@ -583,13 +901,27 @@ function AdminEditModal({ mod, contentType, onSave, onClose, isLight }: any) {
     if (!form.title.trim()) { alert('Title is required'); return; }
     setSaving(true);
     try {
+      // For certification: pass video items as chapters, new PDF items separately
+      const chapters = isCertContent
+        ? certVideoItems.map((v: any, i: number) => ({ title: v.title, ref: `Part ${i + 1}`, free: v.isFreePreview, videoUrl: v.videoUrl }))
+        : form.chapters;
+
       await onSave({
         ...form,
         highlights:    form.highlights.split(',').map((s: string) => s.trim()).filter(Boolean),
         previewTopics: form.previewTopics.split(',').map((s: string) => s.trim()).filter(Boolean),
+        chapters,
+        _certNewPdfs: isCertContent ? certPdfItems : [],  // new PDFs to upload via cert-pdfs endpoint
       }, pdfFile);
     } finally { setSaving(false); }
   };
+
+  // ── Chapter (segment) helpers for video ──────────────────────────────
+  const addChapter    = () => setForm((f: any) => ({ ...f, chapters: [...f.chapters, { title: '', ref: '', free: true, videoUrl: '' }] }));
+  const updateChapter = (idx: number, key: string, val: any) =>
+    setForm((f: any) => ({ ...f, chapters: f.chapters.map((c: any, i: number) => i === idx ? { ...c, [key]: val } : c) }));
+  const removeChapter = (idx: number) =>
+    setForm((f: any) => ({ ...f, chapters: f.chapters.filter((_: any, i: number) => i !== idx) }));
 
   return (
     <div style={cssVars}>
@@ -597,23 +929,78 @@ function AdminEditModal({ mod, contentType, onSave, onClose, isLight }: any) {
         <ModalField label="Title *" field="title" form={form} setForm={setForm} isLight={isLight} border={border} textPrimary={primary} textMuted={muted} />
         <ModalField label="Subtitle" field="subtitle" form={form} setForm={setForm} isLight={isLight} border={border} textPrimary={primary} textMuted={muted} />
         <ModalField label="Description" field="description" rows={3} form={form} setForm={setForm} isLight={isLight} border={border} textPrimary={primary} textMuted={muted} />
-        {isVideo ? (
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-bold uppercase tracking-wide flex items-center gap-1" style={{ color: muted }}><SvgLink /> Video URL</label>
-            <input type="url" value={form.videoUrl} placeholder="https://www.youtube.com/watch?v=..."
-              onChange={e => setForm(f => ({ ...f, videoUrl: e.target.value }))}
-              className="rounded-xl px-3 py-2 text-sm outline-none w-full"
-              style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }} />
-            <p className="text-[11px]" style={{ color: faint }}>YouTube / Vimeo URL. No file upload needed.</p>
-          </div>
+
+        {isCertContent ? (
+          <>
+            {/* ── CERTIFICATION: PDFs + Videos ─────────────────────── */}
+            <div className="px-3 py-2 rounded-xl text-xs" style={{ background: 'rgba(168,85,247,0.07)', border: '1px solid rgba(168,85,247,0.18)', color: '#a855f7' }}>
+              💡 Existing PDFs: delete them from the card's 🗑️ button. Add new PDFs below — they'll be uploaded to Cloudinary.
+            </div>
+            <CertPdfEditor items={certPdfItems} setItems={setCertPdfItems} isLight={isLight} border={border} primary={primary} muted={muted} faint={faint} />
+            <CertVideoEditor items={certVideoItems} setItems={setCertVideoItems} isLight={isLight} border={border} primary={primary} muted={muted} faint={faint} />
+          </>
+        ) : isVideo ? (
+          <>
+            {/* ── VIDEO: Segments editor ───────────────────────────── */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold uppercase tracking-wide" style={{ color: muted }}>
+                  Segments / Chapters ({form.chapters.length})
+                </label>
+                <button type="button" onClick={addChapter}
+                  className="text-[10px] px-2.5 py-1 rounded-lg font-bold"
+                  style={{ background: 'rgba(16,185,129,0.10)', color: '#34D399', border: '1px solid rgba(16,185,129,0.25)' }}>
+                  + Add Segment
+                </button>
+              </div>
+              {form.chapters.length === 0 && (
+                <p className="text-[11px] px-3 py-2 rounded-lg" style={{ color: faint, background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)', border: `1px dashed ${border}` }}>
+                  No segments yet. Click "+ Add Segment" to add.
+                </p>
+              )}
+              {form.chapters.map((ch: any, idx: number) => (
+                <div key={idx} className="flex flex-col gap-1.5 p-3 rounded-xl"
+                  style={{ background: isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.04)', border: `1px solid ${border}` }}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold flex-shrink-0" style={{ color: faint }}>#{idx + 1}</span>
+                    <input value={ch.title} placeholder="Segment title"
+                      onChange={e => updateChapter(idx, 'title', e.target.value)}
+                      className="flex-1 rounded-lg px-3 py-1.5 text-xs outline-none"
+                      style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }} />
+                    <button type="button" onClick={() => removeChapter(idx)}
+                      className="w-6 h-6 flex items-center justify-center rounded-lg text-xs font-bold flex-shrink-0"
+                      style={{ background: 'rgba(239,68,68,0.10)', color: '#f87171', border: '1px solid rgba(239,68,68,0.20)' }}>✕</button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input value={ch.ref} placeholder="Label (e.g. Part 1)"
+                      onChange={e => updateChapter(idx, 'ref', e.target.value)}
+                      className="flex-1 rounded-lg px-3 py-1.5 text-xs outline-none"
+                      style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }} />
+                    <select value={ch.free ? 'free' : 'paid'}
+                      onChange={e => updateChapter(idx, 'free', e.target.value === 'free')}
+                      className="rounded-lg px-2 py-1.5 text-xs outline-none flex-shrink-0"
+                      style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }}>
+                      <option value="free">FREE</option>
+                      <option value="paid">PAID</option>
+                    </select>
+                  </div>
+                  <input value={ch.videoUrl || ''} placeholder="Video URL for this segment (YouTube/Vimeo)"
+                    onChange={e => updateChapter(idx, 'videoUrl', e.target.value)}
+                    className="rounded-lg px-3 py-1.5 text-xs outline-none w-full"
+                    style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }} />
+                </div>
+              ))}
+            </div>
+          </>
         ) : (
           <PdfFilePicker currentPdfUrl={form.pdfUrl} pdfFile={pdfFile} setPdfFile={setPdfFile}
             isLight={isLight} border={border} textPrimary={primary} textMuted={muted} textFaint={faint} />
         )}
+
         <div className="flex gap-3">
           <div className="flex-1 flex flex-col gap-1">
             <label className="text-[11px] font-bold uppercase tracking-wide" style={{ color: muted }}>Level</label>
-            <select value={form.level} onChange={e => setForm(f => ({ ...f, level: e.target.value }))}
+            <select value={form.level} onChange={e => setForm((f: any) => ({ ...f, level: e.target.value }))}
               className="rounded-xl px-3 py-2 text-sm outline-none"
               style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }}>
               <option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>All Levels</option>
@@ -621,7 +1008,7 @@ function AdminEditModal({ mod, contentType, onSave, onClose, isLight }: any) {
           </div>
           <div className="flex-1 flex flex-col gap-1">
             <label className="text-[11px] font-bold uppercase tracking-wide" style={{ color: muted }}>Access</label>
-            <select value={form.isPaid ? 'premium' : 'free'} onChange={e => setForm(f => ({ ...f, isPaid: e.target.value === 'premium' }))}
+            <select value={form.isPaid ? 'premium' : 'free'} onChange={e => setForm((f: any) => ({ ...f, isPaid: e.target.value === 'premium' }))}
               className="rounded-xl px-3 py-2 text-sm outline-none"
               style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }}>
               <option value="free">Free</option><option value="premium">Premium</option>
@@ -636,7 +1023,18 @@ function AdminEditModal({ mod, contentType, onSave, onClose, isLight }: any) {
 }
 
 function AdminAddModal({ contentType, onSave, onClose, isLight }: any) {
-  const [form, setForm] = useState({ title: '', subtitle: '', description: '', level: 'Beginner', isPaid: false, highlights: '', previewTopics: '', videoUrl: '', pages: contentType === 'video' ? 'Video' : 'PDF' });
+  const isCertContent = contentType === 'certification';
+  const isVideo = contentType === 'video';
+
+  const [certPdfItems,   setCertPdfItems]   = useState<any[]>([]);
+  const [certVideoItems, setCertVideoItems] = useState<any[]>([]);
+
+  const [form, setForm] = useState({
+    title: '', subtitle: '', description: '', level: 'Beginner', isPaid: false,
+    highlights: '', previewTopics: '', videoUrl: '',
+    pages: isVideo ? 'Video' : 'PDF',
+    chapters: [] as { title: string; ref: string; free: boolean; videoUrl: string }[],
+  });
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [saving,  setSaving]  = useState(false);
 
@@ -645,7 +1043,6 @@ function AdminAddModal({ contentType, onSave, onClose, isLight }: any) {
   const primary = isLight ? '#0f172a' : '#f1f5f9';
   const muted   = isLight ? '#64748b' : '#94a3b8';
   const faint   = isLight ? '#94a3b8' : '#475569';
-  const isVideo = contentType === 'video';
 
   const cssVars = { '--modal-bg': cardBg, '--modal-border': border, '--modal-muted': muted, '--modal-btn-bg': isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.07)' } as any;
 
@@ -653,13 +1050,26 @@ function AdminAddModal({ contentType, onSave, onClose, isLight }: any) {
     if (!form.title.trim()) { alert('Title is required'); return; }
     setSaving(true);
     try {
+      const chapters = isCertContent
+        ? certVideoItems.map((v: any, i: number) => ({ title: v.title, ref: `Part ${i + 1}`, free: v.isFreePreview, videoUrl: v.videoUrl }))
+        : form.chapters;
+
       await onSave({
         ...form,
         highlights:    form.highlights.split(',').map((s: string) => s.trim()).filter(Boolean),
         previewTopics: form.previewTopics.split(',').map((s: string) => s.trim()).filter(Boolean),
+        chapters,
+        _certNewPdfs: isCertContent ? certPdfItems : [],
       }, pdfFile);
     } finally { setSaving(false); }
   };
+
+  // ── Chapter helpers for video ─────────────────────────────────────────
+  const addChapter    = () => setForm((f: any) => ({ ...f, chapters: [...f.chapters, { title: '', ref: '', free: true, videoUrl: '' }] }));
+  const updateChapter = (idx: number, key: string, val: any) =>
+    setForm((f: any) => ({ ...f, chapters: f.chapters.map((c: any, i: number) => i === idx ? { ...c, [key]: val } : c) }));
+  const removeChapter = (idx: number) =>
+    setForm((f: any) => ({ ...f, chapters: f.chapters.filter((_: any, i: number) => i !== idx) }));
 
   return (
     <div style={cssVars}>
@@ -667,23 +1077,75 @@ function AdminAddModal({ contentType, onSave, onClose, isLight }: any) {
         <ModalField label="Title *" field="title" form={form} setForm={setForm} isLight={isLight} border={border} textPrimary={primary} textMuted={muted} />
         <ModalField label="Subtitle" field="subtitle" form={form} setForm={setForm} isLight={isLight} border={border} textPrimary={primary} textMuted={muted} />
         <ModalField label="Description" field="description" rows={3} form={form} setForm={setForm} isLight={isLight} border={border} textPrimary={primary} textMuted={muted} />
-        {isVideo ? (
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-bold uppercase tracking-wide flex items-center gap-1" style={{ color: muted }}><SvgLink /> Video URL</label>
-            <input type="url" value={form.videoUrl} placeholder="https://www.youtube.com/watch?v=..."
-              onChange={e => setForm(f => ({ ...f, videoUrl: e.target.value }))}
-              className="rounded-xl px-3 py-2 text-sm outline-none w-full"
-              style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }} />
-            <p className="text-[11px]" style={{ color: faint }}>YouTube / Vimeo URL. Videos not uploaded — link only.</p>
-          </div>
+
+        {isCertContent ? (
+          <>
+            {/* ── CERTIFICATION: PDFs + Videos ─────────────────────── */}
+            <CertPdfEditor items={certPdfItems} setItems={setCertPdfItems} isLight={isLight} border={border} primary={primary} muted={muted} faint={faint} />
+            <CertVideoEditor items={certVideoItems} setItems={setCertVideoItems} isLight={isLight} border={border} primary={primary} muted={muted} faint={faint} />
+          </>
+        ) : isVideo ? (
+          <>
+            {/* ── VIDEO: Segments ─────────────────────────────────── */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold uppercase tracking-wide" style={{ color: muted }}>
+                  Segments / Chapters ({form.chapters.length})
+                </label>
+                <button type="button" onClick={addChapter}
+                  className="text-[10px] px-2.5 py-1 rounded-lg font-bold"
+                  style={{ background: 'rgba(16,185,129,0.10)', color: '#34D399', border: '1px solid rgba(16,185,129,0.25)' }}>
+                  + Add Segment
+                </button>
+              </div>
+              {form.chapters.length === 0 && (
+                <p className="text-[11px] px-3 py-2 rounded-lg" style={{ color: faint, background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)', border: `1px dashed ${border}` }}>
+                  No segments yet. Click "+ Add Segment" to add.
+                </p>
+              )}
+              {form.chapters.map((ch: any, idx: number) => (
+                <div key={idx} className="flex flex-col gap-1.5 p-3 rounded-xl"
+                  style={{ background: isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.04)', border: `1px solid ${border}` }}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold flex-shrink-0" style={{ color: faint }}>#{idx + 1}</span>
+                    <input value={ch.title} placeholder="Segment title"
+                      onChange={e => updateChapter(idx, 'title', e.target.value)}
+                      className="flex-1 rounded-lg px-3 py-1.5 text-xs outline-none"
+                      style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }} />
+                    <button type="button" onClick={() => removeChapter(idx)}
+                      className="w-6 h-6 flex items-center justify-center rounded-lg text-xs font-bold flex-shrink-0"
+                      style={{ background: 'rgba(239,68,68,0.10)', color: '#f87171', border: '1px solid rgba(239,68,68,0.20)' }}>✕</button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input value={ch.ref} placeholder="Label (e.g. Part 1)"
+                      onChange={e => updateChapter(idx, 'ref', e.target.value)}
+                      className="flex-1 rounded-lg px-3 py-1.5 text-xs outline-none"
+                      style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }} />
+                    <select value={ch.free ? 'free' : 'paid'}
+                      onChange={e => updateChapter(idx, 'free', e.target.value === 'free')}
+                      className="rounded-lg px-2 py-1.5 text-xs outline-none flex-shrink-0"
+                      style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }}>
+                      <option value="free">FREE</option>
+                      <option value="paid">PAID</option>
+                    </select>
+                  </div>
+                  <input value={ch.videoUrl || ''} placeholder="Video URL for this segment (YouTube/Vimeo)"
+                    onChange={e => updateChapter(idx, 'videoUrl', e.target.value)}
+                    className="rounded-lg px-3 py-1.5 text-xs outline-none w-full"
+                    style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }} />
+                </div>
+              ))}
+            </div>
+          </>
         ) : (
           <PdfFilePicker currentPdfUrl="" pdfFile={pdfFile} setPdfFile={setPdfFile}
             isLight={isLight} border={border} textPrimary={primary} textMuted={muted} textFaint={faint} />
         )}
+
         <div className="flex gap-3">
           <div className="flex-1 flex flex-col gap-1">
             <label className="text-[11px] font-bold uppercase tracking-wide" style={{ color: muted }}>Level</label>
-            <select value={form.level} onChange={e => setForm(f => ({ ...f, level: e.target.value }))}
+            <select value={form.level} onChange={e => setForm((f: any) => ({ ...f, level: e.target.value }))}
               className="rounded-xl px-3 py-2 text-sm outline-none"
               style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }}>
               <option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>All Levels</option>
@@ -691,7 +1153,7 @@ function AdminAddModal({ contentType, onSave, onClose, isLight }: any) {
           </div>
           <div className="flex-1 flex flex-col gap-1">
             <label className="text-[11px] font-bold uppercase tracking-wide" style={{ color: muted }}>Access</label>
-            <select value={form.isPaid ? 'premium' : 'free'} onChange={e => setForm(f => ({ ...f, isPaid: e.target.value === 'premium' }))}
+            <select value={form.isPaid ? 'premium' : 'free'} onChange={e => setForm((f: any) => ({ ...f, isPaid: e.target.value === 'premium' }))}
               className="rounded-xl px-3 py-2 text-sm outline-none"
               style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }}>
               <option value="free">Free</option><option value="premium">Premium</option>
@@ -745,7 +1207,7 @@ export const EducationDetailView: React.FC = () => {
   const { isSubscriber, loading: subLoading } = useSubscription();
   const isLight = theme === 'light';
 
-  const isFullyOpen = categoryId === 'financial-ebooks' || categoryId === 'financial-tutorials';
+  const isFullyOpen = categoryId === 'financial-ebooks';
   const hasAccess   = isAdmin || isSubscriber || isFullyOpen;
 
   const {
@@ -786,13 +1248,37 @@ export const EducationDetailView: React.FC = () => {
     if (editingIdx === null) return;
     const mod = localModules[editingIdx];
     await hookUpdateModule(mod._id ?? `local-${editingIdx}`, updated, pdfFile);
-    setEditingIdx(null);
+
+    // Upload any new cert PDFs via the cert-pdfs endpoint
+    const certNewPdfs: any[] = updated._certNewPdfs || [];
+    for (const pdfItem of certNewPdfs) {
+      if (!pdfItem._file || !pdfItem.title?.trim()) continue;
+      try {
+        const fd = new FormData();
+        fd.append('pdf', pdfItem._file);
+        fd.append('title', pdfItem.title.trim());
+        fd.append('subtitle', pdfItem.subtitle?.trim() || '');
+        fd.append('isFreePreview', String(pdfItem.isFreePreview));
+        await fetch(`/api/v1/admin/education/categories/${categoryId}/modules/${mod._id}/cert-pdfs`, {
+          method: 'POST', body: fd, credentials: 'include',
+        });
+      } catch (e) { console.error('Cert PDF upload failed:', e); }
+    }
+    if (certNewPdfs.some((p: any) => p._file)) window.location.reload();
+    else setEditingIdx(null);
   };
 
   const handleAddModule = async (newMod: any, pdfFile?: File | null) => {
-    await hookAddModule(newMod, pdfFile);
+    const added = await hookAddModule(newMod, pdfFile);
     setShowAddModal(false);
     setCurrentPage(Math.ceil((localModules.length + 1) / ITEMS_PER_PAGE));
+
+    // Upload cert PDFs for newly added module — need to reload to get the new _id
+    const certNewPdfs: any[] = newMod._certNewPdfs || [];
+    if (certNewPdfs.some((p: any) => p._file)) {
+      // Small delay to let the module save complete, then reload so we can get the new module's _id
+      setTimeout(() => window.location.reload(), 800);
+    }
   };
 
   const handleMoveUp   = async (i: number) => hookMoveModule((currentPage - 1) * ITEMS_PER_PAGE + i, 'up');
@@ -1040,17 +1526,25 @@ export const EducationDetailView: React.FC = () => {
                       ) : isCert ? (
                         <CertModuleCard mod={mod} data={data} isLight={isLight} cardBg={cardBg} border={border}
                           textPrimary={textPrimary} textMuted={textMuted} textFaint={textFaint}
-                          hasAccess={hasAccess} isAdmin={isAdmin} isSubscriber={isSubscriber} onUnlock={handleUnlock} />
+                          hasAccess={hasAccess} isAdmin={isAdmin} isSubscriber={isSubscriber} onUnlock={handleUnlock}
+                          categoryId={categoryId}
+                          onCertPdfAdded={(updatedMod: any) => {
+                            // refresh page to reflect new PDF
+                            window.location.reload();
+                          }}
+                          onCertPdfDeleted={(pdfIdx: number) => {
+                            window.location.reload();
+                          }} />
                       ) : isEbook ? (
                         <PdfModuleCard mod={mod} data={data} isLight={isLight} cardBg={cardBg} border={border}
                           ls={levelStyleMap[mod.level] ?? levelStyleMap['Beginner']}
                           textPrimary={textPrimary} textMuted={textMuted} textFaint={textFaint}
-                          locked={false} onUnlock={handleUnlock} />
+                          locked={modLocked} onUnlock={handleUnlock} />
                       ) : (
                         <ModuleCard mod={mod} data={data} isLight={isLight} cardBg={cardBg} border={border}
                           ls={levelStyleMap[mod.level] ?? levelStyleMap['Beginner']}
                           textPrimary={textPrimary} textMuted={textMuted} textFaint={textFaint}
-                          locked={false} onUnlock={handleUnlock} />
+                          locked={modLocked} hasAccess={hasAccess} onUnlock={handleUnlock} />
                       )}
                     </div>
                   </div>

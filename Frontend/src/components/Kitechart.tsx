@@ -339,8 +339,31 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
     if (!seriesRef.current || !chartRef.current || !candles.length) return;
     seriesRef.current.setData(toLWC(candles));
     chartRef.current.timeScale().fitContent();
+
+    const isIntraday = period === '1D' || period === '1W';
     chartRef.current.applyOptions({
-      timeScale: { timeVisible: period === '1D' || period === '1W' },
+      timeScale: {
+        timeVisible: isIntraday,
+        secondsVisible: false,
+        barSpacing: period === '1Y' ? 14 : period === '1D' ? 5 : 8,
+        // ✅ FIX: Re-apply tickMarkFormatter on every period change
+        // so 1M/3M/1Y show "DD MMM" date labels on the X-axis
+        tickMarkFormatter: (utcSec: number) => {
+          if (isIntraday) return formatISTTime(utcSec);
+          return formatISTDay(utcSec);
+        },
+      },
+      // ✅ FIX: Re-apply crosshair tooltip formatter on period change
+      localization: {
+        timeFormatter: (utcSec: number) => {
+          if (isIntraday) {
+            const d = toISTDate(utcSec);
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${formatISTTime(utcSec)} IST`;
+          }
+          return formatISTDay(utcSec);
+        },
+      },
     });
   }, [candles, period]);
 

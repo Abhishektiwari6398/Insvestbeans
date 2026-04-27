@@ -26,6 +26,8 @@ import {
   uploadModuleThumbnail,
   deleteModule,
   reorderModules,
+  addCertModulePdf,     // ← NEW: add PDF to cert module pdfs[]
+  deleteCertModulePdf,  // ← NEW: delete PDF from cert module pdfs[]
 } from "../controllers/education.controller.js";
 
 const router = Router();
@@ -109,6 +111,19 @@ router.post(
   uploadImage.single("thumbnail"),
   uploadModuleThumbnail
 );
+
+// ── Certification module PDFs (pdfs[] array) ─────────────────────────────────
+// POST   .../education/categories/:id/modules/:moduleId/cert-pdfs
+// Adds a new PDF entry to mod.pdfs[] — used for certification content type
+router.post(
+  "/categories/:id/modules/:moduleId/cert-pdfs",
+  uploadPdf.single("pdf"),
+  addCertModulePdf
+);
+
+// DELETE .../education/categories/:id/modules/:moduleId/cert-pdfs/:pdfIndex
+// Removes PDF at 0-based pdfIndex from mod.pdfs[] + deletes from Cloudinary
+router.delete("/categories/:id/modules/:moduleId/cert-pdfs/:pdfIndex", deleteCertModulePdf);
 
 // DELETE .../education/categories/:id/modules/:moduleId
 router.delete("/categories/:id/modules/:moduleId", deleteModule);

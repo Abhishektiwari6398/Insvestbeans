@@ -402,6 +402,76 @@ export const deleteModule = asyncHandler(async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ADMIN — add a PDF to a certification module's pdfs[] array
+// POST .../education/categories/:id/modules/:moduleId/cert-pdfs
+// field: "pdf" (file) + body: title, subtitle, isFreePreview
+// ─────────────────────────────────────────────────────────────────────────────
+export const addCertModulePdf = asyncHandler(async (req, res) => {
+  if (!req.file?.path) throw new ApiError(400, "PDF file is required");
+
+  const { id: categoryId, moduleId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(moduleId)) throw new ApiError(400, "Invalid moduleId");
+
+  const cat = await EducationCategory.findOne({ categoryId });
+  if (!cat) throw new ApiError(404, "Category not found");
+
+  const mod = cat.modules.id(moduleId);
+  if (!mod) throw new ApiError(404, "Module not found");
+
+  const { title, subtitle = "", isFreePreview } = req.body;
+  if (!title?.trim()) throw new ApiError(400, "PDF title is required");
+
+  // Upload PDF to Cloudinary as raw file
+  const uploaded = await uploadPdfToCloudinary(req.file.path, "education/cert-pdfs");
+
+  mod.pdfs.push({
+    title:         title.trim(),
+    subtitle:      subtitle.trim(),
+    pdfUrl:        uploaded.secure_url,
+    pdfPublicId:   uploaded.public_id,
+    isFreePreview: isFreePreview === "true" || isFreePreview === true,
+    isPaid:        !(isFreePreview === "true" || isFreePreview === true),
+  });
+
+  await cat.save();
+
+  const addedPdf = mod.pdfs[mod.pdfs.length - 1];
+  return res.status(201).json(new ApiResponse(201, addedPdf, "PDF added to certification module"));
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN — delete a specific PDF from a certification module's pdfs[] array
+// DELETE .../education/categories/:id/modules/:moduleId/cert-pdfs/:pdfIndex
+// pdfIndex: 0-based index into mod.pdfs array
+// ─────────────────────────────────────────────────────────────────────────────
+export const deleteCertModulePdf = asyncHandler(async (req, res) => {
+  const { id: categoryId, moduleId, pdfIndex } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(moduleId)) throw new ApiError(400, "Invalid moduleId");
+
+  const idx = parseInt(pdfIndex, 10);
+  if (isNaN(idx) || idx < 0) throw new ApiError(400, "Invalid pdfIndex");
+
+  const cat = await EducationCategory.findOne({ categoryId });
+  if (!cat) throw new ApiError(404, "Category not found");
+
+  const mod = cat.modules.id(moduleId);
+  if (!mod) throw new ApiError(404, "Module not found");
+
+  if (idx >= mod.pdfs.length) throw new ApiError(404, "PDF not found at that index");
+
+  const pdfToDelete = mod.pdfs[idx];
+
+  // Delete from Cloudinary (raw resource type for PDFs)
+  await deleteCloudinaryAsset(pdfToDelete.pdfPublicId, "raw");
+
+  // Remove from array
+  mod.pdfs.splice(idx, 1);
+  await cat.save();
+
+  return res.status(200).json(new ApiResponse(200, { totalPdfs: mod.pdfs.length }, "PDF deleted from certification module"));
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ADMIN — reorder modules
 // PATCH .../education/categories/:id/modules/reorder
 // Body: { orderedIds: string[] }
