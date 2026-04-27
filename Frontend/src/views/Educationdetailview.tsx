@@ -434,7 +434,7 @@ function ModuleCard({ mod, data, isLight, cardBg, border, ls, textPrimary, textM
 // ════════════════════════════════════════════════════════════════════════
 // CERT MODULE CARD — mobile-first
 // ════════════════════════════════════════════════════════════════════════
-function CertModuleCard({ mod, data, isLight, cardBg, border, textPrimary, textMuted, textFaint, hasAccess, isAdmin: adminFlag, isSubscriber: subFlag, onUnlock, categoryId, onCertPdfAdded, onCertPdfDeleted }: any) {
+function CertModuleCard({ mod, data, isLight, cardBg, border, textPrimary, textMuted, textFaint, hasAccess, isAdmin: adminFlag, isSubscriber: subFlag, onUnlock, categoryId, onCertPdfAdded, onCertPdfDeleted, onVideoDeleted }: any) {
   const ls = levelStyleMap[mod.level] ?? levelStyleMap['Beginner'];
   const handlePdfOpen = (pdfUrl: string) => {
     const url = resolvePdfUrl(pdfUrl);
@@ -695,16 +695,28 @@ function CertModuleCard({ mod, data, isLight, cardBg, border, textPrimary, textM
                   </button>
                 ) : (
                   <button
-                    onClick={() => {
-                      const url = ch.videoUrl || '';
-                      if (url) window.open(url, '_blank', 'noopener,noreferrer');
-                      else alert('No video URL set for this session yet.');
-                    }}
-                    className="flex items-center gap-1 text-[11px] font-bold px-2.5 py-1.5 rounded-lg text-white"
-                    style={{ background: 'rgba(81,148,246,0.85)' }}>
-                    <SvgPlay /> <span className="hidden sm:inline">Watch</span>
-                  </button>
-                )}
+                  onClick={() => {
+                    const url = ch.videoUrl || '';
+                    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                    else alert('No video URL set for this session yet.');
+                  }}
+                  className="flex items-center gap-1 text-[11px] font-bold px-2.5 py-1.5 rounded-lg text-white"
+                  style={{ background: 'rgba(81,148,246,0.85)' }}>
+                  <SvgPlay /> <span className="hidden sm:inline">Watch</span>
+                </button>
+              )}
+              {/* ── Admin: Delete video ── */}
+              {adminFlag && (
+                <button
+                  onClick={() => {
+                    if (!window.confirm(`Delete video "${ch.title}"?`)) return;
+                    onVideoDeleted?.(j);
+                  }}
+                  className="text-[10px] px-2 py-1.5 rounded-lg font-bold"
+                  style={{ background: 'rgba(239,68,68,0.10)', color: '#f87171', border: '1px solid rgba(239,68,68,0.20)' }}>
+                  🗑️
+                </button>
+              )}
               </div>
             </div>
           );
@@ -1736,18 +1748,22 @@ export const EducationDetailView: React.FC = () => {
                     <div style={isAdmin ? { borderRadius: '0 0 16px 16px', overflow: 'hidden' } : {}}>
                       {modLocked ? (
                         <LockedModuleCard data={data} isLight={isLight} cardBg={cardBg} border={border} textFaint={textFaint} onUnlock={handleUnlock} />
-                      ) : isCert ? (
-                        <CertModuleCard mod={mod} data={data} isLight={isLight} cardBg={cardBg} border={border}
-                          textPrimary={textPrimary} textMuted={textMuted} textFaint={textFaint}
-                          hasAccess={hasAccess} isAdmin={isAdmin} isSubscriber={isSubscriber} onUnlock={handleUnlock}
-                          categoryId={categoryId}
-                          onCertPdfAdded={(updatedMod: any) => {
-                            // refresh page to reflect new PDF
-                            window.location.reload();
-                          }}
-                          onCertPdfDeleted={(pdfIdx: number) => {
-                            window.location.reload();
-                          }} />
+                        ) : isCert ? (
+                          <CertModuleCard mod={mod} data={data} isLight={isLight} cardBg={cardBg} border={border}
+                            textPrimary={textPrimary} textMuted={textMuted} textFaint={textFaint}
+                            hasAccess={hasAccess} isAdmin={isAdmin} isSubscriber={isSubscriber} onUnlock={handleUnlock}
+                            categoryId={categoryId}
+                            onCertPdfAdded={(updatedMod: any) => {
+                              window.location.reload();
+                            }}
+                            onCertPdfDeleted={(pdfIdx: number) => {
+                              window.location.reload();
+                            }}
+                            onVideoDeleted={async (chIdx: number) => {
+                              const updatedChapters = mod.chapters.filter((_: any, ci: number) => ci !== chIdx);
+                              await hookUpdateModule(mod._id, { ...mod, chapters: updatedChapters }, null);
+                              window.location.reload();
+                            }} />
                       ) : isEbook ? (
                         <PdfModuleCard mod={mod} data={data} isLight={isLight} cardBg={cardBg} border={border}
                           ls={levelStyleMap[mod.level] ?? levelStyleMap['Beginner']}
