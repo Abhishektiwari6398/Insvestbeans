@@ -366,7 +366,7 @@ function useKiteHolidays() {
           .filter((h: any) => h.date && h.reason)
           .map((h: any, i: number) => ({
             id: `kite-h-${i}`, date: h.date, title: h.reason,
-            description: "NSE & BSE closed — official Kite/Zerodha trading holiday calendar.",
+            description: "NSE & BSE closed",
             region: "india" as Region, category: "holiday" as Category,
             impact: "Medium" as const, source: "api" as const,
           }));

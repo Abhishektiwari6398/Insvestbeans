@@ -20,14 +20,15 @@ interface CandlePoint {
   y: [number, number, number, number]; // [open, high, low, close]
 }
 
-type Period = '1D' | '1W' | '1M' | '3M' | '1Y';
-const PERIODS: Period[] = ['1D', '1W', '1M', '3M', '1Y'];
+type Period = '1D' | '5D' | '1M' | '3M' | '6M' | '1Y';
+const PERIODS: Period[] = ['1D', '5D', '1M', '3M', '6M', '1Y'];
 
 const DELAY_LABEL: Record<Period, string> = {
   '1D': 'Zerodha · 5 min bars · Today',
-  '1W': 'Zerodha · 30 min bars · Last 5 days',
+  '5D': 'Zerodha · 30 min bars · Last 5 days',
   '1M': 'Zerodha · Daily bars · Last 1 month',
   '3M': 'Zerodha · Daily bars · Last 3 months',
+  '6M': 'Zerodha · Daily bars · Last 6 months',
   '1Y': 'Zerodha · Daily bars · Last 1 year',
 };
 
@@ -89,7 +90,7 @@ function makeTickFormatter(period: Period) {
       return formatISTTime(utcSec);
     }
 
-    if (period === '1W') {
+    if (period === '5D') {
       // New day → show "DD MMM"; same day → show "HH:MM"
       if (day !== prevDay) { prevDay = day; return `${day} ${MONTHS[month]}`; }
       return formatISTTime(utcSec);
@@ -101,7 +102,7 @@ function makeTickFormatter(period: Period) {
       return '';
     }
 
-    if (period === '3M') {
+    if (period === '3M' || period === '6M') {
       // New month → show "MMM"; new week → show "DD"
       if (month !== prevMonth) { prevMonth = month; prevWeek = week; return MONTHS[month]; }
       if (week !== prevWeek)   { prevWeek = week; return `${day}`; }
@@ -311,7 +312,7 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
 
   // ── Auto-refresh for intraday ────────────────────────────────────
   useEffect(() => {
-    if (period !== '1D' && period !== '1W') return;
+    if (period !== '1D' && period !== '5D') return;
     const id = setInterval(() => fetchCandles(symbol, period), AUTO_REFRESH_MS);
     return () => clearInterval(id);
   }, [symbol, period, fetchCandles]);
@@ -340,21 +341,21 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
       rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.08, bottom: 0.06 }, minimumWidth: 62 },
       timeScale: {
         borderVisible:   false,
-        timeVisible:     period === '1D' || period === '1W',
+        timeVisible:     period === '1D' || period === '5D',
         secondsVisible:  false,
         fixLeftEdge:     true,
         fixRightEdge:    true,
         // rightOffset: 0,
-        barSpacing:      period === '1Y' ? 14 : period === '1D' ? 5 : 8,
+        barSpacing:      period === '1Y' || period === '6M' ? 6 : period === '1D' ? 5 : 8,
         rightOffset:     2,
-        minimumBarSpacing: 3,
+        minimumBarSpacing: period === '1Y' || period === '6M' ? 0.5 : 3,
         // ✅ Smart TradingView-style tick formatter — boundary-aware, IST-corrected
         tickMarkFormatter: makeTickFormatter(period),
       },
       // ✅ FIX Issue 4: Crosshair tooltip also shows IST
       localization: {
         timeFormatter: (utcSec: number) => {
-          if (period === '1D' || period === '1W') {
+          if (period === '1D' || period === '5D') {
             const d = toISTDate(utcSec);
             const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
             return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${formatISTTime(utcSec)} IST`;
@@ -405,12 +406,13 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
     //   chart.timeScale().fitContent();
     // }, 0);
 
-    const isIntraday = period === '1D' || period === '1W';
+    const isIntraday = period === '1D' || period === '5D';
     chartRef.current.applyOptions({
       timeScale: {
         timeVisible: isIntraday,
         secondsVisible: false,
-        barSpacing: period === '1Y' ? 14 : period === '1D' ? 5 : 8,
+        barSpacing: period === '1Y' || period === '6M' ? 6 : period === '1D' ? 5 : 8,
+        minimumBarSpacing: period === '1Y' || period === '6M' ? 0.5 : 3,
         // ✅ Re-create smart formatter on every period change (stateful, boundary-aware)
         tickMarkFormatter: makeTickFormatter(period),
       },
@@ -431,7 +433,7 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
   // ── Countdown to next refresh ────────────────────────────────────
   const [nextRefreshIn, setNextRefreshIn] = useState('');
   useEffect(() => {
-    if ((period !== '1D' && period !== '1W') || !lastFetch) { setNextRefreshIn(''); return; }
+    if ((period !== '1D' && period !== '5D') || !lastFetch) { setNextRefreshIn(''); return; }
     const tick = () => {
       const rem = Math.max(0, AUTO_REFRESH_MS - (Date.now() - lastFetch.getTime()));
       const m = Math.floor(rem / 60_000);
@@ -609,26 +611,7 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
           )}
         </div>
 
-        {/* ── Period buttons ─────────────────────────────────────── */}
-        <div className="flex items-center gap-1 mb-2 sm:mb-5">
-          {PERIODS.map(p => (
-            <button key={p}
-              onClick={() => setPeriod(p)}
-              disabled={loading}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all disabled:opacity-60 ${period === p ? btnActive : btnDefault}`}>
-              {p}
-            </button>
-          ))}
-          {loading && <Loader2 className="w-3.5 h-3.5 ml-1 animate-spin text-slate-400" />}
-          <button
-            onClick={() => fetchCandles(symbol, period)}
-            disabled={loading}
-            className={`ml-auto px-2 py-1 rounded-lg text-xs font-bold transition-all disabled:opacity-60 ${btnDefault}`}
-            title="Refresh"
-          >
-            <RefreshCw className="w-3 h-3" />
-          </button>
-        </div>
+        {/* ── Period buttons removed from here — now in footer bottom-right ── */}
       </div>
 
       {/* ── Chart canvas — responsive height ────────────────────── */}
@@ -652,29 +635,48 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
       )}
 
       {/* ── Footer ──────────────────────────────────────────────── */}
-      <div className={`flex flex-col gap-0.5 px-3 sm:px-5 py-2 text-[10px] border-t ${footBg}`}>
-        {/* Row 1: source label + refresh timer */}
-        <div className="flex items-center justify-between">
-          <span className="flex items-center gap-1">
-            📊 <span className="hidden xs:inline">{DELAY_LABEL[period]}</span>
-            <span className="xs:hidden">{period === '1D' ? '5m bars · 9:30–15:30' : DELAY_LABEL[period]}</span>
+      <div className={`flex flex-col gap-1 px-3 sm:px-5 py-2 border-t ${footBg}`}>
+        {/* Row 1: source label (hidden on mobile) + period buttons + refresh timer */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="hidden sm:flex items-center gap-1 text-[10px]">
+            📊 {DELAY_LABEL[period]}
           </span>
-          <span className="flex items-center gap-1.5">
+          {/* ── Period buttons — bottom right (full width on mobile) ── */}
+          <div className="flex items-center gap-1 sm:ml-auto w-full sm:w-auto justify-between sm:justify-end">
+            <div className="flex items-center gap-1">
+              {PERIODS.map(p => (
+                <button key={p}
+                  onClick={() => setPeriod(p)}
+                  disabled={loading}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all disabled:opacity-60 ${period === p ? btnActive : btnDefault}`}>
+                  {p}
+                </button>
+              ))}
+              {loading && <Loader2 className="w-3 h-3 ml-0.5 animate-spin text-slate-400" />}
+              <button
+                onClick={() => fetchCandles(symbol, period)}
+                disabled={loading}
+                className={`ml-1 px-1.5 py-0.5 rounded text-xs font-bold transition-all disabled:opacity-60 ${btnDefault}`}
+                title="Refresh"
+              >
+                <RefreshCw className="w-3 h-3" />
+              </button>
+            </div>
             {nextRefreshIn && (
-              <span className="flex items-center gap-1 text-amber-500/80">
+              <span className=" hidden sm:block flex  items-center gap-1 text-[10px] text-amber-500/80">
                 <Clock className="w-2.5 h-2.5" />{nextRefreshIn}
               </span>
             )}
             {lastFetch && !nextRefreshIn && (
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1 text-[10px]">
                 <Clock className="w-2.5 h-2.5" />
                 {Math.round((Date.now() - lastFetch.getTime()) / 60_000)}m ago
               </span>
             )}
-          </span>
+          </div>
         </div>
-        {/* Row 2: powered by */}
-        <div className={`text-[9px] opacity-50 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
+        {/* Row 2: powered by — hidden on mobile */}
+        <div className={`hidden sm:block text-[9px] opacity-50 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
           Powered by Zerodha
         </div>
       </div>

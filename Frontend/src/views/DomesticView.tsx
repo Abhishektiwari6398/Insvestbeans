@@ -70,7 +70,7 @@ function makeTickFormatterKC(period: Period) {
       if (hh === 9 && mm === 15) { prevDay = day; return `${day} ${MONTHS_KC[month]}`; }
       return formatISTTimeKC(utcSec);
     }
-    if (period === '1W') {
+    if (period === '5D') {
       if (day !== prevDay) { prevDay = day; return `${day} ${MONTHS_KC[month]}`; }
       return formatISTTimeKC(utcSec);
     }
@@ -78,7 +78,7 @@ function makeTickFormatterKC(period: Period) {
       if (week !== prevWeek) { prevWeek = week; return `${day} ${MONTHS_KC[month]}`; }
       return '';
     }
-    if (period === '3M') {
+    if (period === '3M' || period === '6M') {
       if (month !== prevMonth) { prevMonth = month; prevWeek = week; return MONTHS_KC[month]; }
       if (week !== prevWeek) { prevWeek = week; return `${day}`; }
       return '';
@@ -476,12 +476,12 @@ function SideNav({ active, onSelect, ticks, connected }: {
 // CANDLESTICK CHART COMPONENT
 // ══════════════════════════════════════════════════════════════════
 interface Candle { x: number; y: [number, number, number, number]; volume?: number }
-type Period = "1D" | "1W" | "1M" | "3M" | "1Y";
-const PERIODS: Period[] = ["1D", "1W", "1M", "3M", "1Y"];
-const P_INTERVAL: Record<Period, string> = { "1D": "5minute", "1W": "30minute", "1M": "day", "3M": "day", "1Y": "day" };
+type Period = "1D" | "5D" | "1M" | "3M" | "6M" | "1Y";
+const PERIODS: Period[] = ["1D", "5D", "1M", "3M", "6M", "1Y"];
+const P_INTERVAL: Record<Period, string> = { "1D": "5minute", "5D": "30minute", "1M": "day", "3M": "day", "6M": "day", "1Y": "day" };
 // 1D: fetch 4 days so weekends/holidays always have data; backend returns today's candles
-const P_DAYS: Record<Period, number> = { "1D": 4, "1W": 7, "1M": 30, "3M": 90, "1Y": 365 };
-const P_LABEL: Record<Period, string> = { "1D": "5m candles · 9:15–15:30 IST", "1W": "30m candles · IST", "1M": "EOD · daily candles", "3M": "EOD · daily candles", "1Y": "EOD · daily candles" };
+const P_DAYS: Record<Period, number> = { "1D": 4, "5D": 7, "1M": 30, "3M": 90, "6M": 180, "1Y": 365 };
+const P_LABEL: Record<Period, string> = { "1D": "5m candles · 9:15–15:30 IST", "5D": "30m candles · IST", "1M": "EOD · daily candles", "3M": "EOD · daily candles", "6M": "EOD · daily candles", "1Y": "EOD · daily candles" };
 
 // IST offset: UTC+5:30 = 19800 seconds
 // lightweight-charts uses UNIX seconds; Kite timestamps are UTC ms → convert to IST seconds
@@ -567,7 +567,7 @@ function CandleChart({ token, height = 300, showControls = true, defaultPeriod =
       // timeScale: { borderVisible: false, timeVisible: period === "1D" || period === "1W", secondsVisible: false, fixLeftEdge: true, fixRightEdge: true, barSpacing: 9, rightOffset: 4 },
       localization: {
         timeFormatter: (utcSec: number) => {
-          const isIntraday = period === "1D" || period === "1W";
+          const isIntraday = period === "1D" || period === "5D";
           if (isIntraday) {
             const d = toISTDateKC(utcSec);
             return `${d.getUTCDate()} ${MONTHS_KC[d.getUTCMonth()]} ${formatISTTimeKC(utcSec)} IST`;
@@ -577,13 +577,13 @@ function CandleChart({ token, height = 300, showControls = true, defaultPeriod =
       },
       timeScale: {
         borderVisible: false,
-        timeVisible: period === "1D" || period === "1W",
+        timeVisible: period === "1D" || period === "5D",
         secondsVisible: false,
         fixLeftEdge: true,
         fixRightEdge: true,
-        barSpacing: period === "1Y" ? 14 : period === "1D" ? 5 : 8,
+        barSpacing: period === "1Y" || period === "6M" ? 6 : period === "1D" ? 5 : 8,
         rightOffset: 2,
-        minimumBarSpacing: 3,
+        minimumBarSpacing: period === "1Y" || period === "6M" ? 1 : 3,
         tickMarkFormatter: makeTickFormatterKC(period),  // ← yeh key hai
       },
       handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true },
@@ -669,13 +669,14 @@ function CandleChart({ token, height = 300, showControls = true, defaultPeriod =
     // Period change pe tickMarkFormatter bhi update karo
     chartRef.current?.applyOptions({
       timeScale: {
-        timeVisible: period === "1D" || period === "1W",
-        barSpacing: period === "1Y" ? 14 : period === "1D" ? 5 : 8,
+        timeVisible: period === "1D" || period === "5D",
+        barSpacing: period === "1Y" || period === "6M" ? 6 : period === "1D" ? 5 : 8,
+        minimumBarSpacing: period === "1Y" || period === "6M" ? 1 : 3,
         tickMarkFormatter: makeTickFormatterKC(period),  // ← har period change pe naya formatter
       },
       localization: {
         timeFormatter: (utcSec: number) => {
-          const isIntraday = period === "1D" || period === "1W";
+          const isIntraday = period === "1D" || period === "5D";
           if (isIntraday) {
             const d = toISTDateKC(utcSec);
             return `${d.getUTCDate()} ${MONTHS_KC[d.getUTCMonth()]} ${formatISTTimeKC(utcSec)} IST`;

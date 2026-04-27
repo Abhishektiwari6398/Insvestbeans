@@ -1,4 +1,3 @@
-
 import express from "express";
 import crypto  from "crypto";
 import axios   from "axios";
@@ -315,9 +314,11 @@ router.get("/markets/history/:symbol", async (req, res) => {
 
   const PERIOD_MAP = {
     "1D": { interval: "5minute",  days: 5   }, // 5 days covers weekends & holidays — filtered to last session
-    "1W": { interval: "30minute", days: 9   }, // 9 calendar days = safely covers 5 trading days (Mon–Fri + weekends)
+    "5D": { interval: "30minute", days: 9   }, // 9 calendar days = safely covers 5 trading days (Mon–Fri + weekends)
+    "1W": { interval: "30minute", days: 9   }, // legacy alias — same as 5D
     "1M": { interval: "day",      days: 35  }, // 35 calendar days = ~22 trading days (1 full month)
     "3M": { interval: "day",      days: 95  }, // 95 calendar days = ~66 trading days (3 full months)
+    "6M": { interval: "day",      days: 185 }, // 185 calendar days = ~126 trading days (6 full months)
     "1Y": { interval: "day",      days: 450 }, // 370 calendar days = ~252 trading days (1 full year)
   };
 
@@ -444,8 +445,8 @@ console.log("From:", fmt(fromDateObj), "To:", fmt(toDateObj));
       });
     }
 
-    // For 1W: keep only last 5 unique trading dates, market hours (9:15–15:30 IST)
-    if (period === "1W" && rawCandles.length > 0) {
+    // For 5D/1W: keep only last 5 unique trading dates, market hours (9:15–15:30 IST)
+    if ((period === "5D" || period === "1W") && rawCandles.length > 0) {
       const allDates  = [...new Set(rawCandles.map(c => toISTDate(c.x)))].sort();
       const last5     = new Set(allDates.slice(-5));
       const OPEN  = 9  * 60 + 15;
