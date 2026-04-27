@@ -634,6 +634,92 @@ function CertModuleCard({ mod, data, isLight, cardBg, border, textPrimary, textM
           </button>
         )}
       </div>
+      {/* ── VIDEO SESSIONS (chapters) ─────────────────────────────────── */}
+{mod.chapters?.length > 0 && (
+  <>
+    <div className="mx-4 md:mx-6" style={{ height: 1, background: `linear-gradient(90deg,${data.accent}20,transparent)` }} />
+    <div className="px-4 md:px-6 py-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: textFaint }}>
+          🎥 Video Sessions
+        </p>
+        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+          style={{ background: `${data.accent}10`, color: data.accent }}>
+          {mod.chapters.length} Videos
+        </span>
+      </div>
+      <div className="space-y-2">
+        {mod.chapters.map((ch: any, j: number) => {
+          const chLocked = !ch.free && !hasAccess;
+          return (
+            <div key={j}
+              className="flex items-center justify-between gap-2 p-2.5 rounded-xl"
+              style={{
+                background: chLocked
+                  ? (isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.03)')
+                  : (isLight ? 'rgba(81,148,246,0.04)' : 'rgba(81,148,246,0.07)'),
+                border: chLocked
+                  ? (isLight ? '1px solid rgba(0,0,0,0.07)' : '1px solid rgba(255,255,255,0.07)')
+                  : '1px solid rgba(81,148,246,0.18)',
+              }}>
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: chLocked ? 'rgba(148,163,184,0.12)' : 'rgba(81,148,246,0.15)',
+                    color: chLocked ? 'rgba(148,163,184,0.5)' : '#5194F6',
+                  }}>
+                  {chLocked ? <SvgLockSm /> : <SvgPlay />}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold truncate"
+                    style={{ color: chLocked ? textFaint : textPrimary, opacity: chLocked ? 0.6 : 1 }}>
+                    {ch.title}
+                  </p>
+                  {ch.ref && (
+                    <p className="text-[10px]" style={{ color: textFaint }}>{ch.ref}</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {ch.free
+                  ? <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full hidden sm:block"
+                      style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399' }}>FREE</span>
+                  : <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full hidden sm:block"
+                      style={{ background: 'rgba(81,148,246,0.10)', color: '#5194F6' }}>PAID</span>
+                }
+                {chLocked ? (
+                  <button onClick={onUnlock}
+                    className="text-[10px] font-bold px-2.5 py-1.5 rounded-lg"
+                    style={{ background: 'rgba(81,148,246,0.10)', color: '#5194F6', border: '1px solid rgba(81,148,246,0.25)' }}>
+                    🔒 Unlock
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      const url = ch.videoUrl || '';
+                      if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                      else alert('No video URL set for this session yet.');
+                    }}
+                    className="flex items-center gap-1 text-[11px] font-bold px-2.5 py-1.5 rounded-lg text-white"
+                    style={{ background: 'rgba(81,148,246,0.85)' }}>
+                    <SvgPlay /> <span className="hidden sm:inline">Watch</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {!hasAccess && mod.chapters.some((ch: any) => !ch.free) && (
+        <button onClick={onUnlock}
+          className="w-full mt-3 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 text-white"
+          style={{ background: data.accentGrad }}>
+          <SvgCrown /> Unlock All Videos
+        </button>
+      )}
+    </div>
+  </>
+)}
     </div>
   );
 }
