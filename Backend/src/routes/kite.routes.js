@@ -1,4 +1,4 @@
-// Backend/src/routes/kite.routes.js  ← REPLACE existing
+
 import express from "express";
 import crypto  from "crypto";
 import axios   from "axios";
@@ -15,8 +15,6 @@ const router     = express.Router();
 const API_KEY    = process.env.KITE_API_KEY;
 const API_SECRET = process.env.KITE_API_SECRET;
 
-// ✅ FIX: autoLoginKite process.env.KITE_ACCESS_TOKEN update karta hai
-// headers() ab runtime pe fresh token read karta hai — stale nahi hoga
 const getToken = () => process.env.KITE_ACCESS_TOKEN || "";
 let ACCESS_TOKEN = getToken(); // backward compat ke liye (callback mein use hota hai)
 
@@ -316,22 +314,22 @@ router.get("/markets/history/:symbol", async (req, res) => {
   const period     = req.query.period || "1D";
 
   const PERIOD_MAP = {
-    "1D": { interval: "5minute",  days: 5   }, // 5 days covers weekends & holidays
-    "1W": { interval: "30minute", days: 10  }, // 10 days for a full trading week
-    "1M": { interval: "day",      days: 30  },
-    "3M": { interval: "day",      days: 90  },
-    "1Y": { interval: "day",      days: 365 },
+    "1D": { interval: "5minute",  days: 5   }, // 5 days covers weekends & holidays — filtered to last session
+    "1W": { interval: "30minute", days: 9   }, // 9 calendar days = safely covers 5 trading days (Mon–Fri + weekends)
+    "1M": { interval: "day",      days: 35  }, // 35 calendar days = ~22 trading days (1 full month)
+    "3M": { interval: "day",      days: 95  }, // 95 calendar days = ~66 trading days (3 full months)
+    "1Y": { interval: "day",      days: 450 }, // 370 calendar days = ~252 trading days (1 full year)
   };
 
   const symUpper = symbol.toUpperCase();
-  // Apply alias — some frontend symbol names differ from Kite CSV tradingsymbols
+  
   const symResolved = SYMBOL_ALIAS[symUpper] || symUpper;
 
-  // 1. Check hardcoded stocks first (fast, no API call)
-  let token = STOCK_TOKEN_MAP[symUpper] || STOCK_TOKEN_MAP[symResolved];
-  let exchange = "NSE"; // default
 
-  // 2. Check NSE indices
+  let token = STOCK_TOKEN_MAP[symUpper] || STOCK_TOKEN_MAP[symResolved];
+  let exchange = "NSE"; 
+
+ 
   if (!token) {
     const indexMap = await getNSEIndexTokens();
     token = indexMap[symUpper] || indexMap[symResolved];
@@ -367,41 +365,95 @@ router.get("/markets/history/:symbol", async (req, res) => {
 
   const cfg = PERIOD_MAP[period] || PERIOD_MAP["1D"];
 
-  const toDate   = new Date().toISOString().split("T")[0];
-  const fromDate = (() => { const d = new Date(); d.setDate(d.getDate() - cfg.days); return d.toISOString().split("T")[0]; })();
+  const toDateObj   = new Date();
+  const fromDateObj = new Date();
+  fromDateObj.setDate(fromDateObj.getDate() - cfg.days);
+
+  const fmt = (d) => d.toISOString().split("T")[0];
+
+  // ── Chunked fetch for daily intervals ──────────────────────────
+  // Zerodha silently truncates daily data beyond ~100 days per request.
+  // Fix: split 3M/1Y requests into 100-day chunks and merge results.
+  async function fetchChunked(token, interval, fromD, toD) {
+    const CHUNK_DAYS = 100; // safe limit per request for daily bars
+    const results = [];
+    let chunkTo = new Date(toD);
+
+    while (chunkTo > fromD) {
+      const chunkFrom = new Date(chunkTo);
+      chunkFrom.setDate(chunkFrom.getDate() - CHUNK_DAYS);
+      if (chunkFrom < fromD) chunkFrom.setTime(fromD.getTime());
+
+      try {
+        const r = await axios.get(
+          `https://api.kite.trade/instruments/historical/${token}/${interval}`,
+          { headers: headers(), params: { from: fmt(chunkFrom), to: fmt(chunkTo) } }
+        );
+        const chunk = (r.data?.data?.candles || []).map(([time, open, high, low, close, volume]) => ({
+          x: new Date(time).getTime(), y: [open, high, low, close], volume,
+        }));
+        results.unshift(...chunk); // prepend older data
+      } catch (e) {
+        console.warn(`[history] Chunk fetch failed ${fmt(chunkFrom)}→${fmt(chunkTo)}:`, e.message);
+      }
+
+      chunkTo = new Date(chunkFrom);
+      chunkTo.setDate(chunkTo.getDate() - 1); // step back 1 day to avoid overlap
+    }
+
+    // De-duplicate by timestamp (x), keep sorted ascending
+    const seen = new Set();
+    return results
+      .filter(c => { if (seen.has(c.x)) return false; seen.add(c.x); return true; })
+      .sort((a, b) => a.x - b.x);
+  }
 
   try {
-    const r = await axios.get(
-      `https://api.kite.trade/instruments/historical/${token}/${cfg.interval}`,
-      { headers: headers(), params: { from: fromDate, to: toDate } }
-    );
-    const rawCandles = (r.data?.data?.candles || []).map(([time, open, high, low, close, volume]) => ({
-      x: new Date(time).getTime(), y: [open, high, low, close], volume,
-    }));
+    // Use chunked fetch for multi-month daily data; single request for intraday
+    const useChunking = cfg.interval === "day" && cfg.days > 60;
 
-    // For 1D: filter to only the last trading session (most recent date) using IST
-    // IST = UTC+5:30 (330 minutes ahead of UTC)
-    // Zerodha timestamps are IST — comparing via UTC .toISOString() gives wrong dates
+    let rawCandles;
+    if (useChunking) {
+      rawCandles = await fetchChunked(token, cfg.interval, fromDateObj, toDateObj);
+    } else {
+      const r = await axios.get(
+        `https://api.kite.trade/instruments/historical/${token}/${cfg.interval}`,
+        { headers: headers(), params: { from: fmt(fromDateObj), to: fmt(toDateObj) } }
+      );
+      rawCandles = (r.data?.data?.candles || []).map(([time, open, high, low, close, volume]) => ({
+        x: new Date(time).getTime(), y: [open, high, low, close], volume,
+      }));
+    }
+    console.log("Period:", period);
+console.log("From:", fmt(fromDateObj), "To:", fmt(toDateObj));
+    console.log("Candles count:", rawCandles.length);
+    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+    const toISTDate = (ms) => new Date(ms + IST_OFFSET_MS).toISOString().slice(0, 10);
+
     let candles = rawCandles;
+
+    // For 1D: keep only last trading session, market hours only (9:30–15:30 IST)
     if (period === "1D" && rawCandles.length > 0) {
-      const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // 5h30m in ms
-
-      // Helper: get "YYYY-MM-DD" in IST for a given UTC epoch ms
-      const toISTDate = (ms) => new Date(ms + IST_OFFSET_MS).toISOString().slice(0, 10);
-
-      // Find the most recent trading date present in the data
       const lastDate = toISTDate(rawCandles[rawCandles.length - 1].x);
-
-      // Market hours: 9:15 AM IST = 03:45 UTC, 3:30 PM IST = 10:00 UTC
-      const MARKET_OPEN_IST_MINUTES  = 9  * 60 + 30; // 570 min — market opens 9:30 AM IST
-      const MARKET_CLOSE_IST_MINUTES = 15 * 60 + 30; // 930 min — market closes 3:30 PM IST
-
+      const OPEN  = 9  * 60 + 30; // 9:30 AM IST
+      const CLOSE = 15 * 60 + 30; // 3:30 PM IST
       candles = rawCandles.filter(c => {
         if (toISTDate(c.x) !== lastDate) return false;
-        // Candle time in minutes from midnight IST
-        const istMs      = c.x + IST_OFFSET_MS;
-        const istMinutes = ((istMs / 60000) % (24 * 60) + 24 * 60) % (24 * 60); // 0–1439
-        return istMinutes >= MARKET_OPEN_IST_MINUTES && istMinutes <= MARKET_CLOSE_IST_MINUTES;
+        const istMin = ((( c.x + IST_OFFSET_MS) / 60000) % (24 * 60) + 24 * 60) % (24 * 60);
+        return istMin >= OPEN && istMin <= CLOSE;
+      });
+    }
+
+    // For 1W: keep only last 5 unique trading dates, market hours (9:15–15:30 IST)
+    if (period === "1W" && rawCandles.length > 0) {
+      const allDates  = [...new Set(rawCandles.map(c => toISTDate(c.x)))].sort();
+      const last5     = new Set(allDates.slice(-5));
+      const OPEN  = 9  * 60 + 15;
+      const CLOSE = 15 * 60 + 30;
+      candles = rawCandles.filter(c => {
+        if (!last5.has(toISTDate(c.x))) return false;
+        const istMin = (((c.x + IST_OFFSET_MS) / 60000) % (24 * 60) + 24 * 60) % (24 * 60);
+        return istMin >= OPEN && istMin <= CLOSE;
       });
     }
 
@@ -785,23 +837,6 @@ async function fetchYahooSymbol(symbol) {
 }
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 1.  FII / DII  —  live from NSE API
-//     GET /api/v1/kite/fii-dii
-//
-//  ROOT CAUSE OF PRODUCTION 500:
-//  NSE's fiidiiTradeReact API actively blocks datacenter/VPS IPs (AWS, DO, etc.)
-//  because they detect server-originated requests via IP reputation + missing
-//  browser fingerprint. Localhost works because residential IPs are trusted.
-//
-//  FIX — 5-tier strategy:
-//  TIER 0: moneycontrol.com public JSON  — no session, works from any IP ✅
-//  TIER 1: NSE  (existing session)
-//  TIER 2: NSE  (fresh session + different UA)
-//  TIER 3: BSE  fallback (no session, but sometimes blocks VPS too)
-//  TIER 4: Stale cache   — NEVER return 500 if we have any prior data
-//  TIER 5: Static placeholder — return 200 with null values, not 500
-// ─────────────────────────────────────────────────────────────────────────────
 const _fiiDiiCache = { data: null, ts: 0 };
 
 // ── TIER 0: MoneyControl public API — works from VPS/datacenter IPs ──────────
@@ -1061,39 +1096,7 @@ router.get("/fii-dii", async (req, res) => {
 });
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// NSE-BASED GIFT NIFTY  (used as primary fallback when Kite NSE_IFSC fails)
-// NSE allIndices API publishes GIFT NIFTY with live price + % change vs prev close
-// ─────────────────────────────────────────────────────────────────────────────
-// async function fetchGiftNiftyFromNse(cookies) {
-//   const r = await axios.get("https://www.nseindia.com/api/allIndices", {
-//     timeout: 12000,
-//     headers: nseApiHeaders(cookies, "https://www.nseindia.com/market-data/live-equity-market"),
-//   });
 
-//   const indices = Array.isArray(r.data?.data) ? r.data.data : extractNseRows(r.data);
-
-//   // NSE names it "GIFT NIFTY" or "SGX NIFTY" depending on version
-//   const gift = indices.find(i =>
-//     /GIFT\s*NIFTY|SGX\s*NIFTY/i.test(i.index ?? i.indexSymbol ?? i.key ?? i.name ?? "")
-//   );
-//   if (!gift) throw new Error("GIFT NIFTY not found in NSE allIndices response");
-
-//   const price     = parseFloat(gift.last ?? gift.lastPrice ?? gift.current ?? "0");
-//   const prevClose = parseFloat(gift.previousClose ?? gift.prev_close ?? "0");
-//   const changePct = parseFloat(gift.percentChange ?? gift.pChange ?? "0")
-//     || (prevClose > 0 ? ((price - prevClose) / prevClose) * 100 : 0);
-
-//   if (!price || price <= 0) throw new Error("GIFT NIFTY: invalid price in NSE data");
-
-//   console.log(`[GIFT NIFTY] NSE allIndices: ${price} (${changePct.toFixed(2)}%)`);
-//   return {
-//     symbol:         "GIFT NIFTY",
-//     last_price:     price,
-//     change_percent: +changePct.toFixed(2),
-//     source:         "nse",
-//   };
-// }
 async function fetchGiftNiftyFromNse(cookies) {
   // ── NSE equity-stockIndices se NIFTY 50 price + pChange lo ──
   const r = await axios.get(
@@ -1607,14 +1610,6 @@ router.get("/vix", async (req, res) => {
 });
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARKET BREADTH — Advance / Decline / Unchanged + 52-week H/L counts
-// GET /api/v1/kite/market-breadth
-//
-// Source: NSE /api/allIndices → A/D for NIFTY 500 (powers nseindia.com/market-data/advance)
-// 52W H/L: NSE /api/equity-stockIndices?index=NIFTY%20500
-// Cache: 60 seconds
-// ─────────────────────────────────────────────────────────────────────────────
 const _breadthCache = { data: null, ts: 0 };
 
 async function fetchMarketBreadth(cookies) {
@@ -1728,47 +1723,10 @@ router.get("/market-breadth", async (req, res) => {
 });
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TOP GAINERS & LOSERS  (Cash Market)
-// GET /api/v1/kite/gainers-losers
-// Source: NSE /api/live-analysis-variations (powers nseindia.com/market-data/advance page)
-// Cache: 60 seconds
-// ─────────────────────────────────────────────────────────────────────────────
+
 const _gainersCache = { data: null, ts: 0 };
 
-// async function fetchGainersLosers(cookies) {
-//   const [gRes, lRes] = await Promise.allSettled([
-//     axios.get("https://www.nseindia.com/api/live-analysis-variations?index=gainers", {
-//       timeout: 12000,
-//       headers: nseApiHeaders(cookies, "https://www.nseindia.com/market-data/top-gainers-losers"),
-//     }),
-//     axios.get("https://www.nseindia.com/api/live-analysis-variations?index=loosers", {
-//       timeout: 12000,
-//       headers: nseApiHeaders(cookies, "https://www.nseindia.com/market-data/top-gainers-losers"),
-//     }),
-//   ]);
 
-//   // ✅ FIX: extractNseRows handles all NSE response shapes
-//   // Previously: raw?.data ?? raw?.NIFTY ?? array — fails when data is { NIFTY: [...] }
-//   const parseRows = (res) => {
-//     if (res.status !== "fulfilled") return [];
-//     const raw  = res.value?.data;
-//     const rows = extractNseRows(raw);
-//     return rows.slice(0, 20).map(r => ({
-//       symbol:     r.symbol      ?? r.stock      ?? "",
-//       last_price: parseFloat(r.lastPrice   ?? r.ltp      ?? "0") || 0,
-//       change_pct: parseFloat(r.pChange     ?? r.changePct ?? r.perChange ?? "0") || 0,
-//       change_abs: parseFloat(r.change      ?? r.netChange  ?? "0") || 0,
-//       volume:     parseInt(r.totalTradedVolume ?? r.volume ?? "0", 10) || 0,
-//     })).filter(r => r.symbol && r.last_price > 0);
-//   };
-
-//   return {
-//     gainers: parseRows(gRes),
-//     losers:  parseRows(lRes),
-//     source:  "NSE",
-//   };
-// }
 async function fetchGainersLosers(cookies) {
   const [gRes, lRes] = await Promise.allSettled([
     axios.get("https://www.nseindia.com/api/live-analysis-variations?index=gainers", {

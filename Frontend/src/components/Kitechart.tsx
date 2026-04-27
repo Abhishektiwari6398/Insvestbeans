@@ -24,33 +24,98 @@ type Period = '1D' | '1W' | '1M' | '3M' | '1Y';
 const PERIODS: Period[] = ['1D', '1W', '1M', '3M', '1Y'];
 
 const DELAY_LABEL: Record<Period, string> = {
-  '1D': 'Zerodha · 5 min bars',
-  '1W': 'Zerodha · 30 min bars',
-  '1M': 'Zerodha · daily bars',
-  '3M': 'Zerodha · daily bars',
-  '1Y': 'Zerodha · daily bars',
+  '1D': 'Zerodha · 5 min bars · Today',
+  '1W': 'Zerodha · 30 min bars · Last 5 days',
+  '1M': 'Zerodha · Daily bars · Last 1 month',
+  '3M': 'Zerodha · Daily bars · Last 3 months',
+  '1Y': 'Zerodha · Daily bars · Last 1 year',
 };
 
 // ── IST Time Formatter helpers ────────────────────────────────────
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // UTC+5:30
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 function toISTDate(utcSeconds: number) {
   return new Date(utcSeconds * 1000 + IST_OFFSET_MS);
 }
 
-/** Format intraday bar timestamps in IST (HH:MM) */
 function formatISTTime(utcSeconds: number): string {
   const d = toISTDate(utcSeconds);
-  const hh = d.getUTCHours().toString().padStart(2, '0');
-  const mm = d.getUTCMinutes().toString().padStart(2, '0');
-  return `${hh}:${mm}`;
+  return `${d.getUTCHours().toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')}`;
 }
 
-/** Format daily bar timestamps as DD MMM */
 function formatISTDay(utcSeconds: number): string {
   const d = toISTDate(utcSeconds);
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${d.getUTCDate()} ${months[d.getUTCMonth()]}`;
+  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+}
+
+/**
+ * TradingView-style smart tick formatter factory.
+ * Returns a stateful formatter that detects boundary changes (day/week/month/year)
+ * and shows the right label — exactly like Zerodha/TradingView.
+ *
+ *   1D  → HH:MM every bar; session open (09:15) shows "DD MMM"
+ *   1W  → day boundary → "DD MMM"; same day → "HH:MM"
+ *   1M  → week boundary → "DD MMM"
+ *   3M  → month boundary → "MMM"; week boundary → "DD"
+ *   1Y  → month boundary → "MMM"; year change → "MMM 'YY"
+ */
+function makeTickFormatter(period: Period) {
+  let prevDay   = -1;
+  let prevMonth = -1;
+  let prevYear  = -1;
+  let prevWeek  = -1;
+
+  const isoWeek = (d: Date): number => {
+    const tmp = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    const dayNum = tmp.getUTCDay() || 7;
+    tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+    return Math.ceil((((tmp.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  };
+
+  return (utcSec: number): string => {
+    const d     = toISTDate(utcSec);
+    const day   = d.getUTCDate();
+    const month = d.getUTCMonth();
+    const year  = d.getUTCFullYear();
+    const week  = isoWeek(d);
+    const hh    = d.getUTCHours();
+    const mm    = d.getUTCMinutes();
+
+    if (period === '1D') {
+      // Session open → show date; rest → show time
+      if (hh === 9 && mm === 15) { prevDay = day; return `${day} ${MONTHS[month]}`; }
+      return formatISTTime(utcSec);
+    }
+
+    if (period === '1W') {
+      // New day → show "DD MMM"; same day → show "HH:MM"
+      if (day !== prevDay) { prevDay = day; return `${day} ${MONTHS[month]}`; }
+      return formatISTTime(utcSec);
+    }
+
+    if (period === '1M') {
+      // New week → show "DD MMM"
+      if (week !== prevWeek) { prevWeek = week; return `${day} ${MONTHS[month]}`; }
+      return '';
+    }
+
+    if (period === '3M') {
+      // New month → show "MMM"; new week → show "DD"
+      if (month !== prevMonth) { prevMonth = month; prevWeek = week; return MONTHS[month]; }
+      if (week !== prevWeek)   { prevWeek = week; return `${day}`; }
+      return '';
+    }
+
+    // 1Y: new month → "MMM"; year change → "MMM 'YY"
+    if (month !== prevMonth) {
+      prevMonth = month;
+      if (year !== prevYear) { prevYear = year; return `${MONTHS[month]} '${String(year).slice(2)}`; }
+      return MONTHS[month];
+    }
+    return '';
+  };
 }
 
 // Domestic symbols available from Kite (matching kite_routes.js TOKEN_MAP)
@@ -279,15 +344,12 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
         secondsVisible:  false,
         fixLeftEdge:     true,
         fixRightEdge:    true,
+        // rightOffset: 0,
         barSpacing:      period === '1Y' ? 14 : period === '1D' ? 5 : 8,
         rightOffset:     2,
         minimumBarSpacing: 3,
-        // ✅ FIX Issue 4: IST tick labels — lightweight-charts uses UTC internally,
-        // so we manually offset by +5:30 to display the correct Indian market time
-        tickMarkFormatter: (utcSec: number) => {
-          if (period === '1D' || period === '1W') return formatISTTime(utcSec);
-          return formatISTDay(utcSec);
-        },
+        // ✅ Smart TradingView-style tick formatter — boundary-aware, IST-corrected
+        tickMarkFormatter: makeTickFormatter(period),
       },
       // ✅ FIX Issue 4: Crosshair tooltip also shows IST
       localization: {
@@ -339,6 +401,9 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
     if (!seriesRef.current || !chartRef.current || !candles.length) return;
     seriesRef.current.setData(toLWC(candles));
     chartRef.current.timeScale().fitContent();
+    // setTimeout(() => {
+    //   chart.timeScale().fitContent();
+    // }, 0);
 
     const isIntraday = period === '1D' || period === '1W';
     chartRef.current.applyOptions({
@@ -346,12 +411,8 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
         timeVisible: isIntraday,
         secondsVisible: false,
         barSpacing: period === '1Y' ? 14 : period === '1D' ? 5 : 8,
-        // ✅ FIX: Re-apply tickMarkFormatter on every period change
-        // so 1M/3M/1Y show "DD MMM" date labels on the X-axis
-        tickMarkFormatter: (utcSec: number) => {
-          if (isIntraday) return formatISTTime(utcSec);
-          return formatISTDay(utcSec);
-        },
+        // ✅ Re-create smart formatter on every period change (stateful, boundary-aware)
+        tickMarkFormatter: makeTickFormatter(period),
       },
       // ✅ FIX: Re-apply crosshair tooltip formatter on period change
       localization: {

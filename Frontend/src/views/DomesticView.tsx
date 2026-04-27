@@ -3,6 +3,7 @@
 
 import Layout from "@/components/Layout";
 import { useKiteTicks, type KiteTick } from "@/hooks/useKiteTicks";
+
 import {
   TrendingUp, TrendingDown, RefreshCw, BarChart3,
   LineChart, ArrowUpDown, Info, Wifi,
@@ -24,7 +25,73 @@ const BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 const ROOT = BASE.replace(/\/api\/v1\/?$/, "");
 
 
+// ── IST Time Helpers (KiteChart style) ───────────────────────────
+const IST_OFFSET_MS_KC = 5.5 * 60 * 60 * 1000;
+const MONTHS_KC = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+function toISTDateKC(utcSeconds: number) {
+  return new Date(utcSeconds * 1000 + IST_OFFSET_MS_KC);
+}
+
+function formatISTTimeKC(utcSeconds: number): string {
+  const d = toISTDateKC(utcSeconds);
+  return `${d.getUTCHours().toString().padStart(2, '0')}:${d.getUTCMinutes().toString().padStart(2, '0')}`;
+}
+
+function formatISTDayKC(utcSeconds: number): string {
+  const d = toISTDateKC(utcSeconds);
+  return `${d.getUTCDate()} ${MONTHS_KC[d.getUTCMonth()]}`;
+}
+
+function makeTickFormatterKC(period: Period) {
+  let prevDay = -1;
+  let prevMonth = -1;
+  let prevYear = -1;
+  let prevWeek = -1;
+
+  const isoWeek = (d: Date): number => {
+    const tmp = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    const dayNum = tmp.getUTCDay() || 7;
+    tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+    return Math.ceil((((tmp.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  };
+
+  return (utcSec: number): string => {
+    const d = toISTDateKC(utcSec);
+    const day = d.getUTCDate();
+    const month = d.getUTCMonth();
+    const year = d.getUTCFullYear();
+    const week = isoWeek(d);
+    const hh = d.getUTCHours();
+    const mm = d.getUTCMinutes();
+
+    if (period === '1D') {
+      if (hh === 9 && mm === 15) { prevDay = day; return `${day} ${MONTHS_KC[month]}`; }
+      return formatISTTimeKC(utcSec);
+    }
+    if (period === '1W') {
+      if (day !== prevDay) { prevDay = day; return `${day} ${MONTHS_KC[month]}`; }
+      return formatISTTimeKC(utcSec);
+    }
+    if (period === '1M') {
+      if (week !== prevWeek) { prevWeek = week; return `${day} ${MONTHS_KC[month]}`; }
+      return '';
+    }
+    if (period === '3M') {
+      if (month !== prevMonth) { prevMonth = month; prevWeek = week; return MONTHS_KC[month]; }
+      if (week !== prevWeek) { prevWeek = week; return `${day}`; }
+      return '';
+    }
+    // 1Y
+    if (month !== prevMonth) {
+      prevMonth = month;
+      if (year !== prevYear) { prevYear = year; return `${MONTHS_KC[month]} '${String(year).slice(2)}`; }
+      return MONTHS_KC[month];
+    }
+    return '';
+  };
+}
 const SECTOR_INDICES = [
   { name: "Nifty IT", key: "NSE:NIFTY IT", sym: "NIFTY IT", token: 258529 },
   { name: "Nifty Bank", key: "NSE:NIFTY BANK", sym: "NIFTY BANK", token: 260105 },
@@ -392,8 +459,8 @@ function SideNav({ active, onSelect, ticks, connected }: {
           <button key={s.id}
             onClick={() => { onSelect(s.id); document.getElementById(s.id)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
             className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all text-left ${active === s.id
-                ? l ? "bg-[#5194F6]/10 text-[#5194F6] border-l-2 border-[#5194F6] font-bold" : "bg-[#5194F6]/10 text-[#5194F6] border-l-2 border-[#5194F6]"
-                : l ? "text-slate-500 hover:bg-slate-50 hover:text-slate-800" : "text-slate-400 hover:bg-[#0c1a2e] hover:text-white"
+              ? l ? "bg-[#5194F6]/10 text-[#5194F6] border-l-2 border-[#5194F6] font-bold" : "bg-[#5194F6]/10 text-[#5194F6] border-l-2 border-[#5194F6]"
+              : l ? "text-slate-500 hover:bg-slate-50 hover:text-slate-800" : "text-slate-400 hover:bg-[#0c1a2e] hover:text-white"
               }`}>
             <s.icon className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">{s.label}</span>
@@ -481,23 +548,44 @@ function CandleChart({ token, height = 300, showControls = true, defaultPeriod =
         horzLine: { color: "rgba(81,148,246,0.25)", labelBackgroundColor: dark ? "#0c1a2e" : "#dbeafe", width: 1, style: 1 },
       },
       rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.06, bottom: 0.18 }, minimumWidth: 70 },
+      // localization: {
+      //   // Show time labels in IST on chart x-axis
+      //   timeFormatter: (t: number) => {
+      //     // t is already IST seconds (we added IST_OFFSET_SEC when pushing data)
+      //     const d = new Date((t - IST_OFFSET_SEC) * 1000); // back to UTC ms for Date
+      //     if (period === "1D" || period === "1W") {
+      //       const hh = String(d.getUTCHours() + 5).padStart(2, "0");
+      //       const rawMins = d.getUTCMinutes() + 30;
+      //       const mm = String(rawMins % 60).padStart(2, "0");
+      //       const extraH = rawMins >= 60 ? 1 : 0;
+      //       const finalH = String(d.getUTCHours() + 5 + extraH).padStart(2, "0");
+      //       return `${finalH}:${mm}`;
+      //     }
+      //     return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
+      //   },
+      // },
+      // timeScale: { borderVisible: false, timeVisible: period === "1D" || period === "1W", secondsVisible: false, fixLeftEdge: true, fixRightEdge: true, barSpacing: 9, rightOffset: 4 },
       localization: {
-        // Show time labels in IST on chart x-axis
-        timeFormatter: (t: number) => {
-          // t is already IST seconds (we added IST_OFFSET_SEC when pushing data)
-          const d = new Date((t - IST_OFFSET_SEC) * 1000); // back to UTC ms for Date
-          if (period === "1D" || period === "1W") {
-            const hh = String(d.getUTCHours() + 5).padStart(2, "0");
-            const rawMins = d.getUTCMinutes() + 30;
-            const mm = String(rawMins % 60).padStart(2, "0");
-            const extraH = rawMins >= 60 ? 1 : 0;
-            const finalH = String(d.getUTCHours() + 5 + extraH).padStart(2, "0");
-            return `${finalH}:${mm}`;
+        timeFormatter: (utcSec: number) => {
+          const isIntraday = period === "1D" || period === "1W";
+          if (isIntraday) {
+            const d = toISTDateKC(utcSec);
+            return `${d.getUTCDate()} ${MONTHS_KC[d.getUTCMonth()]} ${formatISTTimeKC(utcSec)} IST`;
           }
-          return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
+          return formatISTDayKC(utcSec);
         },
       },
-      timeScale: { borderVisible: false, timeVisible: period === "1D" || period === "1W", secondsVisible: false, fixLeftEdge: true, fixRightEdge: true, barSpacing: 9, rightOffset: 4 },
+      timeScale: {
+        borderVisible: false,
+        timeVisible: period === "1D" || period === "1W",
+        secondsVisible: false,
+        fixLeftEdge: true,
+        fixRightEdge: true,
+        barSpacing: period === "1Y" ? 14 : period === "1D" ? 5 : 8,
+        rightOffset: 2,
+        minimumBarSpacing: 3,
+        tickMarkFormatter: makeTickFormatterKC(period),  // ← yeh key hai
+      },
       handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true },
       handleScale: { mouseWheel: false, pinch: false },
     });
@@ -527,7 +615,8 @@ function CandleChart({ token, height = 300, showControls = true, defaultPeriod =
     if (!liveTick?.last_price || !cSerRef.current || period !== "1D" || candles.length === 0) return;
     const last = candles[candles.length - 1];
     if (!last) return;
-    const t = toISTSec(last.x) as any;
+    // const t = toISTSec(last.x) as any;
+    const t = Math.floor(last.x / 1000) as any;
     try {
       cSerRef.current.update({
         time: t,
@@ -551,15 +640,51 @@ function CandleChart({ token, height = 300, showControls = true, defaultPeriod =
   // Push candles
   useEffect(() => {
     if (!cSerRef.current || !vSerRef.current || !candles.length) return;
+    // const seen = new Set<number>();
+    // const rows = candles
+    //   .map(c => ({ time: toISTSec(c.x) as any, o: c.y[0], h: c.y[1], l: c.y[2], cl: c.y[3], v: c.volume ?? 0 }))
+    //   .filter(c => { const tt = c.time as number; if (seen.has(tt)) return false; seen.add(tt); return true; })
+    //   .sort((a, b) => (a.time as number) - (b.time as number));
+    // cSerRef.current.setData(rows.map(r => ({ time: r.time, open: r.o, high: r.h, low: r.l, close: r.cl })));
+    // vSerRef.current.setData(rows.map(r => ({ time: r.time, value: r.v, color: r.cl >= r.o ? "rgba(22,163,74,0.35)" : "rgba(220,38,38,0.35)" })));
+    // chartRef.current?.timeScale().fitContent();
+    // chartRef.current?.applyOptions({ timeScale: { timeVisible: period === "1D" || period === "1W" } });
     const seen = new Set<number>();
     const rows = candles
-      .map(c => ({ time: toISTSec(c.x) as any, o: c.y[0], h: c.y[1], l: c.y[2], cl: c.y[3], v: c.volume ?? 0 }))
-      .filter(c => { const tt = c.time as number; if (seen.has(tt)) return false; seen.add(tt); return true; })
+      .map(c => ({
+        time: Math.floor(c.x / 1000) as any,
+        open: c.y[0], high: c.y[1], low: c.y[2], close: c.y[3],
+        vol: c.volume ?? 0
+      }))
+      .filter(c => {
+        const t = c.time as number;
+        if (seen.has(t)) return false;
+        seen.add(t); return true;
+      })
       .sort((a, b) => (a.time as number) - (b.time as number));
-    cSerRef.current.setData(rows.map(r => ({ time: r.time, open: r.o, high: r.h, low: r.l, close: r.cl })));
-    vSerRef.current.setData(rows.map(r => ({ time: r.time, value: r.v, color: r.cl >= r.o ? "rgba(22,163,74,0.35)" : "rgba(220,38,38,0.35)" })));
+
+    cSerRef.current.setData(rows.map(r => ({ time: r.time, open: r.open, high: r.high, low: r.low, close: r.close })));
+    vSerRef.current.setData(rows.map(r => ({ time: r.time, value: r.vol, color: r.close >= r.open ? "rgba(22,163,74,0.35)" : "rgba(220,38,38,0.35)" })));
+
+    // Period change pe tickMarkFormatter bhi update karo
+    chartRef.current?.applyOptions({
+      timeScale: {
+        timeVisible: period === "1D" || period === "1W",
+        barSpacing: period === "1Y" ? 14 : period === "1D" ? 5 : 8,
+        tickMarkFormatter: makeTickFormatterKC(period),  // ← har period change pe naya formatter
+      },
+      localization: {
+        timeFormatter: (utcSec: number) => {
+          const isIntraday = period === "1D" || period === "1W";
+          if (isIntraday) {
+            const d = toISTDateKC(utcSec);
+            return `${d.getUTCDate()} ${MONTHS_KC[d.getUTCMonth()]} ${formatISTTimeKC(utcSec)} IST`;
+          }
+          return formatISTDayKC(utcSec);
+        },
+      },
+    });
     chartRef.current?.timeScale().fitContent();
-    chartRef.current?.applyOptions({ timeScale: { timeVisible: period === "1D" || period === "1W" } });
   }, [candles, period]);
 
   return (
@@ -570,8 +695,8 @@ function CandleChart({ token, height = 300, showControls = true, defaultPeriod =
             {PERIODS.map(p => (
               <button key={p} onClick={() => setPeriod(p)} disabled={loading}
                 className={`px-2.5 py-1 rounded-md text-[11px] font-bold border transition-all disabled:opacity-60 ${period === p
-                    ? "bg-[#5194F6] text-white border-transparent"
-                    : l ? "bg-white text-slate-500 border-slate-200 hover:border-gray-300" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50 hover:border-[#1e3a5f]"
+                  ? "bg-[#5194F6] text-white border-transparent"
+                  : l ? "bg-white text-slate-500 border-slate-200 hover:border-gray-300" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50 hover:border-[#1e3a5f]"
                   }`}>{p}</button>
             ))}
           </div>
@@ -721,7 +846,7 @@ function SearchBar({ rawTicks, onResult }: {
   const [open, setOpen] = useState(false);
   const [selecting, setSelecting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const wrapRef  = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
 
   // API search — same as KiteChart
   const { results, loading: apiLoading } = useInstrumentSearch(query, open);
@@ -751,8 +876,8 @@ function SearchBar({ rawTicks, onResult }: {
   return (
     <div className="relative w-full" ref={wrapRef}>
       <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${l
-          ? "bg-slate-50 border-slate-200 focus-within:border-[#5194F6] focus-within:bg-white"
-          : "bg-[#0c1a2e] border-[#1e3a5f]/50 focus-within:border-[#5194F6] focus-within:bg-[#0c1a2e]"
+        ? "bg-slate-50 border-slate-200 focus-within:border-[#5194F6] focus-within:bg-white"
+        : "bg-[#0c1a2e] border-[#1e3a5f]/50 focus-within:border-[#5194F6] focus-within:bg-[#0c1a2e]"
         }`}>
         <Search className={`w-3.5 h-3.5 shrink-0 ${tx.t3(l)}`} />
         <input
@@ -847,8 +972,8 @@ function IndicesSection({ ticks, connected }: any) {
             <div key={m.key} className="relative shrink-0 group">
               <button onClick={() => setSel(i)}
                 className={`flex flex-col items-start px-3 py-2 pr-7 rounded-lg text-xs font-bold transition-all border w-full ${sel === i
-                    ? "bg-[#5194F6] text-white border-transparent"
-                    : l ? "bg-white text-slate-600 border-slate-200 hover:border-[#5194F6]/40" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50 hover:border-[#5194F6]/40"
+                  ? "bg-[#5194F6] text-white border-transparent"
+                  : l ? "bg-white text-slate-600 border-slate-200 hover:border-[#5194F6]/40" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50 hover:border-[#5194F6]/40"
                   }`}>
                 <span className="font-black text-[11px]">{m.name}</span>
                 <span className={`text-[10px] tabular-nums mt-0.5 ${sel === i ? "opacity-80" : up(pp) ? "text-emerald-500" : "text-red-500"}`}>
@@ -997,7 +1122,7 @@ const INDEX_SYMS = new Set([
 
 // ── REST depth poller — fetches full quote+depth for ANY equity via REST API ──
 function useRestDepth(sym: string) {
-  const [data,    setData]    = useState<KiteTick | null>(null);
+  const [data, setData] = useState<KiteTick | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -1015,19 +1140,19 @@ function useRestDepth(sym: string) {
         const q = j.data?.[sym];
         if (!q || cancelled) return;
         setData({
-          symbol:           sym,
+          symbol: sym,
           instrument_token: q.instrument_token,
-          tradable:         q.tradable ?? true,
-          mode:             "full",
-          last_price:       q.last_price,
-          ohlc:             q.ohlc,
-          depth:            q.depth ?? null,
-          buy_quantity:     q.buy_quantity  ?? 0,
-          sell_quantity:    q.sell_quantity ?? 0,
-          volume:           q.volume_traded ?? q.volume ?? 0,
-          change:           q.net_change    ?? 0,
+          tradable: q.tradable ?? true,
+          mode: "full",
+          last_price: q.last_price,
+          ohlc: q.ohlc,
+          depth: q.depth ?? null,
+          buy_quantity: q.buy_quantity ?? 0,
+          sell_quantity: q.sell_quantity ?? 0,
+          volume: q.volume_traded ?? q.volume ?? 0,
+          change: q.net_change ?? 0,
         } as KiteTick);
-      } catch (_) {}
+      } catch (_) { }
       finally { if (!cancelled) setLoading(false); }
     };
 
@@ -1044,7 +1169,7 @@ function DepthCard({ sym, ticks }: { sym: string; ticks: any }) {
   const isIndex = INDEX_SYMS.has(sym);
   const { data: restData, loading: restLoading } = useRestDepth(sym);
 
-  const wsTick  = ticks[sym] as KiteTick | undefined;
+  const wsTick = ticks[sym] as KiteTick | undefined;
 
   // Build the merged tick:
   // • For equities: REST provides depth, WS provides live last_price
@@ -1053,9 +1178,11 @@ function DepthCard({ sym, ticks }: { sym: string; ticks: any }) {
   const tick: KiteTick | undefined = isIndex
     ? wsTick                                         // index: just WS (no depth)
     : restData                                       // equity: REST is primary (has depth)
-        ? { ...restData, last_price: wsTick?.last_price ?? restData.last_price,
-            ohlc: wsTick?.ohlc ?? restData.ohlc }   // overlay live WS price if available
-        : wsTick;                                    // equity fallback before first REST fetch
+      ? {
+        ...restData, last_price: wsTick?.last_price ?? restData.last_price,
+        ohlc: wsTick?.ohlc ?? restData.ohlc
+      }   // overlay live WS price if available
+      : wsTick;                                    // equity fallback before first REST fetch
 
   const name = sym.split(":")[1];
   const p = getPct(tick);
@@ -1108,7 +1235,7 @@ function DepthCard({ sym, ticks }: { sym: string; ticks: any }) {
                 ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}
                 style={{ gridTemplateColumns: "1fr 1fr 120px 1fr 1fr" }}>
                 <div className="absolute inset-y-0 left-0 bg-emerald-500/8 rounded-l" style={{ width: `${bPct}%` }} />
-                <div className="absolute inset-y-0 right-0 bg-red-500/8 rounded-r"    style={{ width: `${aPct}%` }} />
+                <div className="absolute inset-y-0 right-0 bg-red-500/8 rounded-r" style={{ width: `${aPct}%` }} />
                 <span className="text-emerald-600 font-bold tabular-nums relative z-10">
                   {b ? b.quantity.toLocaleString("en-IN") : "—"}
                 </span>
@@ -1311,14 +1438,14 @@ function OptionsSection({ ticks }: { ticks: any }) {
   const FO_NAMES = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"];
   return (
     <section className="mb-8">
-      <SecHead id="options" icon={Layers} title="F&O Instruments"  />
+      <SecHead id="options" icon={Layers} title="F&O Instruments" />
 
       {/* Controls Row 1 — Index name + Expiry + Refresh */}
       <div className="flex items-center gap-2 mb-2 overflow-x-auto scrollbar-none pb-1 flex-nowrap">
         {FO_NAMES.map(n => (
           <button key={n} onClick={() => { setFoName(n); setFoExpiry(""); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all shrink-0 ${foName === n ? "bg-[#5194F6] text-white border-transparent"
-                : l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
+              : l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
               }`}>{n}</button>
         ))}
         <div className={`w-px h-5 shrink-0 ${l ? "bg-slate-200" : "bg-[#1e3a5f]"}`} />
@@ -1370,49 +1497,49 @@ function OptionsSection({ ticks }: { ticks: any }) {
               </div>
             )}
             <div className="overflow-y-auto" style={{ maxHeight: 400 }}>
-            {strikes.length === 0 ? (
-              <div className={`p-8 text-center text-sm ${tx.t2(l)}`}>
-                <Layers className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                No instruments loaded — select expiry above
-              </div>
-            ) : strikes.map((strike, i) => {
-              const isATM = strike === ATM;
-              const cInst = foItems.find((x: any) => x.instrument_type === "CE" && Number(x.strike) === strike);
-              const pInst = foItems.find((x: any) => x.instrument_type === "PE" && Number(x.strike) === strike);
-              const cKey = cInst ? "NFO:" + cInst.tradingsymbol : null;
-              const pKey = pInst ? "NFO:" + pInst.tradingsymbol : null;
-              const cWS = cKey ? ticks[cKey] : undefined;
-              const pWS = pKey ? ticks[pKey] : undefined;
-              const cQ = cKey ? liveQuotes[cKey] : undefined;
-              const pQ = pKey ? liveQuotes[pKey] : undefined;
-              const cLTP = cWS?.last_price || cQ?.last_price || 0;
-              const pLTP = pWS?.last_price || pQ?.last_price || 0;
-              const cOI = cWS?.oi || cQ?.oi || 0;
-              const pOI = pWS?.oi || pQ?.oi || 0;
-              const cVol = cWS?.volume || cQ?.volume || 0;
-              const pVol = pWS?.volume || pQ?.volume || 0;
-              return (
-                <div key={strike} className={`grid grid-cols-7 px-5 py-2 text-xs items-center
+              {strikes.length === 0 ? (
+                <div className={`p-8 text-center text-sm ${tx.t2(l)}`}>
+                  <Layers className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                  No instruments loaded — select expiry above
+                </div>
+              ) : strikes.map((strike, i) => {
+                const isATM = strike === ATM;
+                const cInst = foItems.find((x: any) => x.instrument_type === "CE" && Number(x.strike) === strike);
+                const pInst = foItems.find((x: any) => x.instrument_type === "PE" && Number(x.strike) === strike);
+                const cKey = cInst ? "NFO:" + cInst.tradingsymbol : null;
+                const pKey = pInst ? "NFO:" + pInst.tradingsymbol : null;
+                const cWS = cKey ? ticks[cKey] : undefined;
+                const pWS = pKey ? ticks[pKey] : undefined;
+                const cQ = cKey ? liveQuotes[cKey] : undefined;
+                const pQ = pKey ? liveQuotes[pKey] : undefined;
+                const cLTP = cWS?.last_price || cQ?.last_price || 0;
+                const pLTP = pWS?.last_price || pQ?.last_price || 0;
+                const cOI = cWS?.oi || cQ?.oi || 0;
+                const pOI = pWS?.oi || pQ?.oi || 0;
+                const cVol = cWS?.volume || cQ?.volume || 0;
+                const pVol = pWS?.volume || pQ?.volume || 0;
+                return (
+                  <div key={strike} className={`grid grid-cols-7 px-5 py-2 text-xs items-center
                   ${isATM ? (l ? "bg-amber-50" : "bg-amber-900/10") : ""}
                   ${i < strikes.length - 1 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""}
                   ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}>
-                  <span className="text-emerald-700 font-bold">{cOI > 0 ? fmtV(cOI) : <span className={`text-[10px] ${tx.t3(l)}`}>—</span>}</span>
-                  <span className={`text-right ${tx.t2(l)}`}>{cVol > 0 ? fmtV(cVol) : "—"}</span>
-                  <span className="text-right text-emerald-600 font-bold">
-                    {cLTP > 0 ? "₹" + fmt(cLTP) : <span className={`text-[10px] ${tx.t3(l)}`}>₹0.00</span>}
-                  </span>
-                  <div className={`text-center font-black text-sm ${isATM ? "text-amber-600" : tx.t1(l)}`}>
-                    {isATM && <span className="mr-1 text-[9px] bg-amber-400 text-white rounded px-1">ATM</span>}
-                    {strike}
+                    <span className="text-emerald-700 font-bold">{cOI > 0 ? fmtV(cOI) : <span className={`text-[10px] ${tx.t3(l)}`}>—</span>}</span>
+                    <span className={`text-right ${tx.t2(l)}`}>{cVol > 0 ? fmtV(cVol) : "—"}</span>
+                    <span className="text-right text-emerald-600 font-bold">
+                      {cLTP > 0 ? "₹" + fmt(cLTP) : <span className={`text-[10px] ${tx.t3(l)}`}>₹0.00</span>}
+                    </span>
+                    <div className={`text-center font-black text-sm ${isATM ? "text-amber-600" : tx.t1(l)}`}>
+                      {isATM && <span className="mr-1 text-[9px] bg-amber-400 text-white rounded px-1">ATM</span>}
+                      {strike}
+                    </div>
+                    <span className="text-red-600 font-bold">
+                      {pLTP > 0 ? "₹" + fmt(pLTP) : <span className={`text-[10px] ${tx.t3(l)}`}>₹0.00</span>}
+                    </span>
+                    <span className={`text-right ${tx.t2(l)}`}>{pVol > 0 ? fmtV(pVol) : "—"}</span>
+                    <span className="text-right text-red-700 font-bold">{pOI > 0 ? fmtV(pOI) : <span className={`text-[10px] ${tx.t3(l)}`}>—</span>}</span>
                   </div>
-                  <span className="text-red-600 font-bold">
-                    {pLTP > 0 ? "₹" + fmt(pLTP) : <span className={`text-[10px] ${tx.t3(l)}`}>₹0.00</span>}
-                  </span>
-                  <span className={`text-right ${tx.t2(l)}`}>{pVol > 0 ? fmtV(pVol) : "—"}</span>
-                  <span className="text-right text-red-700 font-bold">{pOI > 0 ? fmtV(pOI) : <span className={`text-[10px] ${tx.t3(l)}`}>—</span>}</span>
-                </div>
-              );
-            })}
+                );
+              })}
             </div>
           </div>
         </Card>
@@ -1430,34 +1557,34 @@ function HistoricalSection() {
 
   // Pre-defined quick-access symbols with known tokens
   const QUICK_SYMS = [
-    { label: "Nifty 50",    token: 256265 },
-    { label: "Sensex",      token: 265 },
-    { label: "Bank Nifty",  token: 260105 },
-    { label: "Nifty Auto",  token: 258049 },
-    { label: "Nifty Pharma",token: 259849 },
+    { label: "Nifty 50", token: 256265 },
+    { label: "Sensex", token: 265 },
+    { label: "Bank Nifty", token: 260105 },
+    { label: "Nifty Auto", token: 258049 },
+    { label: "Nifty Pharma", token: 259849 },
     { label: "Nifty Metal", token: 259337 },
-    { label: "Nifty Energy",token: 258409 },
-    { label: "Nifty FMCG",  token: 258537 },
-    { label: "Reliance",    token: 738561 },
-    { label: "TCS",         token: 2953217 },
-    { label: "HDFC Bank",   token: 341249 },
-    { label: "Infosys",     token: 408065 },
-    { label: "ICICI Bank",  token: 1270529 },
-    { label: "Wipro",       token: 969473 },
-    { label: "HUL",         token: 356865 },
-    { label: "ITC",         token: 424961 },
+    { label: "Nifty Energy", token: 258409 },
+    { label: "Nifty FMCG", token: 258537 },
+    { label: "Reliance", token: 738561 },
+    { label: "TCS", token: 2953217 },
+    { label: "HDFC Bank", token: 341249 },
+    { label: "Infosys", token: 408065 },
+    { label: "ICICI Bank", token: 1270529 },
+    { label: "Wipro", token: 969473 },
+    { label: "HUL", token: 356865 },
+    { label: "ITC", token: 424961 },
   ];
 
   const IVLS = [
-    { label: "5m",  val: "5minute" },
+    { label: "5m", val: "5minute" },
     { label: "15m", val: "15minute" },
-    { label: "1h",  val: "60minute" },
-    { label: "1d",  val: "day" },
+    { label: "1h", val: "60minute" },
+    { label: "1d", val: "day" },
   ];
 
-  const [sym, setSym]             = useState(QUICK_SYMS[0]);
-  const [ivl, setIvl]             = useState("day");
-  const [histSearch, setHistSearch]       = useState("");
+  const [sym, setSym] = useState(QUICK_SYMS[0]);
+  const [ivl, setIvl] = useState("day");
+  const [histSearch, setHistSearch] = useState("");
   const [histSearchOpen, setHistSearchOpen] = useState(false);
   const [tokenFetching, setTokenFetching] = useState(false);
   const histWrapRef = useRef<HTMLDivElement>(null);
@@ -1550,8 +1677,8 @@ function HistoricalSection() {
         {QUICK_SYMS.map(s => (
           <button key={s.token} onClick={() => { setSym(s); setHistSearch(""); setHistSearchOpen(false); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all shrink-0 ${sym.token === s.token
-                ? "bg-[#5194F6] text-white border-transparent"
-                : l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
+              ? "bg-[#5194F6] text-white border-transparent"
+              : l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
               }`}>{s.label}</button>
         ))}
       </div>
@@ -1561,8 +1688,8 @@ function HistoricalSection() {
         {IVLS.map(iv => (
           <button key={iv.val} onClick={() => setIvl(iv.val)}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all shrink-0 ${ivl === iv.val
-                ? "bg-[#d97706] text-white border-transparent"
-                : l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
+              ? "bg-[#d97706] text-white border-transparent"
+              : l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
               }`}>{iv.label}</button>
         ))}
         <button onClick={refresh} className={`px-2.5 py-1.5 rounded-lg border flex items-center shrink-0 ${l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"}`}>
@@ -1670,18 +1797,18 @@ function CorporateSection() {
         {CORP_TYPES.map(t => (
           <button key={t} onClick={() => setFilter(t)}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${filter === t
-                ? t === "Announcement"
-                  ? "bg-amber-500 text-white border-transparent"
-                  : "bg-[#5194F6] text-white border-transparent"
-                : l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
+              ? t === "Announcement"
+                ? "bg-amber-500 text-white border-transparent"
+                : "bg-[#5194F6] text-white border-transparent"
+              : l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
               }`}>
             {t === "Announcement" ? "📢 Announcement" : t}
           </button>
         ))}
         {source && filter !== "Announcement" && (
           <span className={`text-[10px] font-black px-2 py-0.5 rounded border ${source === "NSE"
-              ? l ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-[#5194F6]/10 text-[#5194F6] border-[#5194F6]/25"
-              : l ? "bg-orange-50 text-orange-700 border-orange-200" : "bg-orange-900/15 text-orange-400 border-orange-800/30"
+            ? l ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-[#5194F6]/10 text-[#5194F6] border-[#5194F6]/25"
+            : l ? "bg-orange-50 text-orange-700 border-orange-200" : "bg-orange-900/15 text-orange-400 border-orange-800/30"
             }`}>via {source}</span>
         )}
         {filter !== "Announcement" && (
@@ -1928,7 +2055,7 @@ function BreadthVixSection({ ticks }: { ticks: any }) {
   return (
     <section className="mb-8">
       <SecHead id="breadth" icon={BarChart3} title="Market Breadth & Volatility"
-       live />
+        live />
 
       {/* ── Breadth Boxes — single scrollable row, all clickable ── */}
       <div className="flex gap-4 mb-3 overflow-x-auto pb-1 scrollbar-none">
@@ -2055,7 +2182,7 @@ function SectorSection({ ticks }: { ticks: any }) {
   return (
     <section className="mb-8">
       <SecHead id="sectors" icon={PieChart} title="Sector Performance"
-         live />
+        live />
 
       {/* Top / Bottom chips */}
       <div className="flex flex-wrap gap-2 mb-3">
@@ -2081,65 +2208,65 @@ function SectorSection({ ticks }: { ticks: any }) {
           <div className="hidden sm:block sm:col-span-1 text-right"></div>
         </div>
         <div className="overflow-y-auto" style={{ maxHeight: 380 }}>
-        {sorted.map((s, i) => {
-          const isPos = (s.pct ?? 0) >= 0;
-          const barPct = s.pct != null ? (Math.abs(s.pct) / maxAbs) * 100 : 0;
-          const chg = getChg(s.tick);
-          const vol = s.tick?.volume;
-          // NSE sector-specific stocks page
-          const nseUrl = `https://www.nseindia.com/market-data/live-equity-market?symbol=${encodeURIComponent(s.sym)}`;
-          return (
-            <div key={s.key}
-              className={`grid grid-cols-3 sm:grid-cols-12 px-4 sm:px-5 py-2 items-center relative overflow-hidden
+          {sorted.map((s, i) => {
+            const isPos = (s.pct ?? 0) >= 0;
+            const barPct = s.pct != null ? (Math.abs(s.pct) / maxAbs) * 100 : 0;
+            const chg = getChg(s.tick);
+            const vol = s.tick?.volume;
+            // NSE sector-specific stocks page
+            const nseUrl = `https://www.nseindia.com/market-data/live-equity-market?symbol=${encodeURIComponent(s.sym)}`;
+            return (
+              <div key={s.key}
+                className={`grid grid-cols-3 sm:grid-cols-12 px-4 sm:px-5 py-2 items-center relative overflow-hidden
               ${i < sorted.length - 1 ? (l ? "border-b border-slate-100" : "border-b border-[#1e3a5f]/30") : ""}
               ${l ? "hover:bg-slate-50/60" : "hover:bg-white/[0.015]"}`}>
-              {/* Background bar */}
-              <div
-                className={`absolute top-0 bottom-0 ${isPos ? "bg-emerald-500/5" : "bg-red-500/5"}`}
-                style={{ left: 0, width: `${barPct * 0.5}%` }}
-              />
-              {/* Sector name — clickable */}
-              <div className="sm:col-span-4 relative z-10 cursor-pointer" onClick={() => window.open(nseUrl, "_blank")}>
-                <p className={`font-bold text-xs truncate ${tx.t1(l)}`}>{s.name}</p>
-                <p className={`text-[10px] ${tx.t3(l)} hidden sm:block`}>{s.sym}</p>
-              </div>
-              {/* Value / LTP */}
-              <div className={`sm:col-span-3 text-right text-xs sm:text-sm font-black tabular-nums relative z-10 ${tx.t1(l)}`}>
-                {s.tick?.last_price != null
-                  ? fmt(s.tick.last_price, 2)
-                  : <span className={`text-xs ${tx.t3(l)}`}>—</span>}
-              </div>
-              {/* Change % + abs */}
-              <div className="sm:col-span-3 text-right relative z-10">
-                {s.pct != null ? (
-                  <>
-                    <p className={`text-xs font-bold tabular-nums ${isPos ? "text-emerald-500" : "text-red-500"}`}>
-                      {isPos ? "+" : ""}{s.pct.toFixed(2)}%
-                    </p>
-                    {chg != null && (
-                      <p className={`text-[10px] tabular-nums hidden sm:block ${isPos ? "text-emerald-400" : "text-red-400"}`}>
-                        {chg >= 0 ? "+" : ""}{fmt(chg)}
+                {/* Background bar */}
+                <div
+                  className={`absolute top-0 bottom-0 ${isPos ? "bg-emerald-500/5" : "bg-red-500/5"}`}
+                  style={{ left: 0, width: `${barPct * 0.5}%` }}
+                />
+                {/* Sector name — clickable */}
+                <div className="sm:col-span-4 relative z-10 cursor-pointer" onClick={() => window.open(nseUrl, "_blank")}>
+                  <p className={`font-bold text-xs truncate ${tx.t1(l)}`}>{s.name}</p>
+                  <p className={`text-[10px] ${tx.t3(l)} hidden sm:block`}>{s.sym}</p>
+                </div>
+                {/* Value / LTP */}
+                <div className={`sm:col-span-3 text-right text-xs sm:text-sm font-black tabular-nums relative z-10 ${tx.t1(l)}`}>
+                  {s.tick?.last_price != null
+                    ? fmt(s.tick.last_price, 2)
+                    : <span className={`text-xs ${tx.t3(l)}`}>—</span>}
+                </div>
+                {/* Change % + abs */}
+                <div className="sm:col-span-3 text-right relative z-10">
+                  {s.pct != null ? (
+                    <>
+                      <p className={`text-xs font-bold tabular-nums ${isPos ? "text-emerald-500" : "text-red-500"}`}>
+                        {isPos ? "+" : ""}{s.pct.toFixed(2)}%
                       </p>
-                    )}
-                  </>
-                ) : <span className={`text-xs ${tx.t3(l)}`}>—</span>}
+                      {chg != null && (
+                        <p className={`text-[10px] tabular-nums hidden sm:block ${isPos ? "text-emerald-400" : "text-red-400"}`}>
+                          {chg >= 0 ? "+" : ""}{fmt(chg)}
+                        </p>
+                      )}
+                    </>
+                  ) : <span className={`text-xs ${tx.t3(l)}`}>—</span>}
+                </div>
+                {/* Volume */}
+                <div className={`sm:col-span-1 text-right text-xs tabular-nums relative z-10 hidden sm:block ${tx.t3(l)}`}>
+                  {vol != null && vol > 0 ? fmtV(vol) : <span className="text-[10px]">N/A</span>}
+                </div>
+                {/* External link */}
+                <div className="hidden sm:block sm:col-span-1 text-right relative z-10">
+                  <a href={nseUrl} target="_blank" rel="noopener noreferrer"
+                    onClick={e => e.stopPropagation()}
+                    title={`View ${s.name} stocks on NSE`}
+                    className={`inline-flex items-center justify-center w-5 h-5 rounded opacity-40 hover:opacity-100 transition-opacity text-[#5194F6]`}>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
               </div>
-              {/* Volume */}
-              <div className={`sm:col-span-1 text-right text-xs tabular-nums relative z-10 hidden sm:block ${tx.t3(l)}`}>
-                {vol != null && vol > 0 ? fmtV(vol) : <span className="text-[10px]">N/A</span>}
-              </div>
-              {/* External link */}
-              <div className="hidden sm:block sm:col-span-1 text-right relative z-10">
-                <a href={nseUrl} target="_blank" rel="noopener noreferrer"
-                  onClick={e => e.stopPropagation()}
-                  title={`View ${s.name} stocks on NSE`}
-                  className={`inline-flex items-center justify-center w-5 h-5 rounded opacity-40 hover:opacity-100 transition-opacity text-[#5194F6]`}>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
         </div>
       </Card>
     </section>
@@ -2212,17 +2339,17 @@ function GainersLosersSection() {
   return (
     <section className="mb-8">
       <SecHead id="gainers" icon={TrendingUp} title="Gainers · Losers · Most Active"
-         />
+      />
 
       {/* Tab controls — single row, refresh always inline */}
       <div className="flex items-center gap-1.5 mb-3 overflow-x-auto scrollbar-none pb-0.5">
         {(["gainers", "losers", "active"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all shrink-0 ${tab === t
-                ? t === "gainers" ? "bg-emerald-600 text-white border-transparent"
-                  : t === "losers" ? "bg-red-600 text-white border-transparent"
-                    : "bg-[#5194F6] text-white border-transparent"
-                : l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
+              ? t === "gainers" ? "bg-emerald-600 text-white border-transparent"
+                : t === "losers" ? "bg-red-600 text-white border-transparent"
+                  : "bg-[#5194F6] text-white border-transparent"
+              : l ? "bg-white text-slate-600 border-slate-200" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50"
               }`}>
             {t === "gainers" ? "▲ Gainers" : t === "losers" ? "▼ Losers" : "⚡ Active"}
           </button>
@@ -2251,19 +2378,19 @@ function GainersLosersSection() {
         </div>
 
         <div className="overflow-y-auto" style={{ maxHeight: 380 }}>
-        {loading ? (
-          <div className="p-4 space-y-2">{[...Array(8)].map((_, i) => <Skel key={i} h="h-10" />)}</div>
-        ) : !isAvailable ? (
-          <div className={`p-8 text-center ${tx.t2(l)}`}>
-            <Activity className="w-10 h-10 mx-auto mb-3 opacity-20" />
-            <p className="text-sm font-bold">NSE data temporarily unavailable</p>
-            <p className="text-xs mt-1 opacity-70">NSE API blocks VPS IPs intermittently. Data will auto-recover.</p>
-          </div>
-        ) : rows.length === 0 ? (
-          <div className={`p-8 text-center text-sm ${tx.t2(l)}`}>
-            {tab === "gainers" ? "No gainers data yet — market may be closed" : tab === "losers" ? "No losers data yet" : "No active stocks data"}
-          </div>
-        ) : rows.map((r: any, i: number) => <StockLine key={r.symbol + i} r={r} rank={i} />)}
+          {loading ? (
+            <div className="p-4 space-y-2">{[...Array(8)].map((_, i) => <Skel key={i} h="h-10" />)}</div>
+          ) : !isAvailable ? (
+            <div className={`p-8 text-center ${tx.t2(l)}`}>
+              <Activity className="w-10 h-10 mx-auto mb-3 opacity-20" />
+              <p className="text-sm font-bold">NSE data temporarily unavailable</p>
+              <p className="text-xs mt-1 opacity-70">NSE API blocks VPS IPs intermittently. Data will auto-recover.</p>
+            </div>
+          ) : rows.length === 0 ? (
+            <div className={`p-8 text-center text-sm ${tx.t2(l)}`}>
+              {tab === "gainers" ? "No gainers data yet — market may be closed" : tab === "losers" ? "No losers data yet" : "No active stocks data"}
+            </div>
+          ) : rows.map((r: any, i: number) => <StockLine key={r.symbol + i} r={r} rank={i} />)}
         </div>
       </Card>
 
@@ -2346,7 +2473,7 @@ function FiiDiiSection() {
   return (
     <section className="mb-8">
       <SecHead id="fii-dii" icon={Building2} title="FII / DII Activity"
-        />
+      />
 
       {loading && <Card className="p-4 space-y-2">{[...Array(2)].map((_, i) => <Skel key={i} h="h-14" />)}</Card>}
 
@@ -2407,40 +2534,40 @@ function FiiDiiSection() {
 // Only names where PCR/MaxPain actually has data on NSE/BSE F&O
 const FO_UNDERLYINGS = [
   // NFO indices
-  { key: "NIFTY",      label: "Nifty 50",              ex: "NFO" },
-  { key: "BANKNIFTY",  label: "Bank Nifty",             ex: "NFO" },
-  { key: "FINNIFTY",   label: "Nifty Fin Services",     ex: "NFO" },
-  { key: "MIDCPNIFTY", label: "Nifty Midcap Select",   ex: "NFO" },
+  { key: "NIFTY", label: "Nifty 50", ex: "NFO" },
+  { key: "BANKNIFTY", label: "Bank Nifty", ex: "NFO" },
+  { key: "FINNIFTY", label: "Nifty Fin Services", ex: "NFO" },
+  { key: "MIDCPNIFTY", label: "Nifty Midcap Select", ex: "NFO" },
   // BFO indices (BSE)
-  { key: "SENSEX",     label: "BSE Sensex",             ex: "BFO" },
-  { key: "BANKEX",     label: "BSE Bankex",             ex: "BFO" },
+  { key: "SENSEX", label: "BSE Sensex", ex: "BFO" },
+  { key: "BANKEX", label: "BSE Bankex", ex: "BFO" },
   // Popular stock F&O (NFO)
-  { key: "RELIANCE",   label: "Reliance Industries",    ex: "NFO" },
-  { key: "TCS",        label: "Tata Consultancy Svc",   ex: "NFO" },
-  { key: "HDFCBANK",   label: "HDFC Bank",              ex: "NFO" },
-  { key: "INFY",       label: "Infosys",                ex: "NFO" },
-  { key: "ICICIBANK",  label: "ICICI Bank",             ex: "NFO" },
-  { key: "SBIN",       label: "State Bank of India",    ex: "NFO" },
-  { key: "AXISBANK",   label: "Axis Bank",              ex: "NFO" },
-  { key: "KOTAKBANK",  label: "Kotak Mahindra Bank",    ex: "NFO" },
-  { key: "BAJFINANCE", label: "Bajaj Finance",          ex: "NFO" },
-  { key: "LT",         label: "Larsen & Toubro",        ex: "NFO" },
-  { key: "TATAMOTORS", label: "Tata Motors",            ex: "NFO" },
-  { key: "WIPRO",      label: "Wipro",                  ex: "NFO" },
-  { key: "ADANIENT",   label: "Adani Enterprises",      ex: "NFO" },
-  { key: "MARUTI",     label: "Maruti Suzuki",          ex: "NFO" },
-  { key: "SUNPHARMA",  label: "Sun Pharma",             ex: "NFO" },
-  { key: "TATASTEEL",  label: "Tata Steel",             ex: "NFO" },
-  { key: "ONGC",       label: "ONGC",                   ex: "NFO" },
-  { key: "NTPC",       label: "NTPC",                   ex: "NFO" },
-  { key: "COALINDIA",  label: "Coal India",             ex: "NFO" },
-  { key: "JSWSTEEL",   label: "JSW Steel",              ex: "NFO" },
-  { key: "HINDALCO",   label: "Hindalco Industries",    ex: "NFO" },
-  { key: "POWERGRID",  label: "Power Grid Corp",        ex: "NFO" },
-  { key: "ZOMATO",     label: "Zomato",                 ex: "NFO" },
-  { key: "IRFC",       label: "IRFC",                   ex: "NFO" },
-  { key: "HAL",        label: "Hindustan Aeronautics",  ex: "NFO" },
-  { key: "BEL",        label: "Bharat Electronics",     ex: "NFO" },
+  { key: "RELIANCE", label: "Reliance Industries", ex: "NFO" },
+  { key: "TCS", label: "Tata Consultancy Svc", ex: "NFO" },
+  { key: "HDFCBANK", label: "HDFC Bank", ex: "NFO" },
+  { key: "INFY", label: "Infosys", ex: "NFO" },
+  { key: "ICICIBANK", label: "ICICI Bank", ex: "NFO" },
+  { key: "SBIN", label: "State Bank of India", ex: "NFO" },
+  { key: "AXISBANK", label: "Axis Bank", ex: "NFO" },
+  { key: "KOTAKBANK", label: "Kotak Mahindra Bank", ex: "NFO" },
+  { key: "BAJFINANCE", label: "Bajaj Finance", ex: "NFO" },
+  { key: "LT", label: "Larsen & Toubro", ex: "NFO" },
+  { key: "TATAMOTORS", label: "Tata Motors", ex: "NFO" },
+  { key: "WIPRO", label: "Wipro", ex: "NFO" },
+  { key: "ADANIENT", label: "Adani Enterprises", ex: "NFO" },
+  { key: "MARUTI", label: "Maruti Suzuki", ex: "NFO" },
+  { key: "SUNPHARMA", label: "Sun Pharma", ex: "NFO" },
+  { key: "TATASTEEL", label: "Tata Steel", ex: "NFO" },
+  { key: "ONGC", label: "ONGC", ex: "NFO" },
+  { key: "NTPC", label: "NTPC", ex: "NFO" },
+  { key: "COALINDIA", label: "Coal India", ex: "NFO" },
+  { key: "JSWSTEEL", label: "JSW Steel", ex: "NFO" },
+  { key: "HINDALCO", label: "Hindalco Industries", ex: "NFO" },
+  { key: "POWERGRID", label: "Power Grid Corp", ex: "NFO" },
+  { key: "ZOMATO", label: "Zomato", ex: "NFO" },
+  { key: "IRFC", label: "IRFC", ex: "NFO" },
+  { key: "HAL", label: "Hindustan Aeronautics", ex: "NFO" },
+  { key: "BEL", label: "Bharat Electronics", ex: "NFO" },
 ];
 
 // ── PCR + MAX PAIN WIDGET  (add this inside or after OptionsSection) ──────────
@@ -2480,12 +2607,12 @@ function PcrMaxPainWidget({ ticks }: { ticks: any }) {
 
   const { data, loading, error, refresh } = useAPI<any>(`/kite/pcr-maxpain?name=${activeName}`, [activeName]);
 
-  const spot = activeName === "NIFTY"       ? (ticks["NSE:NIFTY 50"]?.last_price  as number | undefined)
-             : activeName === "BANKNIFTY"   ? (ticks["NSE:NIFTY BANK"]?.last_price as number | undefined)
-             : activeName === "FINNIFTY"    ? (ticks["NSE:NIFTY FIN SERVICE"]?.last_price as number | undefined)
-             : activeName === "MIDCPNIFTY"  ? (ticks["NSE:NIFTY MIDCAP SELECT"]?.last_price as number | undefined)
-             : activeName === "SENSEX"      ? (ticks["BSE:SENSEX"]?.last_price     as number | undefined)
-             : undefined;
+  const spot = activeName === "NIFTY" ? (ticks["NSE:NIFTY 50"]?.last_price as number | undefined)
+    : activeName === "BANKNIFTY" ? (ticks["NSE:NIFTY BANK"]?.last_price as number | undefined)
+      : activeName === "FINNIFTY" ? (ticks["NSE:NIFTY FIN SERVICE"]?.last_price as number | undefined)
+        : activeName === "MIDCPNIFTY" ? (ticks["NSE:NIFTY MIDCAP SELECT"]?.last_price as number | undefined)
+          : activeName === "SENSEX" ? (ticks["BSE:SENSEX"]?.last_price as number | undefined)
+            : undefined;
 
   const pcr = data?.pcr ?? null;
   const maxPain = data?.max_pain ?? null;
@@ -2523,7 +2650,7 @@ function PcrMaxPainWidget({ ticks }: { ticks: any }) {
           <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all ${l
             ? "bg-slate-50 border-slate-200 focus-within:border-[#5194F6]"
             : "bg-[#0c1a2e] border-[#1e3a5f]/50 focus-within:border-[#5194F6]"
-          }`}>
+            }`}>
             <Search className={`w-3 h-3 shrink-0 ${tx.t3(l)}`} />
             <input
               value={pcrSearch}
@@ -2640,9 +2767,9 @@ function PcrMaxPainWidget({ ticks }: { ticks: any }) {
 // ── Static fallback macro values (updated periodically) ──────────
 const MACRO_FALLBACK = {
   bond_yield: 6.872,   // NSE G-Sec 10Y yield — update when it changes significantly
-  rbi_rate:   6.25,    // RBI Repo Rate (as of Apr 2025 cut)
-  cpi:        { value: 4.85, year: "2025" },   // CPI YoY % (MOSPI)
-  gdp:        { value: 8.20, year: "FY24" },   // GDP growth (NSO)
+  rbi_rate: 6.25,    // RBI Repo Rate (as of Apr 2025 cut)
+  cpi: { value: 4.85, year: "2025" },   // CPI YoY % (MOSPI)
+  gdp: { value: 8.20, year: "FY24" },   // GDP growth (NSO)
 };
 
 function MacroSection() {
@@ -2658,18 +2785,18 @@ function MacroSection() {
   const inrUsd = data?.inr_usd ?? null;
 
   // Prefer live API value, fall back to static constant so it always shows
-  const rbiRate   = data?.rbi_repo_rate   ?? MACRO_FALLBACK.rbi_rate;
-  const bondYield = data?.bond_yield_10y  ?? MACRO_FALLBACK.bond_yield;
-  const cpiVal    = data?.cpi?.value      ?? MACRO_FALLBACK.cpi.value;
-  const cpiYear   = data?.cpi?.year       ?? MACRO_FALLBACK.cpi.year;
-  const gdpVal    = data?.gdp?.value      ?? MACRO_FALLBACK.gdp.value;
-  const gdpYear   = data?.gdp?.year       ?? MACRO_FALLBACK.gdp.year;
+  const rbiRate = data?.rbi_repo_rate ?? MACRO_FALLBACK.rbi_rate;
+  const bondYield = data?.bond_yield_10y ?? MACRO_FALLBACK.bond_yield;
+  const cpiVal = data?.cpi?.value ?? MACRO_FALLBACK.cpi.value;
+  const cpiYear = data?.cpi?.year ?? MACRO_FALLBACK.cpi.year;
+  const gdpVal = data?.gdp?.value ?? MACRO_FALLBACK.gdp.value;
+  const gdpYear = data?.gdp?.year ?? MACRO_FALLBACK.gdp.year;
 
   // Track which fields are live vs fallback
   const isBondLive = data?.bond_yield_10y != null;
-  const isRbiLive  = data?.rbi_repo_rate  != null;
-  const isCpiLive  = data?.cpi?.value     != null;
-  const isGdpLive  = data?.gdp?.value     != null;
+  const isRbiLive = data?.rbi_repo_rate != null;
+  const isCpiLive = data?.cpi?.value != null;
+  const isGdpLive = data?.gdp?.value != null;
 
   const cards = [
     {
@@ -2717,7 +2844,7 @@ function MacroSection() {
   return (
     <section className="mb-8">
       <SecHead id="macro" icon={Globe2} title="Macro Indicators"
- />
+      />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-2">
         {loading
@@ -2726,11 +2853,10 @@ function MacroSection() {
             <Card key={c.label} className="px-3 py-3">
               <div className="flex items-start justify-between gap-1 mb-1">
                 <p className={`text-[9px] font-black uppercase tracking-widest ${tx.t3(l)}`}>{c.label}</p>
-                <span className={`text-[8px] font-bold px-1 py-0.5 rounded border shrink-0 flex items-center gap-0.5 ${
-                  c.live
+                <span className={`text-[8px] font-bold px-1 py-0.5 rounded border shrink-0 flex items-center gap-0.5 ${c.live
                     ? l ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                     : l ? "bg-slate-50 text-slate-400 border-slate-100" : "bg-[#0c1a2e] text-slate-500 border-[#1e3a5f]/50"
-                }`}>
+                  }`}>
                   {c.live && <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />}
                   {c.source}
                 </span>
@@ -2747,7 +2873,7 @@ function MacroSection() {
           <button onClick={refresh} className="ml-auto underline">Retry</button>
         </div>
       )}
-{/* 
+      {/* 
       <div className={`mt-1 text-[10px] flex items-center gap-1 ${tx.t3(l)}`}>
         INR/USD: live (Yahoo). Bond yield &amp; RBI rate: live when available, fallback to last known values. CPI/GDP: MOSPI/NSO annual data.
         <button onClick={refresh} className={`ml-auto flex items-center gap-1 px-2 py-0.5 rounded border text-[9px] font-bold transition-colors ${l ? "bg-white border-slate-200 text-slate-500 hover:border-slate-300" : "bg-[#0c1a2e] border-[#1e3a5f]/50 text-slate-500 hover:text-slate-400"}`}>
@@ -2855,11 +2981,10 @@ export default function DomesticView() {
             </button>
 
             {/* 1. Indian Market Open/Closed badge */}
-            <span className={`flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-md border shrink-0 ${
-              mktOpen
+            <span className={`flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-md border shrink-0 ${mktOpen
                 ? l ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
                 : l ? "bg-slate-50 border-slate-100 text-slate-400" : "bg-[#1e3a5f]/40 border-[#1e3a5f]/50 text-slate-500"
-            }`}>
+              }`}>
               <span className={`w-1.5 h-1.5 rounded-full ${mktOpen ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
               <span className="hidden xs:inline">Indian Mkt · </span>{mktOpen ? "Open" : "Closed"}
             </span>
