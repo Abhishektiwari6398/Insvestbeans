@@ -21,6 +21,10 @@ import { useTheme } from '@/controllers/Themecontext';
 import { useAuth } from '@/controllers/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useEducation } from '@/hooks/useEducation';
+import {
+  addCertModulePdf as apiAddCertPdf,
+  deleteCertModulePdf as apiDeleteCertPdf,
+} from '@/services/api/educationApi';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const ITEMS_PER_PAGE = 10;
@@ -440,45 +444,30 @@ function CertModuleCard({ mod, data, isLight, cardBg, border, textPrimary, textM
   const premiumPdfs = (mod.pdfs || []).filter((p: any) => !p.isFreePreview);
 
   // ── Admin: Add PDF to this cert module ───────────────────────────────
-  const certPdfInputRef = useRef<HTMLInputElement>(null);
   const [addingPdf, setAddingPdf] = useState(false);
+  const [showCertPdfModal, setShowCertPdfModal] = useState(false);
 
-  const handleAddCertPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !categoryId || !mod._id) return;
-    const pdfTitle = window.prompt('PDF Title (e.g. NISM V-A Workbook Nov 2025):', '');
-    if (!pdfTitle?.trim()) return;
-    const pdfSubtitle = window.prompt('PDF Subtitle (e.g. Latest English edition):', '') || '';
-    const isFreeStr   = window.confirm('Is this PDF free preview? (OK = FREE, Cancel = PAID)');
+  const handleAddCertPdf = async (payload: { file: File; title: string; subtitle: string; isFreePreview: boolean }) => {
+    if (!categoryId || !mod._id) return;
     setAddingPdf(true);
     try {
-      const fd = new FormData();
-      fd.append('pdf', file);
-      fd.append('title',         pdfTitle.trim());
-      fd.append('subtitle',      pdfSubtitle.trim());
-      fd.append('isFreePreview', String(isFreeStr));
-      const res  = await fetch(`/api/v1/admin/education/categories/${categoryId}/modules/${mod._id}/cert-pdfs`, { method: 'POST', body: fd, credentials: 'include' });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.message || 'Upload failed');
-      onCertPdfAdded?.(json.data);
-      alert('✅ PDF added successfully!');
+      await apiAddCertPdf(categoryId, mod._id, payload.file, payload.title, payload.subtitle, payload.isFreePreview);
+      setShowCertPdfModal(false);
+      onCertPdfAdded?.(null);
     } catch (err: any) {
-      alert(`❌ ${err.message}`);
+      alert(`\u274C ${err.message}`);
     } finally {
       setAddingPdf(false);
-      if (certPdfInputRef.current) certPdfInputRef.current.value = '';
     }
   };
 
   const handleDeleteCertPdf = async (pdfIndex: number, pdfTitle: string) => {
     if (!window.confirm(`Delete "${pdfTitle}"?\nThis will remove it from Cloudinary too.`)) return;
     try {
-      const res  = await fetch(`/api/v1/admin/education/categories/${categoryId}/modules/${mod._id}/cert-pdfs/${pdfIndex}`, { method: 'DELETE', credentials: 'include' });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.message || 'Delete failed');
+      await apiDeleteCertPdf(categoryId, mod._id, pdfIndex);
       onCertPdfDeleted?.(pdfIndex);
     } catch (err: any) {
-      alert(`❌ ${err.message}`);
+      alert(`\u274C ${err.message}`);
     }
   };
 
@@ -549,13 +538,20 @@ function CertModuleCard({ mod, data, isLight, cardBg, border, textPrimary, textM
             {adminFlag && (
               <>
                 <button type="button"
-                  onClick={() => certPdfInputRef.current?.click()}
+                  onClick={() => setShowCertPdfModal(true)}
                   disabled={addingPdf}
                   className="text-[10px] px-2.5 py-1 rounded-lg font-bold disabled:opacity-50"
                   style={{ background: 'rgba(168,85,247,0.10)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.25)' }}>
                   {addingPdf ? '⏳ Uploading…' : '+ Add PDF'}
                 </button>
-                <input ref={certPdfInputRef} type="file" accept="application/pdf" className="hidden" onChange={handleAddCertPdf} />
+                {showCertPdfModal && (
+                  <CertAddPdfModal
+                    isLight={isLight}
+                    onClose={() => setShowCertPdfModal(false)}
+                    onSubmit={handleAddCertPdf}
+                    saving={addingPdf}
+                  />
+                )}
               </>
             )}
           </div>
@@ -637,6 +633,122 @@ function CertModuleCard({ mod, data, isLight, cardBg, border, textPrimary, textM
             <SvgCrown /> Unlock All {premiumPdfs.length} PDFs
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// CERT ADD PDF MODAL — replaces window.prompt / window.confirm flow
+// Opens when admin clicks "+ Add PDF" on a certification module card.
+// ════════════════════════════════════════════════════════════════════════
+function CertAddPdfModal({ isLight, onClose, onSubmit, saving }: any) {
+  const [title,    setTitle]    = useState('');
+  const [subtitle, setSubtitle] = useState('');
+  const [isFree,   setIsFree]   = useState(true);
+  const [file,     setFile]     = useState<File | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const cardBg  = isLight ? '#ffffff' : '#1e2433';
+  const border  = isLight ? 'rgba(226,232,240,0.8)' : 'rgba(255,255,255,0.10)';
+  const primary = isLight ? '#0f172a' : '#f1f5f9';
+  const muted   = isLight ? '#64748b' : '#94a3b8';
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (f.size > 50 * 1024 * 1024) { alert('File too large — max 50 MB'); return; }
+    setFile(f);
+  };
+
+  const handleSubmit = async () => {
+    if (!title.trim()) { alert('PDF Title is required'); return; }
+    if (!file)         { alert('Please select a PDF file'); return; }
+    await onSubmit({ file, title: title.trim(), subtitle: subtitle.trim(), isFreePreview: isFree });
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}>
+      <div className="w-full max-w-md mx-4 rounded-2xl overflow-hidden flex flex-col"
+        style={{ background: cardBg, border: `1px solid ${border}`, maxHeight: '90dvh' }}>
+
+        {/* Header */}
+        <div className="px-5 py-4 flex items-center justify-between flex-shrink-0"
+          style={{ borderBottom: `1px solid ${border}`, background: 'rgba(168,85,247,0.06)' }}>
+          <span className="font-bold text-sm" style={{ color: '#a855f7' }}>📄 Add PDF to Module</span>
+          <button onClick={onClose} disabled={saving}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-lg hover:opacity-60 disabled:opacity-30"
+            style={{ color: muted }}>✕</button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
+
+          {/* Title */}
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] font-bold uppercase tracking-wide" style={{ color: muted }}>PDF Title *</label>
+            <input value={title} onChange={e => setTitle(e.target.value)}
+              placeholder="e.g. NISM V-A Workbook Nov 2025"
+              className="rounded-xl px-3 py-2.5 text-sm outline-none"
+              style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }} />
+          </div>
+
+          {/* Subtitle */}
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] font-bold uppercase tracking-wide" style={{ color: muted }}>Subtitle</label>
+            <input value={subtitle} onChange={e => setSubtitle(e.target.value)}
+              placeholder="e.g. Latest English edition"
+              className="rounded-xl px-3 py-2.5 text-sm outline-none"
+              style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }} />
+          </div>
+
+          {/* Free / Paid */}
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] font-bold uppercase tracking-wide" style={{ color: muted }}>Access</label>
+            <select value={isFree ? 'free' : 'paid'} onChange={e => setIsFree(e.target.value === 'free')}
+              className="rounded-xl px-3 py-2.5 text-sm outline-none"
+              style={{ background: isLight ? '#f8fafc' : '#0d1117', border: `1px solid ${border}`, color: primary }}>
+              <option value="free">Free Preview</option>
+              <option value="paid">Paid Only</option>
+            </select>
+          </div>
+
+          {/* File picker */}
+          <div className="flex flex-col gap-2">
+            <label className="text-[11px] font-bold uppercase tracking-wide" style={{ color: muted }}>PDF File *</label>
+            <button type="button" onClick={() => fileRef.current?.click()}
+              className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all hover:opacity-80"
+              style={{
+                background: file ? 'rgba(81,148,246,0.08)' : (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)'),
+                color:      file ? '#5194F6' : muted,
+                border:     `1px solid ${file ? 'rgba(81,148,246,0.25)' : border}`,
+              }}>
+              <SvgUpload />
+              <span className="truncate">{file ? `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)` : 'Choose PDF (max 50 MB)'}</span>
+            </button>
+            <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={handleFile} />
+            {file && (
+              <button onClick={() => { setFile(null); if (fileRef.current) fileRef.current.value = ''; }}
+                className="text-[11px] self-start font-bold" style={{ color: '#f87171' }}>✕ Remove file</button>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 pb-5 pt-3 flex gap-3 flex-shrink-0"
+          style={{ borderTop: `1px solid ${border}` }}>
+          <button onClick={onClose} disabled={saving}
+            className="flex-1 py-3 rounded-xl text-sm font-bold disabled:opacity-40"
+            style={{ background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.07)', color: muted, border: `1px solid ${border}` }}>
+            Cancel
+          </button>
+          <button onClick={handleSubmit} disabled={saving || !title.trim() || !file}
+            className="flex-1 py-3 rounded-xl text-sm font-bold text-white disabled:opacity-40"
+            style={{ background: 'linear-gradient(135deg,#a855f7,#7c3aed)' }}>
+            {saving ? '⏳ Uploading…' : '+ Upload PDF'}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1249,19 +1361,19 @@ export const EducationDetailView: React.FC = () => {
     const mod = localModules[editingIdx];
     await hookUpdateModule(mod._id ?? `local-${editingIdx}`, updated, pdfFile);
 
-    // Upload any new cert PDFs via the cert-pdfs endpoint
+    // Upload any new cert PDFs via the correct cert-pdfs API function
     const certNewPdfs: any[] = updated._certNewPdfs || [];
     for (const pdfItem of certNewPdfs) {
       if (!pdfItem._file || !pdfItem.title?.trim()) continue;
       try {
-        const fd = new FormData();
-        fd.append('pdf', pdfItem._file);
-        fd.append('title', pdfItem.title.trim());
-        fd.append('subtitle', pdfItem.subtitle?.trim() || '');
-        fd.append('isFreePreview', String(pdfItem.isFreePreview));
-        await fetch(`/api/v1/admin/education/categories/${categoryId}/modules/${mod._id}/cert-pdfs`, {
-          method: 'POST', body: fd, credentials: 'include',
-        });
+        await apiAddCertPdf(
+          categoryId!,
+          mod._id,
+          pdfItem._file,
+          pdfItem.title.trim(),
+          pdfItem.subtitle?.trim() || '',
+          pdfItem.isFreePreview ?? true
+        );
       } catch (e) { console.error('Cert PDF upload failed:', e); }
     }
     if (certNewPdfs.some((p: any) => p._file)) window.location.reload();
@@ -1269,15 +1381,30 @@ export const EducationDetailView: React.FC = () => {
   };
 
   const handleAddModule = async (newMod: any, pdfFile?: File | null) => {
-    const added = await hookAddModule(newMod, pdfFile);
+    // hookAddModule now returns the saved module (including its DB _id)
+    const savedModule = await hookAddModule(newMod, pdfFile);
     setShowAddModal(false);
     setCurrentPage(Math.ceil((localModules.length + 1) / ITEMS_PER_PAGE));
 
-    // Upload cert PDFs for newly added module — need to reload to get the new _id
+    // Upload cert PDFs now that we have the new module's _id
     const certNewPdfs: any[] = newMod._certNewPdfs || [];
-    if (certNewPdfs.some((p: any) => p._file)) {
-      // Small delay to let the module save complete, then reload so we can get the new module's _id
-      setTimeout(() => window.location.reload(), 800);
+    const hasCertPdfs = certNewPdfs.some((p: any) => p._file);
+
+    if (hasCertPdfs && savedModule?._id && !savedModule._id.startsWith('local-')) {
+      for (const pdfItem of certNewPdfs) {
+        if (!pdfItem._file || !pdfItem.title?.trim()) continue;
+        try {
+          await apiAddCertPdf(
+            categoryId!,
+            savedModule._id,
+            pdfItem._file,
+            pdfItem.title.trim(),
+            pdfItem.subtitle?.trim() || '',
+            pdfItem.isFreePreview ?? true
+          );
+        } catch (e) { console.error('Cert PDF upload failed:', e); }
+      }
+      window.location.reload();
     }
   };
 

@@ -1,12 +1,9 @@
 /**
  * educationApi.ts
  *
- * CHANGES vs original:
- *  1. addModule    → now sends FormData (supports optional PDF file upload)
- *  2. updateModule → now sends FormData (supports optional new PDF file upload)
- *  3. uploadModulePdf   → NEW: upload/replace just the PDF for a module
- *  4. deleteModulePdf   → NEW: delete a module's PDF from Cloudinary
- *  5. apiFetch stays for JSON-only calls; apiFetchForm added for multipart
+ * CHANGES vs previous:
+ *  6. addCertModulePdf   → NEW: add a PDF to a cert module's pdfs[] (uses correct ADMIN_SEGMENT URL)
+ *  7. deleteCertModulePdf → NEW: delete a PDF from a cert module's pdfs[] (uses correct ADMIN_SEGMENT URL)
  *
  * Place in: src/api/educationApi.ts  (or src/services/api/educationApi.ts)
  */
@@ -76,7 +73,7 @@ export const updateCategoryMeta = (categoryId: string, fields: Record<string, an
  * @param categoryId  - category slug (e.g. "financial-ebooks")
  * @param moduleData  - module fields (title, subtitle, description, level, isPaid,
  *                      videoUrl, highlights[], previewTopics[])
- * @param pdfFile     - optional PDF File object (≥ 1 MB, ≤ 50 MB)
+ * @param pdfFile     - optional PDF File object (≤ 50 MB)
  */
 export const addModule = (
   categoryId: string,
@@ -178,4 +175,61 @@ export const reorderModules = (categoryId: string, orderedIds: string[]) =>
   apiFetch(
     `/${ADMIN_SEGMENT}/education/categories/${categoryId}/modules/reorder`,
     { method: "PATCH", body: JSON.stringify({ orderedIds }) }
+  );
+
+// ── CERTIFICATION-SPECIFIC ────────────────────────────────────────────────────
+
+/**
+ * Add a PDF to a certification module's pdfs[] array.
+ *
+ * FIX: Previously the component called `/api/v1/admin/education/...` (hardcoded "admin")
+ * which hit the wrong route — server returned HTML 404 → "Unexpected end of JSON input".
+ * Now uses the correct `/${ADMIN_SEGMENT}/education/...` URL.
+ *
+ * @param categoryId    - category slug
+ * @param moduleId      - MongoDB _id of the cert module
+ * @param pdfFile       - PDF File to upload (≤ 50 MB)
+ * @param title         - PDF title (required)
+ * @param subtitle      - PDF subtitle (optional)
+ * @param isFreePreview - true = free, false = paid
+ */
+export const addCertModulePdf = (
+  categoryId: string,
+  moduleId: string,
+  pdfFile: File,
+  title: string,
+  subtitle: string,
+  isFreePreview: boolean
+) => {
+  const form = new FormData();
+  form.append("pdf", pdfFile, pdfFile.name);
+  form.append("title", title.trim());
+  form.append("subtitle", subtitle.trim());
+  form.append("isFreePreview", String(isFreePreview));
+  return apiFetchForm(
+    `/${ADMIN_SEGMENT}/education/categories/${categoryId}/modules/${moduleId}/cert-pdfs`,
+    form,
+    "POST"
+  );
+};
+
+/**
+ * Delete a specific PDF from a certification module's pdfs[] array.
+ *
+ * FIX: Previously the component called `/api/v1/admin/education/...` (hardcoded "admin")
+ * which hit the wrong route — server returned HTML 404 → "Unexpected end of JSON input".
+ * Now uses the correct `/${ADMIN_SEGMENT}/education/...` URL.
+ *
+ * @param categoryId - category slug
+ * @param moduleId   - MongoDB _id of the cert module
+ * @param pdfIndex   - 0-based index of the PDF to delete in mod.pdfs[]
+ */
+export const deleteCertModulePdf = (
+  categoryId: string,
+  moduleId: string,
+  pdfIndex: number
+) =>
+  apiFetch(
+    `/${ADMIN_SEGMENT}/education/categories/${categoryId}/modules/${moduleId}/cert-pdfs/${pdfIndex}`,
+    { method: "DELETE" }
   );

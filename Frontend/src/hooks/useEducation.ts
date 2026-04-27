@@ -1,14 +1,10 @@
 /**
- * useEducation.ts — v3 (production-ready)
+ * useEducation.ts — v4 (production-ready)
  *
- * CHANGES vs v2:
- *  1. addModule: pdfFile param passed through correctly to API
- *  2. updateModule: pdfFile param passed through correctly
- *  3. setLoading(false) always runs in finally — no stuck spinner
- *  4. dbSynced: set true only when API returns live data
- *  5. Removed pdfFile size check from hook (controller handles validation)
- *  6. Module list stays sorted by `order` after every mutation
- *  7. On moveModule fail → correctly reverts to previous state
+ * FIX vs v3:
+ *  addModule now returns the saved module object so the caller (handleAddModule)
+ *  can immediately use the new module's _id to upload cert PDFs via the cert-pdfs
+ *  endpoint — without needing a page reload to discover the _id.
  *
  * Place in: src/hooks/useEducation.ts
  */
@@ -57,20 +53,25 @@ export function useEducation(categoryId: string | undefined) {
   }, [categoryId]);
 
   // ── Add module ─────────────────────────────────────────────────────────────
+  // FIX: returns the saved module so the caller can get the new _id for cert-pdf uploads
   const addModule = useCallback(
-    async (newMod: any, pdfFile?: File | null) => {
-      if (!categoryId) return;
+    async (newMod: any, pdfFile?: File | null): Promise<any | null> => {
+      if (!categoryId) return null;
       try {
         if (dbSynced) {
-          // API returns the saved module object directly
+          // API returns the saved module object directly (including _id)
           const savedModule = await apiAddModule(categoryId, newMod, pdfFile);
           setModules((prev) => [...prev, savedModule]);
+          return savedModule; // ← FIXED: was missing return, caller couldn't get _id
         } else {
           // Not seeded yet — local only (will vanish on refresh — prompt to seed)
-          setModules((prev) => [...prev, { ...newMod, _id: `local-${Date.now()}` }]);
+          const localMod = { ...newMod, _id: `local-${Date.now()}` };
+          setModules((prev) => [...prev, localMod]);
+          return localMod;
         }
       } catch (e: any) {
         alert("Failed to add module: " + e.message);
+        return null;
       }
     },
     [categoryId, dbSynced]
