@@ -1171,7 +1171,7 @@ const CATEGORY_DATA: Record<string, any> = {
       contentType: 'ebook',
       description: 'NISM certification workbooks covering Investment Advisory, AIF, PMS, Compliance, and more — from the Non-Financial category.',
       stats: { rating: '4.7', reviews: '187', duration: '19 PDFs', modules: 19 },
-      instructor: { name: 'InvestBeans Editorial', role: 'NISM & SEBI Certified Faculty', avatar: '🧠' },
+      instructor: { name: 'InvestBeans Editorial', role: 'NISM Certified Faculty', avatar: '🧠' },
       whatYouLearn: [
         'Master NISM Series X-B Investment Adviser Level 2',
         'Understand AIF, PMS, and Merchant Banking regulations',
@@ -1538,7 +1538,7 @@ const CATEGORY_DATA: Record<string, any> = {
       contentType: 'video',
       description: 'Video tutorials on NISM advanced certifications, PMS, AIF, compliance, and career guidance.',
       stats: { rating: '4.6', reviews: '453', duration: '5 Videos', modules: 5 },
-      instructor: { name: 'InvestBeans Faculty', role: 'NISM & SEBI Certified', avatar: '🎯' },
+      instructor: { name: 'InvestBeans Faculty', role: 'NISM Certified', avatar: '🎯' },
       whatYouLearn: [
         'Understand AIF, PMS, and Merchant Banking',
         'Master compliance and AML/KYC concepts',

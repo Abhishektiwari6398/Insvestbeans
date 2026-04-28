@@ -38,26 +38,29 @@ interface CleanChartProps {
 
 // ── Delay/description label per period ────────────────────────────
 const DELAY_LABEL: Record<string, string> = {
-  '1D':  '~15 min delayed · 2 min bars',
-  '5D':  '~15 min delayed · 15 min bars',
-  '1M':  'End-of-day · daily bars',
-  '6M':  'End-of-day · daily bars',
-  'YTD': 'End-of-day · daily bars',
-  '1Y':  'End-of-day · weekly bars',
-  '5Y':  'End-of-day · weekly bars',
-  'MAX': 'End-of-day · monthly bars',
+  '1D':  '~15 min delayed · 2 min bars · today only',
+  '5D':  '~15 min delayed · 15 min bars · last 5 trading days',
+  '1M':  'End-of-day · daily bars · last 1 month',
+  '6M':  'End-of-day · daily bars · last 6 months',
+  'YTD': 'End-of-day · daily bars · Jan 1 to today',
+  '1Y':  'End-of-day · weekly bars · last 52 weeks',
+  '5Y':  'End-of-day · weekly bars · last 5 years',
+  'MAX': 'End-of-day · monthly bars · all available history',
 };
 
 // ── Bar spacing per period ─────────────────────────────────────────
+// 5D has 15-min bars × 5 days = ~130 bars → small spacing needed
+// 1M has ~21 daily bars → wider spacing for readability
+// 1Y has ~52 weekly bars → comfortable spacing
 const BAR_SPACING: Record<string, number> = {
-  '1D':  3,
-  '5D':  4,
-  '1M':  12,
-  '6M':  5,
-  'YTD': 7,
-  '1Y':  14,
-  '5Y':  4,
-  'MAX': 18,
+  '1D':  3,   // ~195 × 2-min bars
+  '5D':  3,   // ~130 × 15-min bars across 5 days
+  '1M':  14,  // ~21 daily bars — wide spacing, dates clearly readable
+  '6M':  5,   // ~126 daily bars
+  'YTD': 6,   // varies — daily bars
+  '1Y':  12,  // ~52 weekly bars — "Apr '25" labels need space
+  '5Y':  4,   // ~260 weekly bars
+  'MAX': 18,  // ~50+ monthly bars — "Apr 2024" labels need most space
 };
 
 // ── Month names for X-axis date labels ────────────────────────────
@@ -241,7 +244,8 @@ const CleanChart = ({
   }, [propCandles]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Derived chart config ───────────────────────────────────────
-  // Show HH:MM time labels for intraday periods only (1D, 5D)
+  // timeVisible = true for 1D and 5D so LWC renders time component on axis
+  // For daily/weekly/monthly periods it's false — only date labels needed
   const timeVisible = period === '1D' || period === '5D';
   const barSpacing  = BAR_SPACING[period] ?? 6;
 
@@ -260,38 +264,62 @@ const CleanChart = ({
   // We add tzOffsetSeconds to the raw UTC timestamp before formatting,
   // then use getUTC* methods (which read the shifted value as-is).
   // This avoids the browser's local timezone interfering with display.
+  //
+  // FORMAT GUIDE (what user expects to see):
+  //   1D  → "09:30"               (HH:MM exchange local time only)
+  //   5D  → "28 Apr 09:30"        (Date + Time — spans multiple days)
+  //   1M  → "28 Apr"              (Day + Month — daily bars)
+  //   6M  → "28 Apr"              (Day + Month — daily bars)
+  //   YTD → "28 Apr"              (Day + Month — daily bars)
+  //   1Y  → "Apr '25"             (Month + Short Year — weekly bars)
+  //   5Y  → "Apr 2024"            (Month + Full Year — weekly bars)
+  //   MAX → "Apr 2024"            (Month + Full Year — monthly bars)
   const makeTimeFormatter = (p: string) => (timestamp: number) => {
     // timestamp from LWC is UTC epoch seconds
     // Shift to exchange local time by adding tzOffset
     const localMs = (timestamp + tzOffsetSeconds) * 1000;
     const d = new Date(localMs);
 
-    if (p === '1D' || p === '5D') {
-      // ── Intraday: show HH:MM in exchange local time ──
-      // e.g. "09:30" for NYSE open, "09:15" for NSE open
-      const hh = d.getUTCHours().toString().padStart(2, '0');
-      const mm = d.getUTCMinutes().toString().padStart(2, '0');
+    const day = d.getUTCDate().toString().padStart(2, '0');
+    const mon = MONTHS[d.getUTCMonth()];
+    const hh  = d.getUTCHours().toString().padStart(2, '0');
+    const mm  = d.getUTCMinutes().toString().padStart(2, '0');
+    const yr2 = d.getUTCFullYear().toString().slice(2);
+    const yr4 = d.getUTCFullYear();
+
+    if (p === '1D') {
+      // ── Intraday 1D: only time, no date (single day chart) ──
+      // e.g. "09:30", "10:15", "15:45"
       return `${hh}:${mm}`;
     }
 
+    if (p === '5D') {
+      // ── 5D: Date + Time — user needs to see WHICH day + what time ──
+      // e.g. "28 Apr 09:30", "29 Apr 14:00"
+      // Only show time label on non-midnight ticks to reduce clutter
+      const isSessionOpen = !(hh === '00' && mm === '00');
+      if (isSessionOpen) {
+        return `${day} ${mon} ${hh}:${mm}`;
+      }
+      // midnight tick → just show the date
+      return `${day} ${mon}`;
+    }
+
     if (p === '1M' || p === '6M' || p === 'YTD') {
-      // ── Daily bars: show "15 Apr" style ──
-      const day = d.getUTCDate().toString().padStart(2, '0');
-      const mon = MONTHS[d.getUTCMonth()];
+      // ── Daily bars: show "28 Apr" — user needs exact date ──
+      // e.g. "01 Apr", "15 Apr", "28 Apr"
       return `${day} ${mon}`;
     }
 
     if (p === '1Y') {
-      // ── Weekly bars (1Y): show "Apr '25" style ──
-      const mon  = MONTHS[d.getUTCMonth()];
-      const yr   = d.getUTCFullYear().toString().slice(2);
-      return `${mon} '${yr}`;
+      // ── 1Y weekly bars: "Apr '25" — month + short year ──
+      // e.g. "Jan '25", "Apr '25", "Oct '25"
+      return `${mon} '${yr2}`;
     }
 
-    // ── 5Y / MAX: monthly bars — show "Apr 2024" style ──
-    const mon = MONTHS[d.getUTCMonth()];
-    const yr  = d.getUTCFullYear();
-    return `${mon} ${yr}`;
+    // ── 5Y / MAX: "Apr 2024" — month + full year for clarity ──
+    // e.g. "Jan 2022", "Jun 2023", "Apr 2026"
+    return `${mon} ${yr4}`;
   };
 
   // ── Create lightweight-charts instance ────────────────────────
@@ -454,8 +482,8 @@ const CleanChart = ({
 
       {/* ── Period selector (only when historyUrl provided) ──────── */}
       {historyUrl && (
-        <div className={`flex items-center gap-1 px-4 py-2 border-t ${dark ? 'border-white/[0.05]' : 'border-slate-100'}`}>
-          {(['1D', '1W', '1M', '3M', '1Y'] as const).map(p => (
+        <div className={`flex items-center gap-1 px-4 py-2 border-t flex-wrap ${dark ? 'border-white/[0.05]' : 'border-slate-100'}`}>
+          {(['1D', '5D', '1M', '6M', 'YTD', '1Y', '5Y', 'MAX'] as const).map(p => (
             <button
               key={p}
               onClick={() => setActivePeriod(p)}

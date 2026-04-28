@@ -350,31 +350,85 @@ function useInsightBanner() {
   return { insight, loading, error };
 }
 
+// function useKiteHolidays() {
+//   const [indiaHolidays, setIndiaHolidays] = useState<MarketEvent[]>(INDIA_HOLIDAYS_STATIC);
+//   const [fromApi,       setFromApi]       = useState(false);
+//   useEffect(() => {
+//     let cancelled = false;
+//     (async () => {
+//       try {
+//         const year = new Date().getFullYear();
+//         const res  = await fetch(`${API}/kite/holidays?year=${year}`, { credentials: "include" });
+//         if (!res.ok) return;
+//         const json = await res.json();
+//         if (json?.status !== "success" || !Array.isArray(json?.data)) return;
+//         const mapped: MarketEvent[] = json.data
+//           .filter((h: any) => h.date && h.reason)
+//           .map((h: any, i: number) => ({
+//             id: `kite-h-${i}`, date: h.date, title: h.reason,
+//             description: "NSE & BSE closed",
+//             region: "india" as Region, category: "holiday" as Category,
+//             impact: "Medium" as const, source: "api" as const,
+//           }));
+//         if (!cancelled && mapped.length > 0) { setIndiaHolidays(mapped); setFromApi(true); }
+//       } catch { /* static fallback */ }
+//     })();
+//     return () => { cancelled = true; };
+//   }, []);
+//   return { indiaHolidays, fromApi };
+// }
 function useKiteHolidays() {
   const [indiaHolidays, setIndiaHolidays] = useState<MarketEvent[]>(INDIA_HOLIDAYS_STATIC);
-  const [fromApi,       setFromApi]       = useState(false);
+  const [fromApi, setFromApi] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const year = new Date().getFullYear();
-        const res  = await fetch(`${API}/kite/holidays?year=${year}`, { credentials: "include" });
-        if (!res.ok) return;
-        const json = await res.json();
-        if (json?.status !== "success" || !Array.isArray(json?.data)) return;
-        const mapped: MarketEvent[] = json.data
-          .filter((h: any) => h.date && h.reason)
-          .map((h: any, i: number) => ({
-            id: `kite-h-${i}`, date: h.date, title: h.reason,
-            description: "NSE & BSE closed",
-            region: "india" as Region, category: "holiday" as Category,
-            impact: "Medium" as const, source: "api" as const,
-          }));
-        if (!cancelled && mapped.length > 0) { setIndiaHolidays(mapped); setFromApi(true); }
-      } catch { /* static fallback */ }
+        const currentYear = new Date().getFullYear();
+        const nextYear = currentYear + 1;
+
+        // ✅ Dono saal parallel fetch karo — exactly like useGlobalHolidays
+        const [r1, r2] = await Promise.allSettled([
+          fetch(`${API}/kite/holidays?year=${currentYear}`, { credentials: "include" }),
+          fetch(`${API}/kite/holidays?year=${nextYear}`,    { credentials: "include" }),
+        ]);
+
+        const holidays: MarketEvent[] = [];
+        let idx = 0;
+
+        for (const result of [r1, r2]) {
+          if (result.status !== "fulfilled" || !result.value.ok) continue;
+          const json = await result.value.json();
+          if (json?.status !== "success" || !Array.isArray(json?.data)) continue;
+
+          for (const h of json.data) {
+            if (!h.date || !h.reason) continue;
+            holidays.push({
+              id:          `kite-h-${idx++}`,
+              date:        h.date,
+              title:       h.reason,
+              description: "NSE & BSE closed",
+              region:      "india" as Region,
+              category:    "holiday" as Category,
+              impact:      "Medium" as const,
+              source:      "api" as const,
+            });
+          }
+        }
+
+        if (!cancelled && holidays.length > 0) {
+          setIndiaHolidays(holidays);
+          setFromApi(true);
+          console.log(`✅ India holidays loaded from Kite API: ${holidays.length}`);
+        }
+      } catch {
+        console.warn("⚠️ Kite holidays API failed — static fallback");
+      }
     })();
     return () => { cancelled = true; };
   }, []);
+
   return { indiaHolidays, fromApi };
 }
 

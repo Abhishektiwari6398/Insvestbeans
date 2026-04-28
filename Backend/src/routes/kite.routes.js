@@ -2477,43 +2477,46 @@ const INDIA_HOLIDAYS_STATIC_2026 = [
 const INDIA_HOL_BY_YEAR  = { 2025: INDIA_HOLIDAYS_STATIC_2025,  2026: INDIA_HOLIDAYS_STATIC_2026  };
 const _indiaHolCache     = {};
 
-router.get("/holidays", async (req, res) => {
-  const year = parseInt(req.query.year) || new Date().getFullYear();
+// router.get("/holidays", async (req, res) => {
+//   const year = parseInt(req.query.year) || new Date().getFullYear();
 
-  // Serve from cache (15 min)
-  if (_indiaHolCache[year] && Date.now() - _indiaHolCache[year].ts < 15 * 60_000) {
-    return res.json({ status: "success", data: _indiaHolCache[year].data, cached: true });
-  }
+//   // Serve from cache (15 min)
+//   if (_indiaHolCache[year] && Date.now() - _indiaHolCache[year].ts < 15 * 60_000) {
+//     return res.json({ status: "success", data: _indiaHolCache[year].data, cached: true });
+//   }
 
-  // Try Kite API first (needs valid access token)
-  const token = getToken();
-  if (token && API_KEY) {
-    try {
-      const r = await axios.get(
-        `https://api.kite.trade/api/holidays/${year}`,
-        { headers: headers(), timeout: 8000 }
-      );
-      const tradingHols = r.data?.data?.trading ?? [];
-      if (Array.isArray(tradingHols) && tradingHols.length > 0) {
-        const mapped = tradingHols.map(h => ({
-          date:   h.date,
-          reason: h.description ?? h.reason ?? h.name ?? "Market Holiday",
-        }));
-        _indiaHolCache[year] = { data: mapped, ts: Date.now() };
-        console.log(`[IndiaHolidays] Kite API: ${mapped.length} holidays for ${year}`);
-        return res.json({ status: "success", data: mapped });
-      }
-    } catch (err) {
-      console.warn(`[IndiaHolidays] Kite API failed (${err?.response?.status ?? err.message}) — using static`);
-    }
-  }
+//   // Try Kite API first (needs valid access token)
+//   const token = getToken();
+//   if (token && API_KEY) {
+//     try {
+//       const r = await axios.get(
+//         `https://api.kite.trade/api/holidays`,
+//         { headers: headers(), timeout: 8000, params: { year }}
+//       );
+//       const tradingHols = r.data?.data?.trading ?? [];
+//       if (Array.isArray(tradingHols) && tradingHols.length > 0) {
+//         const mapped = tradingHols.map(h => ({
+//           date:   h.date,
+//           reason: h.description ?? h.reason ?? h.name ?? "Market Holiday",
+//         }));
+//         _indiaHolCache[year] = { data: mapped, ts: Date.now() };
+//         console.log(`[IndiaHolidays] Kite API: ${mapped.length} holidays for ${year}`);
+//         return res.json({ status: "success", data: mapped });
+//       }
+//     } catch (err) {
+//       console.warn(`[IndiaHolidays] Kite API failed (${err?.response?.status ?? err.message}) — using static`);
+//     }
+//   }
 
-  // Static fallback
-  const staticList = INDIA_HOL_BY_YEAR[year] ?? [];
-  _indiaHolCache[year] = { data: staticList, ts: Date.now() };
-  console.log(`[IndiaHolidays] Static: ${staticList.length} holidays for ${year}`);
-  return res.json({ status: "success", data: staticList, source: "static" });
-});
+//   // Static fallback
+//   const staticList = INDIA_HOL_BY_YEAR[year] ?? [];
+//   if (!INDIA_HOL_BY_YEAR[year]) {
+//     console.warn(`[IndiaHolidays] No static fallback for ${year} — Kite API ki zaroorat hai`);
+//   }
+//   _indiaHolCache[year] = { data: staticList, ts: Date.now() };
+//   console.log(`[IndiaHolidays] Static: ${staticList.length} holidays for ${year}`);
+//   return res.json({ status: "success", data: staticList, source: "static" });
+// });
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2524,7 +2527,60 @@ router.get("/holidays", async (req, res) => {
 // Fallback: Hardcoded static list for 2025 and 2026
 // Cache:    6 hours
 // ─────────────────────────────────────────────────────────────────────────────
+router.get("/holidays", async (req, res) => {
+  const year = parseInt(req.query.year) || new Date().getFullYear();
 
+  // Serve from cache (15 min)
+  if (_indiaHolCache[year] && Date.now() - _indiaHolCache[year].ts < 15 * 60_000) {
+    return res.json({ status: "success", data: _indiaHolCache[year].data, cached: true });
+  }
+
+  // ✅ NSE India Official API
+  try {
+    const r = await axios.get(
+      "https://www.nseindia.com/api/holiday-master?type=trading",
+      {
+        timeout: 10000,
+        headers: {
+          "User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "Accept":          "application/json, text/plain, */*",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Referer":         "https://www.nseindia.com/",
+        },
+      }
+    );
+
+    const segment = r.data?.CM ?? r.data?.FO ?? [];
+
+    const mapped = segment
+      .filter((h) => {
+        if (!h.tradingDate) return false;
+        const d = new Date(h.tradingDate);
+        return d.getFullYear() === year;
+      })
+      .map((h, i) => ({
+        date:   new Date(h.tradingDate).toISOString().split("T")[0],
+        reason: h.description ?? h.reason ?? "Market Holiday",
+      }));
+
+    if (mapped.length > 0) {
+      _indiaHolCache[year] = { data: mapped, ts: Date.now() };
+      console.log(`[IndiaHolidays] NSE API: ${mapped.length} holidays for ${year}`);
+      return res.json({ status: "success", data: mapped });
+    }
+
+    throw new Error("NSE API: empty response");
+
+  } catch (err) {
+    console.warn(`[IndiaHolidays] NSE API failed (${err.message}) — using static`);
+  }
+
+  // Static fallback
+  const staticList = INDIA_HOL_BY_YEAR[year] ?? [];
+  _indiaHolCache[year] = { data: staticList, ts: Date.now() };
+  console.log(`[IndiaHolidays] Static: ${staticList.length} holidays for ${year}`);
+  return res.json({ status: "success", data: staticList, source: "static" });
+});
 const GLOBAL_HOLIDAYS_STATIC_2025 = [
   { date: "2025-01-01", name: "New Year's Day",             description: "NYSE, NASDAQ, LSE, Euronext all closed." },
   { date: "2025-01-20", name: "Martin Luther King Jr. Day", description: "NYSE & NASDAQ closed." },
