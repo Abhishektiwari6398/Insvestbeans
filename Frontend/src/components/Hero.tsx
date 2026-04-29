@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { useTheme } from "@/controllers/Themecontext";
 
@@ -583,11 +582,19 @@ const GoldSilverCard = ({ cardBg, cardBorder, cardShadow, isLight, liveGold, liv
 };
 
 // ─── US Stat Card ────────────────────────────────────────────────────────────
-const USStatCard = ({ label, value, absPrice, absPricePrefix, positive, cardBg, cardBorder, cardShadow, isLight, path, section, onNavigate }) => {
+// TradingView URLs for US stat cards
+const TV_URLS: Record<string, string> = {
+  "NASDAQ":    "https://www.tradingview.com/symbols/NASDAQ-NDX/",
+  "Dow Jones": "https://www.tradingview.com/symbols/DJ-DJI/",
+  "USD / INR": "https://www.tradingview.com/symbols/USDINR/",
+  "Gold":      "https://www.tradingview.com/symbols/COMEX-GC1!/",
+};
+
+const USStatCard = ({ label, value, absPrice, absPricePrefix, positive, cardBg, cardBorder, cardShadow, isLight }) => {
   const isUp = positive === true; const isDown = positive === false;
   const color = isUp ? "#22c55e" : isDown ? "#ef4444" : (isLight ? "#0A3656" : "#74A8C9");
   const loading = value === "..." || value === "N/A";
-  const clickable = !!path && !!section;
+  const tvUrl = TV_URLS[label];
 
   // Format absolute price based on magnitude
   const fmtAbsPrice = (v, prefix) => {
@@ -606,13 +613,13 @@ const USStatCard = ({ label, value, absPrice, absPricePrefix, positive, cardBg, 
 
   return (
     <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }}
-      className={`rounded-2xl p-3 sm:p-3 relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 ${clickable ? "cursor-pointer" : ""}`}
-      onClick={() => clickable && onNavigate?.(path, section)}>
+      className={`rounded-2xl p-3 sm:p-3 relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 flex flex-col ${tvUrl ? "cursor-pointer" : ""}`}
+      onClick={() => tvUrl && window.open(tvUrl, "_blank", "noopener,noreferrer")}>
       <div className="flex items-center gap-1.5 mb-1.5">
         <span style={{ width: 7, height: 7, borderRadius: "50%", background: isLight ? "#0A3656" : "#74A8C9", display: "inline-block", boxShadow: isLight ? "0 0 6px rgba(10,54,86,0.45)" : "0 0 6px rgba(116,168,201,0.45)" }} />
         <span style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.10em", color: isLight ? "#1f455f" : "#ffffff" }}>{label}</span>
       </div>
-      <div className="mb-3">
+      <div className="flex-1 mb-3">
         {/* Absolute price — primary large number */}
         {priceDisplay && !loading && (
           <div className={`text-lg sm:text-xl font-extrabold tracking-tight mb-0.5 ${isLight ? "text-navy" : "text-white"}`}>
@@ -629,7 +636,7 @@ const USStatCard = ({ label, value, absPrice, absPricePrefix, positive, cardBg, 
         <div className={`text-[10px] sm:text-[11px] mt-0.5 ${isLight ? "text-navy/40" : "text-white/35"}`}>Today's change</div>
       </div>
       <Sparkline positive={isUp} color={color} />
-      {clickable && <div style={{ fontSize: "10px", marginTop: "6px", color: isLight ? "#0A3656" : "#74A8C9", opacity: 0.85, fontWeight: 600 }}>View details →</div>}
+      {tvUrl && <div style={{ fontSize: "10px", marginTop: "6px", color: isLight ? "#0A3656" : "#74A8C9", opacity: 0.85, fontWeight: 600 }}>View on TradingView →</div>}
     </div>
   );
 };
@@ -639,7 +646,6 @@ const Hero = () => {
   const [activeTab, setActiveTab] = useState("bharat");
   const { theme } = useTheme();
   const isLight = theme === "light";
-  const navigate = useNavigate();
   const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
   const [usData, setUsData] = useState({
@@ -1067,9 +1073,9 @@ const Hero = () => {
 
           {/* ── US grid ── */}
           {activeTab === "us" && (
-            <div className="hero-stat-grid mt-4 md:mt-5 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 max-w-5xl mx-auto px-1 sm:px-0">
-              <USStatCard label="NASDAQ" value={usData.nasdaq} absPrice={usData.nasdaqPrice} positive={usData.nasdaqPos} cardBg={cardBg} cardBorder={cardBorder} cardShadow={cardShadow} isLight={isLight}
-                path="/global" section="section-us" onNavigate={(p, s) => navigate(`${p}?scrollTo=${s}`)} />
+            <div className="hero-stat-grid mt-4 md:mt-5 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 max-w-5xl mx-auto px-1 sm:px-0 items-stretch">
+              <USStatCard label="NASDAQ" value={usData.nasdaq} absPrice={usData.nasdaqPrice} positive={usData.nasdaqPos} cardBg={cardBg} cardBorder={cardBorder} cardShadow={cardShadow} isLight={isLight} />
+              <USStatCard label="Dow Jones" value={usData.dow} absPrice={usData.dowPrice} positive={usData.dowPos} cardBg={cardBg} cardBorder={cardBorder} cardShadow={cardShadow} isLight={isLight} />
               <USStatCard label="USD / INR"
                 value={(() => {
                   const v = usData.usdInr;
@@ -1078,10 +1084,7 @@ const Hero = () => {
                 absPrice={usData.usdInrAbsPrice ?? bharatData.usdInr}
                 absPricePrefix="₹"
                 positive={usData.usdInrPos ?? (bharatData.usdInrChange != null ? bharatData.usdInrChange >= 0 : null)}
-                cardBg={cardBg} cardBorder={cardBorder} cardShadow={cardShadow} isLight={isLight}
-                path="/global" section="section-forex" onNavigate={(p, s) => navigate(`${p}?scrollTo=${s}`)} />
-              {/* ✅ FIX: US tab Gold — use MCX bharatData.goldChange if available (more accurate for Indian users) */}
-              {/* Falls back to Yahoo GC=F if MCX data not available */}
+                cardBg={cardBg} cardBorder={cardBorder} cardShadow={cardShadow} isLight={isLight} />
               <USStatCard label="Gold"
                 value={bharatData.goldChange != null
                   ? `${bharatData.goldChange >= 0 ? "+" : ""}${bharatData.goldChange.toFixed(2)}%`
@@ -1089,10 +1092,7 @@ const Hero = () => {
                 absPrice={bharatData.goldInr ?? usData.goldPrice}
                 absPricePrefix={bharatData.goldInr ? "₹" : "$"}
                 positive={bharatData.goldChange != null ? bharatData.goldChange >= 0 : usData.goldPos}
-                cardBg={cardBg} cardBorder={cardBorder} cardShadow={cardShadow} isLight={isLight}
-                path="/global" section="section-commodities" onNavigate={(p, s) => navigate(`${p}?scrollTo=${s}`)} />
-              <USStatCard label="Dow Jones" value={usData.dow} absPrice={usData.dowPrice} positive={usData.dowPos} cardBg={cardBg} cardBorder={cardBorder} cardShadow={cardShadow} isLight={isLight}
-                path="/global" section="section-us" onNavigate={(p, s) => navigate(`${p}?scrollTo=${s}`)} />
+                cardBg={cardBg} cardBorder={cardBorder} cardShadow={cardShadow} isLight={isLight} />
             </div>
           )}
 

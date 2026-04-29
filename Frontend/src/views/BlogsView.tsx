@@ -443,7 +443,7 @@ useEffect(() => {
   </div>
 </div>
 
-            <div>
+            {/* <div>
               <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 flex items-center gap-2 ${isLight ? "text-slate-500" : "text-white/60"}`}>
                 <Sparkles size={16} className="text-blue-400" />
                 Categories
@@ -495,7 +495,90 @@ useEffect(() => {
                   ))}
                 </div>
               </div>
-            </div>
+            </div> */}
+            <div>
+  <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 flex items-center gap-2 ${isLight ? "text-slate-500" : "text-white/60"}`}>
+    <Sparkles size={16} className="text-blue-400" />
+    Categories
+  </h3>
+
+  <div className="relative flex items-center gap-2">
+    {/* Prev Button */}
+    <button
+      onClick={() => {
+        const el = document.getElementById('categories-scroll');
+        if (el) el.scrollBy({ left: -200, behavior: 'smooth' });
+      }}
+      className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all ${isLight ? "bg-slate-100 border border-slate-200 text-slate-500 hover:bg-blue-50 hover:text-blue-500 hover:border-blue-200" : "bg-white/10 border border-white/15 text-white/60 hover:bg-white/20 hover:text-white"}`}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="15 18 9 12 15 6" />
+      </svg>
+    </button>
+
+    {/* Scrollable Categories */}
+    <div
+      id="categories-scroll"
+      className="flex gap-2 overflow-x-auto scroll-smooth snap-x snap-mandatory"
+      style={{
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+        WebkitOverflowScrolling: 'touch',
+      }}
+      onMouseDown={(e) => {
+        const el = e.currentTarget;
+        let isDown = true;
+        const startX = e.pageX - el.offsetLeft;
+        const scrollLeft = el.scrollLeft;
+
+        const onMouseMove = (ev: MouseEvent) => {
+          if (!isDown) return;
+          ev.preventDefault();
+          const x = ev.pageX - el.offsetLeft;
+          el.scrollLeft = scrollLeft - (x - startX);
+        };
+        const onMouseUp = () => { isDown = false; };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp, { once: true });
+      }}
+    >
+      <style>{`#categories-scroll::-webkit-scrollbar { display: none; }`}</style>
+
+      {categories.map((category) => (
+        <button
+          key={category}
+          onClick={() => {
+            setSelectedCategory(category);
+            setCurrentPage(1);
+          }}
+          className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 snap-start whitespace-nowrap select-none ${
+            selectedCategory === category
+              ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/25 scale-105'
+              : isLight
+                ? 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'
+                : 'bg-white/5 text-white/70 border border-white/15 hover:text-white hover:border-white/40'
+          }`}
+        >
+          {category}
+        </button>
+      ))}
+    </div>
+
+    {/* Next Button */}
+    <button
+      onClick={() => {
+        const el = document.getElementById('categories-scroll');
+        if (el) el.scrollBy({ left: 200, behavior: 'smooth' });
+      }}
+      className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all ${isLight ? "bg-slate-100 border border-slate-200 text-slate-500 hover:bg-blue-50 hover:text-blue-500 hover:border-blue-200" : "bg-white/10 border border-white/15 text-white/60 hover:bg-white/20 hover:text-white"}`}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="9 18 15 12 9 6" />
+      </svg>
+    </button>
+  </div>
+</div>
           </div>
 
           {loading ? (

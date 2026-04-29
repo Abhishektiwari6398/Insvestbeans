@@ -52,13 +52,13 @@ function formatISTDay(utcSeconds: number): string {
 
 /**
  * TradingView-style smart tick formatter factory.
- * Returns a stateful formatter that detects boundary changes (day/week/month/year)
- * and shows the right label — exactly like Zerodha/TradingView.
+ * Handles both UTCTimestamp (intraday) and BusinessDay objects (daily).
  *
  *   1D  → HH:MM every bar; session open (09:15) shows "DD MMM"
- *   1W  → day boundary → "DD MMM"; same day → "HH:MM"
+ *   5D  → day boundary → "DD MMM"; same day → "HH:MM"
  *   1M  → week boundary → "DD MMM"
  *   3M  → month boundary → "MMM"; week boundary → "DD"
+ *   6M  → same as 3M
  *   1Y  → month boundary → "MMM"; year change → "MMM 'YY"
  */
 function makeTickFormatter(period: Period) {
@@ -75,35 +75,47 @@ function makeTickFormatter(period: Period) {
     return Math.ceil((((tmp.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
   };
 
-  return (utcSec: number): string => {
-    const d     = toISTDate(utcSec);
-    const day   = d.getUTCDate();
-    const month = d.getUTCMonth();
-    const year  = d.getUTCFullYear();
-    const week  = isoWeek(d);
-    const hh    = d.getUTCHours();
-    const mm    = d.getUTCMinutes();
+  return (timeVal: any): string => {
+    // For daily periods, LWC passes BusinessDay { year, month, day }
+    // For intraday, it passes a UTC timestamp (seconds)
+    let day: number, month: number, year: number, hh: number, mm: number, week: number;
+
+    if (typeof timeVal === 'object' && timeVal !== null && 'year' in timeVal) {
+      // BusinessDay format (1M / 3M / 6M / 1Y)
+      year  = timeVal.year;
+      month = timeVal.month - 1; // convert to 0-indexed for MONTHS[]
+      day   = timeVal.day;
+      hh = 0; mm = 0;
+      week = isoWeek(new Date(Date.UTC(year, month, day)));
+    } else {
+      // UTCTimestamp format (1D / 5D)
+      const d = toISTDate(timeVal as number);
+      day   = d.getUTCDate();
+      month = d.getUTCMonth();
+      year  = d.getUTCFullYear();
+      week  = isoWeek(d);
+      hh    = d.getUTCHours();
+      mm    = d.getUTCMinutes();
+    }
 
     if (period === '1D') {
-      // Session open → show date; rest → show time
       if (hh === 9 && mm === 15) { prevDay = day; return `${day} ${MONTHS[month]}`; }
-      return formatISTTime(utcSec);
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      return `${pad(hh)}:${pad(mm)}`;
     }
 
     if (period === '5D') {
-      // New day → show "DD MMM"; same day → show "HH:MM"
       if (day !== prevDay) { prevDay = day; return `${day} ${MONTHS[month]}`; }
-      return formatISTTime(utcSec);
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      return `${pad(hh)}:${pad(mm)}`;
     }
 
     if (period === '1M') {
-      // New week → show "DD MMM"
       if (week !== prevWeek) { prevWeek = week; return `${day} ${MONTHS[month]}`; }
       return '';
     }
 
     if (period === '3M' || period === '6M') {
-      // New month → show "MMM"; new week → show "DD"
       if (month !== prevMonth) { prevMonth = month; prevWeek = week; return MONTHS[month]; }
       if (week !== prevWeek)   { prevWeek = week; return `${day}`; }
       return '';
@@ -116,6 +128,85 @@ function makeTickFormatter(period: Period) {
       return MONTHS[month];
     }
     return '';
+  };
+}
+
+/**
+ * Crosshair tooltip time formatter.
+ * Handles both BusinessDay objects (daily) and UTCTimestamp numbers (intraday).
+ */
+function makeTimeFormatter(period: Period) {
+  return (timeVal: any): string => {
+    if (typeof timeVal === 'object' && timeVal !== null && 'year' in timeVal) {
+      // BusinessDay format
+      return `${timeVal.day} ${MONTHS[timeVal.month - 1]} ${timeVal.year}`;
+    }
+    // UTCTimestamp format
+    if (period === '1D' || period === '5D') {
+      const d = toISTDate(timeVal as number);
+      return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${formatISTTime(timeVal)} IST`;
+    }
+    return formatISTDay(timeVal as number);
+  };
+}
+
+/**
+ * ✅ KEY FIX — toLWC uses BusinessDay for daily bars to eliminate weekend/holiday gaps.
+ *
+ * 1D/5D  → UTCTimestamp (seconds)  — intraday needs exact time
+ * 1M+    → BusinessDay { year, month, day } — no gaps for non-trading days
+ *
+ * IMPORTANT: LWC cannot switch time formats on an existing chart instance.
+ * The chart creation effect uses `isIntraday` in its deps to force full
+ * chart recreation when switching between intraday ↔ daily modes.
+ */
+function toLWC(candles: CandlePoint[], period?: Period) {
+  const isDaily = period && !['1D', '5D'].includes(period);
+  const seen = new Set<string>();
+
+  return candles
+    .map(c => {
+      let time: import('lightweight-charts').Time;
+      if (isDaily) {
+        const d = toISTDate(Math.floor(c.x / 1000));
+        time = {
+          year:  d.getUTCFullYear(),
+          month: d.getUTCMonth() + 1, // LWC uses 1-indexed months
+          day:   d.getUTCDate(),
+        } as unknown as import('lightweight-charts').Time;
+      } else {
+        time = Math.floor(c.x / 1000) as unknown as import('lightweight-charts').Time;
+      }
+      return { time, open: c.y[0], high: c.y[1], low: c.y[2], close: c.y[3] };
+    })
+    .filter(c => {
+      const t = c.time as any;
+      const key = isDaily ? `${t.year}-${t.month}-${t.day}` : String(t);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => {
+      const ta = a.time as any;
+      const tb = b.time as any;
+      if (isDaily) {
+        return (ta.year * 10000 + ta.month * 100 + ta.day) -
+               (tb.year * 10000 + tb.month * 100 + tb.day);
+      }
+      return ta - tb;
+    });
+}
+
+function calcStats(candles: CandlePoint[]) {
+  if (candles.length < 2) return { change: 0, changePct: 0, high: 0, low: 0 };
+  const open  = candles[0].y[0];
+  const close = candles[candles.length - 1].y[3];
+  const chg   = close - open;
+  return {
+    change:    chg,
+    changePct: (chg / open) * 100,
+    high:      Math.max(...candles.map(c => c.y[1])),
+    low:       Math.min(...candles.map(c => c.y[2])),
   };
 }
 
@@ -174,34 +265,6 @@ const C = {
   },
 };
 
-function toLWC(candles: CandlePoint[]) {
-  const seen = new Set<number>();
-  return candles
-    .map(c => ({
-      time:  Math.floor(c.x / 1000) as unknown as import('lightweight-charts').Time,
-      open: c.y[0], high: c.y[1], low: c.y[2], close: c.y[3],
-    }))
-    .filter(c => {
-      const t = c.time as unknown as number;
-      if (seen.has(t)) return false;
-      seen.add(t); return true;
-    })
-    .sort((a, b) => (a.time as unknown as number) - (b.time as unknown as number));
-}
-
-function calcStats(candles: CandlePoint[]) {
-  if (candles.length < 2) return { change: 0, changePct: 0, high: 0, low: 0 };
-  const open  = candles[0].y[0];
-  const close = candles[candles.length - 1].y[3];
-  const chg   = close - open;
-  return {
-    change:    chg,
-    changePct: (chg / open) * 100,
-    high:      Math.max(...candles.map(c => c.y[1])),
-    low:       Math.min(...candles.map(c => c.y[2])),
-  };
-}
-
 // ══════════════════════════════════════════════════════════════════
 const KiteChart = ({ height = '600px' }: { height?: string }) => {
   const { theme } = useTheme();
@@ -214,6 +277,11 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
   // ── Abort controller ref — cancels stale in-flight requests ────
   const abortRef     = useRef<AbortController | null>(null);
 
+  // ✅ Refs always hold the latest values — safe to read inside effects
+  //    without adding them as deps (avoids stale closure issues).
+  const periodRef  = useRef<Period>('1D');
+  const candlesRef = useRef<CandlePoint[]>([]);
+
   const [period,    setPeriod]    = useState<Period>('1D');
   const [symbol,    setSymbol]    = useState<KiteSymbolConfig>(DEFAULT_SYMBOL);
   const [candles,   setCandles]   = useState<CandlePoint[]>([]);
@@ -222,12 +290,16 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
   const [lastFetch, setLastFetch] = useState<Date | null>(null);
   const [stats,     setStats]     = useState({ change: 0, changePct: 0, high: 0, low: 0, price: 0 });
 
+  // Keep refs in sync with latest state on every render
+  periodRef.current  = period;
+  candlesRef.current = candles;
+
   // ── Search state ─────────────────────────────────────────────────
   const [searchQ,       setSearchQ]       = useState('');
   const [searchResults, setSearchResults] = useState<KiteSymbolConfig[]>([]);
   const [searchOpen,    setSearchOpen]    = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
+  const searchRef      = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Fetch candles from Kite backend ─────────────────────────────
@@ -318,9 +390,31 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
   }, [symbol, period, fetchCandles]);
 
   // ── Create chart ─────────────────────────────────────────────────
+  //
+  // ✅ ROOT CAUSE FIX:
+  //    lightweight-charts CANNOT switch time formats (UTCTimestamp ↔ BusinessDay)
+  //    on an existing chart instance. If the chart starts with UTCTimestamp (1D)
+  //    and we call setData() with BusinessDay objects (1M), LWC silently ignores
+  //    the format change — so the weekend/holiday gaps never go away.
+  //
+  //    Solution: add `isIntraday` to the dependency array so the chart is fully
+  //    destroyed and recreated when switching between intraday and daily modes.
+  //    Within the same mode (1M → 3M → 6M → 1Y), no recreation happens —
+  //    the data-update effect below handles it efficiently via setData().
+  //
+  //    periodRef.current / candlesRef.current are used (not state values) so
+  //    the recreated chart gets the correct format and data immediately without
+  //    needing period/candles in the deps (which would recreate on every fetch).
+  //
+  const isIntraday = period === '1D' || period === '5D';
+
   useEffect(() => {
     if (!containerRef.current) return;
     if (chartRef.current) { chartRef.current.remove(); chartRef.current = null; seriesRef.current = null; }
+
+    // Read latest values from refs — NOT stale closure values
+    const p   = periodRef.current;
+    const col = dark ? C.dark : C.light;
 
     const chart = createChart(containerRef.current, {
       layout: {
@@ -340,28 +434,20 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
       },
       rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.08, bottom: 0.06 }, minimumWidth: 62 },
       timeScale: {
-        borderVisible:   false,
-        timeVisible:     period === '1D' || period === '5D',
-        secondsVisible:  false,
-        fixLeftEdge:     true,
-        fixRightEdge:    true,
-        // rightOffset: 0,
-        barSpacing:      period === '1Y' || period === '6M' ? 6 : period === '1D' ? 5 : 8,
-        rightOffset:     2,
-        minimumBarSpacing: period === '1Y' || period === '6M' ? 0.5 : 3,
-        // ✅ Smart TradingView-style tick formatter — boundary-aware, IST-corrected
-        tickMarkFormatter: makeTickFormatter(period),
+        borderVisible:     false,
+        timeVisible:       p === '1D' || p === '5D',
+        secondsVisible:    false,
+        fixLeftEdge:       true,
+        fixRightEdge:      true,
+        // barSpacing:        p === '1Y' || p === '6M' ? 6 : p === '1D' ? 5 : 8,
+        barSpacing: period === '1Y' ? 4 : period === '6M' ? 5 : period === '3M' ? 6 : period === '1M' ? 8 : period === '1D' ? 5 : 8,
+        rightOffset:       2,
+        // minimumBarSpacing: p === '1Y' || p === '6M' ? 0.5 : 3,
+        minimumBarSpacing: period === '1Y' || period === '6M' || period === '3M' ? 0.5 : period === '1M' ? 1 : 3,
+        tickMarkFormatter: makeTickFormatter(p),
       },
-      // ✅ FIX Issue 4: Crosshair tooltip also shows IST
       localization: {
-        timeFormatter: (utcSec: number) => {
-          if (period === '1D' || period === '5D') {
-            const d = toISTDate(utcSec);
-            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${formatISTTime(utcSec)} IST`;
-          }
-          return formatISTDay(utcSec);
-        },
+        timeFormatter: makeTimeFormatter(p),
       },
       handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true },
       handleScale:  { mouseWheel: false, pinch: false },
@@ -377,8 +463,10 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
     chartRef.current  = chart;
     seriesRef.current = series;
 
-    if (candles.length > 0) {
-      series.setData(toLWC(candles));
+    // Use ref values so we always have the latest candles/period
+    const currentCandles = candlesRef.current;
+    if (currentCandles.length > 0) {
+      series.setData(toLWC(currentCandles, p));
       chart.timeScale().fitContent();
     }
 
@@ -395,40 +483,28 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
     ro.observe(containerRef.current);
 
     return () => { ro.disconnect(); chart.remove(); chartRef.current = null; seriesRef.current = null; };
-  }, [dark]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dark, isIntraday]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Push data updates to chart ───────────────────────────────────
   useEffect(() => {
     if (!seriesRef.current || !chartRef.current || !candles.length) return;
-    seriesRef.current.setData(toLWC(candles));
+    seriesRef.current.setData(toLWC(candles, period));
     chartRef.current.timeScale().fitContent();
-    // setTimeout(() => {
-    //   chart.timeScale().fitContent();
-    // }, 0);
 
-    const isIntraday = period === '1D' || period === '5D';
     chartRef.current.applyOptions({
       timeScale: {
-        timeVisible: isIntraday,
-        secondsVisible: false,
-        barSpacing: period === '1Y' || period === '6M' ? 6 : period === '1D' ? 5 : 8,
-        minimumBarSpacing: period === '1Y' || period === '6M' ? 0.5 : 3,
-        // ✅ Re-create smart formatter on every period change (stateful, boundary-aware)
+        timeVisible:       isIntraday,
+        secondsVisible:    false,
+        barSpacing: period === '1Y' ? 4 : period === '6M' ? 5 : period === '3M' ? 6 : period === '1M' ? 8 : period === '1D' ? 5 : 8,
+        minimumBarSpacing: period === '1Y' || period === '6M' || period === '3M' ? 0.5 : period === '1M' ? 1 : 3,
+        // Re-create smart formatter on every period change (stateful, boundary-aware)
         tickMarkFormatter: makeTickFormatter(period),
       },
-      // ✅ FIX: Re-apply crosshair tooltip formatter on period change
       localization: {
-        timeFormatter: (utcSec: number) => {
-          if (isIntraday) {
-            const d = toISTDate(utcSec);
-            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${formatISTTime(utcSec)} IST`;
-          }
-          return formatISTDay(utcSec);
-        },
+        timeFormatter: makeTimeFormatter(period),
       },
     });
-  }, [candles, period]);
+  }, [candles, period]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Countdown to next refresh ────────────────────────────────────
   const [nextRefreshIn, setNextRefreshIn] = useState('');
@@ -446,12 +522,12 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
   }, [period, lastFetch]);
 
   // ── Style tokens ─────────────────────────────────────────────────
-  const cardBg     = dark ? 'bg-[#0e2038] border-white/8'           : 'bg-white border-slate-200';
-  const nameCls    = dark ? 'text-slate-500'                         : 'text-slate-400';
-  const priceCls   = dark ? 'text-slate-100'                         : 'text-slate-900';
-  const hlCls      = dark ? 'bg-white/5 border-white/8 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700';
-  const footBg     = dark ? 'bg-white/2 border-white/5 text-slate-600' : 'bg-slate-50/60 border-slate-100 text-slate-400';
-  const btnActive  = dark ? 'bg-slate-100 text-slate-900 shadow-md'  : 'bg-slate-900 text-white shadow-md';
+  const cardBg     = dark ? 'bg-[#0e2038] border-white/8'              : 'bg-white border-slate-200';
+  const nameCls    = dark ? 'text-slate-500'                            : 'text-slate-400';
+  const priceCls   = dark ? 'text-slate-100'                            : 'text-slate-900';
+  const hlCls      = dark ? 'bg-white/5 border-white/8 text-slate-300'  : 'bg-slate-50 border-slate-200 text-slate-700';
+  const footBg     = dark ? 'bg-white/2 border-white/5 text-slate-600'  : 'bg-slate-50/60 border-slate-100 text-slate-400';
+  const btnActive  = dark ? 'bg-slate-100 text-slate-900 shadow-md'     : 'bg-slate-900 text-white shadow-md';
   const btnDefault = dark ? 'bg-white/6 text-slate-400 border border-white/8 hover:bg-white/12'
                           : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200';
   const symActive  = dark ? 'bg-[#1F5F89] text-white border-[#1F5F89]'
@@ -663,7 +739,7 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
               </button>
             </div>
             {nextRefreshIn && (
-              <span className=" hidden sm:block flex  items-center gap-1 text-[10px] text-amber-500/80">
+              <span className="hidden sm:block flex items-center gap-1 text-[10px] text-amber-500/80">
                 <Clock className="w-2.5 h-2.5" />{nextRefreshIn}
               </span>
             )}

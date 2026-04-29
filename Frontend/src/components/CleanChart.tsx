@@ -432,21 +432,21 @@ const CleanChart = ({
     <div className={`rounded-2xl border shadow-sm overflow-hidden transition-all ${cardBg}`}>
 
       {/* ── Header: index name + price + period H/L ─────────────── */}
-      <div className="px-6 pt-5 pb-4">
-        <h3 className={`text-[11px] font-bold uppercase tracking-widest mb-3 ${nameCls}`}>
+      <div className="px-4 pt-3 pb-2">
+        <h3 className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 ${nameCls}`}>
           {name}
         </h3>
 
-        <div className="flex items-start justify-between">
-          <div>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
             {/* Live price */}
-            <div className={`text-4xl sm:text-5xl font-black tracking-tight leading-none mb-2 ${priceCls}`}>
+            <div className={`text-3xl sm:text-4xl font-black tracking-tight leading-none mb-1 ${priceCls}`}>
               {price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
 
             {/* Change for the selected period */}
-            <div className={`flex items-center gap-2 text-base font-bold ${isPos ? 'text-emerald-500' : 'text-red-500'}`}>
-              {isPos ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+            <div className={`flex items-center gap-1.5 text-sm font-bold ${isPos ? 'text-emerald-500' : 'text-red-500'}`}>
+              {isPos ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
               <span>
                 {pChange > 0 ? '+' : ''}{pChange.toFixed(2)}
                 &nbsp;({pChangePct > 0 ? '+' : ''}{pChangePct.toFixed(2)}%)
@@ -454,14 +454,14 @@ const CleanChart = ({
             </div>
           </div>
 
-          {/* Period High / Low */}
-          <div className="flex flex-col items-end gap-1 text-xs leading-relaxed shrink-0 min-w-[90px]">
-            <div className={`w-full px-2 py-1 rounded border text-right ${hlCls}`}>
+          {/* Period High / Low — compact boxes */}
+          <div className="flex flex-col items-end gap-0.5 shrink-0 min-w-[72px]">
+            <div className={`w-full px-1.5 py-0.5 rounded border text-right text-[10px] ${hlCls}`}>
               H:&nbsp;<span className="font-semibold">
                 {pHigh.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
               </span>
             </div>
-            <div className={`w-full px-2 py-1 rounded border text-right ${hlCls}`}>
+            <div className={`w-full px-1.5 py-0.5 rounded border text-right text-[10px] ${hlCls}`}>
               L:&nbsp;<span className="font-semibold">
                 {pLow.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
               </span>
@@ -471,7 +471,7 @@ const CleanChart = ({
       </div>
 
       {/* ── Candlestick chart ─────────────────────────────────────── */}
-      <div style={{ height: 280, position: 'relative' }}>
+      <div style={{ height: 220, position: 'relative' }}>
         {fetching && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: dark ? 'rgba(14,32,56,0.6)' : 'rgba(255,255,255,0.6)', zIndex: 5, borderRadius: 0 }}>
             <span style={{ fontSize: 11, color: dark ? '#94a3b8' : '#64748b' }}>Loading…</span>
@@ -480,28 +480,11 @@ const CleanChart = ({
         <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
       </div>
 
-      {/* ── Period selector (only when historyUrl provided) ──────── */}
-      {historyUrl && (
-        <div className={`flex items-center gap-1 px-4 py-2 border-t flex-wrap ${dark ? 'border-white/[0.05]' : 'border-slate-100'}`}>
-          {(['1D', '5D', '1M', '6M', 'YTD', '1Y', '5Y', 'MAX'] as const).map(p => (
-            <button
-              key={p}
-              onClick={() => setActivePeriod(p)}
-              className="text-[11px] font-bold px-2.5 py-1 rounded-lg transition-all"
-              style={activePeriod === p
-                ? { background: dark ? '#1e3a5f' : '#e0eaff', color: '#5194F6' }
-                : { background: 'transparent', color: dark ? '#475569' : '#94a3b8' }
-              }
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* ── Footer: lock/delay label LEFT · period tabs RIGHT ──────── */}
+      <div className={`flex items-center justify-between gap-2 px-3 py-1.5 text-[10px] border-t ${footBg}`}>
 
-      {/* ── Footer: data source + delay info ─────────────────────── */}
-      <div className={`flex items-center justify-between px-5 py-2.5 text-[10px] border-t ${footBg}`}>
-        <span className="flex items-center gap-1">
+        {/* Left — lock or delay label */}
+        <span className=" hidden md:block flex items-center gap-1 shrink-0">
           {isFallback ? (
             '🔒 Estimated shape · market closed or no data'
           ) : (
@@ -511,11 +494,26 @@ const CleanChart = ({
             </>
           )}
         </span>
-        {!isFallback && (
-          <span className={`font-semibold ${dark ? 'text-amber-500/70' : 'text-amber-600/80'}`}>
-            Yahoo Finance
-          </span>
+
+        {/* Right — period tabs (only when historyUrl provided) */}
+        {historyUrl && (
+          <div className="flex items-center gap-0.5">
+            {(['1D', '5D', '1M', '6M', 'YTD', '1Y', '5Y', 'MAX'] as const).map(p => (
+              <button
+                key={p}
+                onClick={e => { e.stopPropagation(); setActivePeriod(p); }}
+                className="text-[11px] font-bold px-2 py-0.5 rounded-md transition-all"
+                style={activePeriod === p
+                  ? { background: dark ? '#1e3a5f' : '#e0eaff', color: '#5194F6' }
+                  : { background: 'transparent', color: dark ? '#475569' : '#94a3b8' }
+                }
+              >
+                {p}
+              </button>
+            ))}
+          </div>
         )}
+
       </div>
     </div>
   );

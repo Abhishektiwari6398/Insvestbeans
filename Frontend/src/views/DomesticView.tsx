@@ -2105,12 +2105,13 @@ function BreadthVixSection({ ticks }: { ticks: any }) {
             <span className={`text-xs font-black ${vixState.cls}`}>{vixState.label}</span>
           )}
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-5 divide-x divide-y sm:divide-y-0">
+        <div className="grid grid-cols-2 sm:grid-cols-6 divide-x divide-y sm:divide-y-0">
           {[
             { label: "VIX", val: vixTick?.last_price, fmt: (v: number) => v.toFixed(2), cls: vixPct != null && vixPct >= 0 ? "text-red-500" : "text-emerald-500" },
             { label: "Change", val: vixPct, fmt: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`, cls: vixPct != null && vixPct >= 0 ? "text-red-500" : "text-emerald-500" },
             { label: "Open", val: vixTick?.ohlc?.open, fmt: (v: number) => v.toFixed(2), cls: tx.t1(l) },
             { label: "High", val: vixTick?.ohlc?.high, fmt: (v: number) => v.toFixed(2), cls: "text-red-500" },
+            { label: "Low", val: vixTick?.ohlc?.low, fmt: (v: number) => v.toFixed(2), cls: "text-emerald-500" },   // ← NEW
             { label: "Prev Close", val: vixTick?.ohlc?.close, fmt: (v: number) => v.toFixed(2), cls: tx.t2(l) },
           ].map((cell, i) => (
             <div key={cell.label} className={`${l ? "divide-gray-100" : "divide-[#1a2f4a]"} text-center py-3 px-2`}>
@@ -2855,8 +2856,8 @@ function MacroSection() {
               <div className="flex items-start justify-between gap-1 mb-1">
                 <p className={`text-[9px] font-black uppercase tracking-widest ${tx.t3(l)}`}>{c.label}</p>
                 <span className={`text-[8px] font-bold px-1 py-0.5 rounded border shrink-0 flex items-center gap-0.5 ${c.live
-                    ? l ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                    : l ? "bg-slate-50 text-slate-400 border-slate-100" : "bg-[#0c1a2e] text-slate-500 border-[#1e3a5f]/50"
+                  ? l ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                  : l ? "bg-slate-50 text-slate-400 border-slate-100" : "bg-[#0c1a2e] text-slate-500 border-[#1e3a5f]/50"
                   }`}>
                   {c.live && <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />}
                   {c.source}
@@ -2983,8 +2984,8 @@ export default function DomesticView() {
 
             {/* 1. Indian Market Open/Closed badge */}
             <span className={`flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-md border shrink-0 ${mktOpen
-                ? l ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                : l ? "bg-slate-50 border-slate-100 text-slate-400" : "bg-[#1e3a5f]/40 border-[#1e3a5f]/50 text-slate-500"
+              ? l ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+              : l ? "bg-slate-50 border-slate-100 text-slate-400" : "bg-[#1e3a5f]/40 border-[#1e3a5f]/50 text-slate-500"
               }`}>
               <span className={`w-1.5 h-1.5 rounded-full ${mktOpen ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
               <span className="hidden xs:inline">Indian Mkt · </span>{mktOpen ? "Open" : "Closed"}

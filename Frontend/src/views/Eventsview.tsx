@@ -247,13 +247,26 @@ function useMarketEvents() {
   const fetchData = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      // ── Fetch DB events + legacy global feed IN PARALLEL ──
+      // ── Fetch DB events + legacy feed IN PARALLEL ──
+      // Legacy feed is ONLY used for macro snapshot (USD/INR, VIX) — NOT for events
+      // All events come exclusively from DB so deletes are permanent and consistent
       const [adminRes, legacyRes] = await Promise.allSettled([
         fetch(`${API}/admin/events/public`, { credentials: "include" }),
         fetch(`${API}/markets/global`,      { credentials: "include" }),
       ]);
 
-      // ── 1. DB events (admin-curated, both India + Global) ──
+      // ── Macro data from legacy feed (USD/INR, VIX only) ──
+      if (legacyRes.status === "fulfilled" && legacyRes.value.ok) {
+        try {
+          const data = await legacyRes.value.json();
+          setMacro({
+            usdInr: data?.forex?.find((f: any) => f.pair === "USD/INR")?.rate,
+            vix:    data?.vix?.value,
+          });
+        } catch { /* ignore macro parse errors */ }
+      }
+
+      // ── DB events only — single source of truth ──
       const dbEvents: MarketEvent[] = [];
       if (adminRes.status === "fulfilled" && adminRes.value.ok) {
         const adminData = await adminRes.value.json();
@@ -280,52 +293,41 @@ function useMarketEvents() {
         }
       }
 
-      // ── 2. Legacy global feed — add events NOT already covered by DB ──
-      const legacyEvents: MarketEvent[] = [];
-      if (legacyRes.status === "fulfilled" && legacyRes.value.ok) {
-        const data = await legacyRes.value.json();
-        const raw: ApiEvent[] = Array.isArray(data?.events) ? data.events : [];
-        setMacro({
-          usdInr: data?.forex?.find((f: any) => f.pair === "USD/INR")?.rate,
-          vix:    data?.vix?.value,
-        });
-        // Build a dedup key set from DB events
-        const dbKeys = new Set(dbEvents.map(e => `${e.date}__${e.title.trim().toLowerCase()}`));
-        raw.forEach((e, i) => {
-          const key = `${e.date}__${e.title.trim().toLowerCase()}`;
-          if (!dbKeys.has(key)) {
-            legacyEvents.push({
-              id:          `api-${i}`,
-              date:        e.date,
-              title:       e.title,
-              description: buildDescription(e),
-              region:      mapRegion(e.region),
-              category:    inferCategory(e.title),
-              impact:      (e.impact as any) ?? "Medium",
-              source:      "api" as const,
-              whatHappened: e.whatHappened,
-              whyItMatters: e.whyItMatters,
-              marketImpact: e.marketImpact,
-              impactTerm:   e.impactTerm,
-              whoAffected:  e.whoAffected,
-              investbeansInsight: e.investbeansInsight,
-            });
-          }
-        });
-      }
-
-      const merged = [...dbEvents, ...legacyEvents];
-      if (merged.length === 0 && adminRes.status !== "fulfilled") {
+      if (dbEvents.length === 0 && adminRes.status !== "fulfilled") {
         throw new Error("Could not load events");
       }
-      setApiEvents(merged);
+      setApiEvents(dbEvents);
       setLastFetched(new Date());
     } catch (err: any) {
       setError(err.message || "Network error");
     } finally { setLoading(false); }
   }, []);
+
+  // Delete handler — calls backend for DB events, then refreshes
+  const handleDelete = useCallback(async (event: MarketEvent): Promise<void> => {
+    // Optimistically remove from UI
+    setApiEvents(prev => prev.filter(e => e.id !== event.id));
+
+    if (/^[0-9a-f]{24}$/i.test(event.id)) {
+      try {
+        const token = localStorage.getItem("accessToken");
+        const authH: Record<string,string> = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${API}/admin/events/${event.id}`, {
+          method: "DELETE", headers: authH, credentials: "include",
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || "Delete failed");
+        // No refresh needed — event is gone from DB, won't come back
+      } catch (err: any) {
+        alert(err.message || "Delete failed");
+        fetchData(); // rollback on error
+      }
+    }
+    // For non-DB events: already removed from UI above, no backend call needed
+  }, [fetchData]);
+
   useEffect(() => { fetchData(); }, [fetchData]);
-  return { apiEvents, macro, loading, error, refresh: fetchData, lastFetched };
+  return { apiEvents, macro, loading, error, refresh: fetchData, lastFetched, handleDelete };
 }
 
 function useInsightBanner() {
@@ -1138,7 +1140,8 @@ const AdminFullEventModal: React.FC<{
 const EventTerminalCard: React.FC<{
   event: MarketEvent; isLight: boolean; tk: typeof T.dark; idx: number; section: Section;
   isAdmin?: boolean; onRefresh?: () => void; onEdit?: (event: MarketEvent) => void;
-}> = ({ event, isLight, tk, idx, section, isAdmin, onRefresh, onEdit }) => {
+  onDelete?: (event: MarketEvent) => void;
+}> = ({ event, isLight, tk, idx, section, isAdmin, onRefresh, onEdit, onDelete }) => {
   const [expanded, setExpanded] = useState(false);
   const past   = isPast(event.date);
   const today_ = isToday(event.date);
@@ -1175,13 +1178,14 @@ const EventTerminalCard: React.FC<{
         animation: `fadeSlideIn 0.25s ease both`,
         animationDelay: `${idx * 0.04}s`,
         overflow: "hidden",
+        maxWidth: section === "holidays" ? 640 : "100%",
       }}
     >
       {/* ── Main row ─────────────────────────────────────────── */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "44px 1fr auto",
+          gridTemplateColumns: section === "holidays" ? "44px 1fr" : "44px 1fr auto",
           gap: 0,
           cursor: hasDetail ? "pointer" : "default",
         }}
@@ -1272,7 +1276,8 @@ const EventTerminalCard: React.FC<{
           )}
         </div>
 
-        {/* Right column — UPCOMING/PAST status + chevron + admin edit */}
+        {/* Right column — UPCOMING/PAST status + chevron + admin edit — hidden for holidays */}
+        {section !== "holidays" && (
         <div style={{
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
           padding: "0 10px", gap: 6, borderLeft: `1px solid ${tk.border}`,
@@ -1304,17 +1309,16 @@ const EventTerminalCard: React.FC<{
             <span style={{ fontSize: 8, color: tk.accent, fontWeight: 600 }}>LIVE</span>
           )}
 
-          {/* ── Admin pencil edit + delete ── */}
-          {/* ✅ FIX 2: Removed source==="api" check — India events (static source) bhi edit ho sakein */}
+          {/* ── Admin actions — edit + delete for ALL non-holiday events ── */}
           {isAdmin && event.category !== "holiday" && (
             <>
+              {/* Edit — only meaningful for DB events, but show for all so admin can enrich */}
               <button
                 title="Edit Event"
                 onClick={e => { e.stopPropagation(); onEdit?.(event); }}
                 style={{
                   width: 24, height: 24, borderRadius: 5, cursor: "pointer",
-                  background: "transparent",
-                  border: `1px solid ${tk.border}`,
+                  background: "transparent", border: `1px solid ${tk.border}`,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   transition: "all 0.12s",
                 }}
@@ -1333,51 +1337,41 @@ const EventTerminalCard: React.FC<{
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                 </svg>
               </button>
-              {/* Delete — only for real DB events */}
-              {/^[0-9a-f]{24}$/i.test(event.id) && (
-                <button
-                  title="Delete Event"
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    if (!confirm(`Delete "${event.title}"?`)) return;
-                    try {
-                      const token = localStorage.getItem("accessToken");
-                      const authH: Record<string,string> = token ? { Authorization: `Bearer ${token}` } : {};
-                      const res = await fetch(`${API}/admin/events/${event.id}`, {
-                        method: "DELETE", headers: authH, credentials: "include",
-                      });
-                      const data = await res.json();
-                      if (!data.success) throw new Error(data.message || "Delete failed");
-                      onRefresh?.();
-                    } catch (err: any) { alert(err.message || "Delete failed"); }
-                  }}
-                  style={{
-                    width: 24, height: 24, borderRadius: 5, cursor: "pointer",
-                    background: "transparent", border: `1px solid ${tk.border}`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    transition: "all 0.12s",
-                  }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.12)";
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(239,68,68,0.4)";
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = tk.border;
-                  }}
-                >
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
-                    stroke={tk.red} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="3 6 5 6 21 6"/>
-                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                    <path d="M10 11v6M14 11v6"/>
-                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                  </svg>
-                </button>
-              )}
+              {/* Delete — shown for ALL events; DB events get backend delete, legacy just hide locally */}
+              <button
+                title="Delete Event"
+                onClick={async (ev) => {
+                  ev.stopPropagation();
+                  if (!confirm(`Delete "${event.title}"?`)) return;
+                  onDelete?.(event);
+                }}
+                style={{
+                  width: 24, height: 24, borderRadius: 5, cursor: "pointer",
+                  background: "transparent", border: `1px solid ${tk.border}`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  transition: "all 0.12s",
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.12)";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(239,68,68,0.4)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = tk.border;
+                }}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                  stroke={tk.red} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                  <path d="M10 11v6M14 11v6"/>
+                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                </svg>
+              </button>
             </>
           )}
         </div>
+        )}
       </div>
 
       {/* ── Expanded panel ──────────────────────────────────── */}
@@ -1506,7 +1500,7 @@ const EventsView: React.FC = () => {
     setSelMonth(null);
   }, [searchParams]);
 
-  const { apiEvents, macro, loading, error, refresh, lastFetched } = useMarketEvents();
+  const { apiEvents, macro, loading, error, refresh, lastFetched, handleDelete } = useMarketEvents();
   const { indiaHolidays, fromApi: holidaysFromApi } = useKiteHolidays();
   const { globalHolidays, fromApi: globalHolidaysFromApi } = useGlobalHolidays();
 
@@ -1636,7 +1630,7 @@ const EventsView: React.FC = () => {
 
         /* Desktop: show sidebar toggle, hide mobile drawer button */
         @media (min-width: 768px) {
-          .desktop-filter-btn { display: flex !important; }
+          .desktop-filter-btn { display: none !important; }
           .mobile-filter-btn  { display: none !important; }
           .mobile-filter-drawer { display: none !important; }
           .desktop-sidebar    { display: block !important; }
@@ -1765,7 +1759,7 @@ const EventsView: React.FC = () => {
                 })}
               </div>
             )}
-            {/* Desktop sidebar toggle */}
+            {/* Desktop sidebar toggle — hidden on desktop, CSS class controls visibility */}
             <button onClick={() => setSideOpen(p => !p)} style={{
               display: "flex", alignItems: "center", gap: 5,
               fontSize: 11, fontWeight: 600, padding: "5px 12px", borderRadius: 6,
@@ -1773,7 +1767,6 @@ const EventsView: React.FC = () => {
               background: sideOpen ? tk.accentDim : "transparent",
               color: sideOpen ? tk.accent : tk.textSecond,
               cursor: "pointer", transition: "all 0.15s",
-              display: "none" as any,
             }} className="desktop-filter-btn">
               <SlidersHorizontal size={11} />
               FILTER
@@ -1819,18 +1812,30 @@ const EventsView: React.FC = () => {
                 <button style={sectionBtnStyle(region === "global" && section === "holidays")} onClick={() => { handleTab("global", "holidays"); setMobileFilterOpen(false); }}>Holidays</button>
               </div>
             </div>
-            {/* Month */}
+            {/* Month — dropdown */}
             <div style={{ gridColumn: "1 / -1" }}>
               <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.16em", color: tk.textMuted, display: "block", marginBottom: 8 }}>MONTH</span>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                <button style={btnStyle(selMonth === null)} onClick={() => setSelMonth(null)}>ALL</button>
-                {/* ✅ FIX 5b: Month labels in "May 2026" format */}
+              <select
+                value={selMonth ?? ""}
+                onChange={e => { setSelMonth(e.target.value === "" ? null : e.target.value); setMobileFilterOpen(false); }}
+                style={{
+                  width: "100%", padding: "7px 10px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                  border: `1px solid ${selMonth !== null ? tk.accentBorder : tk.border}`,
+                  background: selMonth !== null ? tk.accentDim : (isLight ? "#fff" : "#060d1c"),
+                  color: selMonth !== null ? tk.accent : tk.textSecond,
+                  cursor: "pointer", outline: "none", appearance: "none" as any,
+                  WebkitAppearance: "none" as any,
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "right 10px center",
+                  paddingRight: 30,
+                }}
+              >
+                <option value="">ALL MONTHS</option>
                 {availableMonths.map(([key, label]) => (
-                  <button key={key} style={btnStyle(selMonth === key)} onClick={() => setSelMonth(key)}>
-                    {label}
-                  </button>
+                  <option key={key} value={key}>{label}</option>
                 ))}
-              </div>
+              </select>
             </div>
           </div>
         )}
@@ -1912,22 +1917,32 @@ const EventsView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Month filter */}
+              {/* Month filter — dropdown */}
               <div style={{ marginBottom: 20 }}>
                 <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.16em", color: tk.textMuted, display: "block", marginBottom: 8 }}>
                   MONTH
                 </span>
-                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                  <button style={btnStyle(selMonth === null)} onClick={() => setSelMonth(null)}>
-                    ALL MONTHS
-                  </button>
-                  {/* ✅ FIX 5: Month labels in "May 2026" format (Title case, not all-caps) */}
+                <select
+                  value={selMonth ?? ""}
+                  onChange={e => setSelMonth(e.target.value === "" ? null : e.target.value)}
+                  style={{
+                    width: "100%", padding: "7px 10px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                    border: `1px solid ${selMonth !== null ? tk.accentBorder : tk.border}`,
+                    background: selMonth !== null ? tk.accentDim : (isLight ? "#fff" : "#060d1c"),
+                    color: selMonth !== null ? tk.accent : tk.textSecond,
+                    cursor: "pointer", outline: "none", appearance: "none" as any,
+                    WebkitAppearance: "none" as any,
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "right 10px center",
+                    paddingRight: 30,
+                  }}
+                >
+                  <option value="">ALL MONTHS</option>
                   {availableMonths.map(([key, label]) => (
-                    <button key={key} style={btnStyle(selMonth === key)} onClick={() => setSelMonth(key)}>
-                      {label}
-                    </button>
+                    <option key={key} value={key}>{label}</option>
                   ))}
-                </div>
+                </select>
               </div>
 
             </div>
@@ -2008,6 +2023,7 @@ const EventsView: React.FC = () => {
                         isAdmin={isAdmin}
                         onRefresh={refresh}
                         onEdit={isAdmin ? (ev) => setAdminModal(ev) : undefined}
+                        onDelete={isAdmin ? handleDelete : undefined}
                       />
                     ))}
                   </div>

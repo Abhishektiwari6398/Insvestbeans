@@ -69,8 +69,8 @@ const Footer = () => {
       </div>
 
       <div className="container mx-auto px-6 relative z-15">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
-          <div className="md:col-span-2">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-10">
+          <div className="col-span-2 md:col-span-2">
             <div className="mb-4">
               <img
                 src={isLight ? "/images/investbeans logo-03.png" : "/images/logo2.svg"}
@@ -114,7 +114,7 @@ const Footer = () => {
 
         <div className={borderTopCls}>
           <p className={copyrightCls}>
-            © 2024 InvestBeans. All rights reserved.
+            © 2026 InvestBeans. All rights reserved.
             Crafted and powered by{" "}
             <a
               href="https://www.strategixworks.com/"

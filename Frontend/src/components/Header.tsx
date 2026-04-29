@@ -469,6 +469,11 @@ const NavItem = ({
   );
 };
 
+// ─── Touch device detection ───────────────────────────────────────────────────
+function isTouchDevice() {
+  return window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+}
+
 // ─── Header ───────────────────────────────────────────────────────────────────
 const Header = () => {
   const navigate = useNavigate();
@@ -768,11 +773,21 @@ const Header = () => {
             </button>
 
             {isAuthenticated && user ? (
-              <li onMouseEnter={userMenu.enter} onMouseLeave={userMenu.leave} className="list-none">
+              <li
+                onMouseEnter={() => { if (!isTouchDevice()) userMenu.enter(); }}
+                onMouseLeave={() => { if (!isTouchDevice()) userMenu.leave(); }}
+                className="list-none"
+              >
                 <DropdownMenu open={userMenu.open} onOpenChange={userMenu.setOpen} modal={false}>
                   <DropdownMenuTrigger asChild>
                     <button
-                      onClick={userMenu.toggle}
+                      onPointerDown={(e) => {
+                        if (e.pointerType === "touch") {
+                          e.preventDefault();
+                          userMenu.toggle();
+                        }
+                      }}
+                      onClick={() => { if (!isTouchDevice()) userMenu.toggle(); }}
                       className={`relative flex items-center gap-3 p-1.5 rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-[#0A3656]/40 ${isLight ? "hover:bg-navy/8" : "hover:bg-[#1C3656]/60"
                         }`}
                     >
@@ -804,6 +819,12 @@ const Header = () => {
                   <DropdownMenuContent
                     align="end"
                     sideOffset={8}
+                    onPointerDownOutside={(e) => {
+                      if (isTouchDevice()) { e.preventDefault(); userMenu.close(); }
+                    }}
+                    onInteractOutside={(e) => {
+                      if (isTouchDevice()) { e.preventDefault(); userMenu.close(); }
+                    }}
                     className={`min-w-[240px] p-2 rounded-xl shadow-xl ring-1 ${isLight ? "bg-white text-navy ring-black/10" : "bg-[#0f1829] text-white ring-white/10"}`}
                   >
                     <div className={`px-3 py-3 border-b ${isLight ? "border-gray-200" : "border-white/10"}`}>

@@ -334,30 +334,9 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym,
       {/* ── Chart card ──────────────────────────────────────────── */}
       <Card className="overflow-hidden">
 
-        {/* ── Period tab row + delay badge ────────────────────── */}
-        <div className={`flex items-center justify-between px-4 pt-3 pb-2 border-b ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
-          <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-none">
-            {PERIODS.map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setPeriod(key)}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all shrink-0 ${
-                  period === key
-                    ? isPos
-                      ? "bg-emerald-500/15 text-emerald-500 border border-emerald-500/30"
-                      : "bg-red-500/15 text-red-500 border border-red-500/30"
-                    : l
-                      ? "text-gray-500 hover:bg-gray-100 border border-transparent hover:border-gray-200"
-                      : "text-[#5a7a92] hover:bg-white/[0.05] border border-transparent hover:border-[#1a2d3f]"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {/* ── 15-min delay badge ────── */}
-          <div className={`flex items-center gap-1 shrink-0 ml-3 px-2 py-0.5 rounded-md border text-[9px] font-bold uppercase tracking-wide
+        {/* ── Top bar: delay badge LEFT · Open TradingView RIGHT ── */}
+        <div className={`flex items-center justify-between px-4 py-2 border-b ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
+          <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md border text-[9px] font-bold uppercase tracking-wide
             ${l
               ? "bg-amber-50 border-amber-200 text-amber-700"
               : "bg-amber-900/10 border-amber-700/30 text-amber-500"
@@ -365,6 +344,12 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym,
             <AlertTriangle className="w-2.5 h-2.5"/>
             <span>Delayed 15 min</span>
           </div>
+          <button
+            onClick={e => { e.stopPropagation(); onChart(s.symbol, s.name); }}
+            className="flex items-center gap-1 text-[11px] font-bold text-[#0A3656] dark:text-[#74A8C9] hover:underline"
+          >
+            Open TradingView <ExternalLink className="w-3 h-3"/>
+          </button>
         </div>
 
         {/* ── Chart area ────────────────────────────────────────── */}
@@ -411,16 +396,34 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym,
           />
         </div>
 
-        {/* ── Footer strip ────────────────────────────────────── */}
-        <div className={`px-5 py-2.5 flex items-center justify-between ${tx.t3(l)} text-[10px] border-t ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
-          <span className="flex items-center gap-1">
+        {/* ── Footer strip: delay info LEFT · period tabs RIGHT ── */}
+        <div className={`px-4 py-2 flex items-center justify-between ${tx.t3(l)} text-[10px] border-t ${l?"border-gray-100":"border-[#1a2d3f]"}`}>
+          {/* Left — lock/delay label */}
+          <span className="hidden md:block flex items-center gap-1 shrink-0">
             <Clock className="w-3 h-3"/>
             Prices delayed 15 min · Yahoo Finance
           </span>
-          <button onClick={() => onChart(s.symbol, s.name)}
-            className="flex items-center gap-1 font-bold text-[#0A3656] dark:text-[#74A8C9] hover:underline">
-            Open TradingView ↗
-          </button>
+
+          {/* Right — period tabs */}
+          <div className="flex items-center gap-0.5">
+            {PERIODS.map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={e => { e.stopPropagation(); setPeriod(key); }}
+                className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition-all shrink-0 ${
+                  period === key
+                    ? isPos
+                      ? "bg-emerald-500/15 text-emerald-500 border border-emerald-500/30"
+                      : "bg-red-500/15 text-red-500 border border-red-500/30"
+                    : l
+                      ? "text-gray-500 hover:bg-gray-100 border border-transparent"
+                      : "text-[#5a7a92] hover:bg-white/[0.05] border border-transparent"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </Card>
 
@@ -764,10 +767,8 @@ export default function GlobalView() {
             {evts.length > 0 && (
               <div className="mb-8">
                 <SecHead id="section-events" icon={Activity} title="Global Events Calendar"
-                  sub={`Next 365 days · ${evts.length} events`}/>
-                <p className={`text-xs mb-3 ${tx.t2(l)}`}>
-                  Showing all events from today through the next 365 days · Click any event to learn more
-                </p>
+                 />
+               
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {evts.map((ev: any, i: number) => {
                     const impCls: Record<string,{bg:string;tc:string}> = {
@@ -781,9 +782,12 @@ export default function GlobalView() {
                       ? ev.date
                       : d.toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" });
 
-                    // ── FIX: Generate Google search URL if no url provided ──
+                    // ── Link to Yahoo Finance calendar ──
+                    const evDate = !isNaN(d.getTime()) ? d.toISOString().split("T")[0] : "";
                     const eventUrl = ev.url ||
-                      `https://www.google.com/search?q=${encodeURIComponent(ev.title + ' ' + ds)}`;
+                      (evDate
+                        ? `https://finance.yahoo.com/calendar/?day=${evDate}`
+                        : `https://finance.yahoo.com/calendar/`);
 
                     return (
                       // ── FIX: Entire card is now a clickable link ──────────
@@ -793,7 +797,7 @@ export default function GlobalView() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="event-card-link block no-underline transition-opacity"
-                        title={`Search: ${ev.title}`}
+                        title={`View on Yahoo Finance: ${ev.title}`}
                       >
                         <Card className="p-3.5 cursor-pointer hover:shadow-md transition-shadow">
                           <div className="flex items-center gap-2 flex-wrap mb-2">

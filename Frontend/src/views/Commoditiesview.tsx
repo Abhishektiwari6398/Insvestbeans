@@ -21,7 +21,7 @@ interface Quote {
   price: number; prev: number; change: number; changePct: number;
   high: number; low: number; volume: number; currency: string; name: string;
   candles?: { x: number; y: [number, number, number, number] }[];
-  inrPrice?: number;
+  inrPrice?: number; inrHigh?: number; inrLow?: number;
 }
 interface FuturesCurve { type: string; spread: number; color: string; desc: string; }
 interface OITrend      { signal: string; color: string; desc: string; trend?: string; }
@@ -132,19 +132,22 @@ const negBadge = "bg-red-500/15 text-red-400 border border-red-500/20";
 // SILVER / GOLD INFLOW CHART (shared component)
 // ─────────────────────────────────────────────────────────────────────────────
 function InflowChart({ data, l }: { data: { month: string; inflow: number }[]; l: boolean }) {
-  // Always use the most recent data, auto-extending to current month
+  // Show only current year data — dynamic based on actual year
   const now = new Date();
-  const currentMonthStr = now.toLocaleString("en-US", { month: "short", year: "numeric" });
-  // Ensure last bar label is current month if data is recent
-  const recent = data.slice(-16);
-  const maxVal = Math.max(...recent.map(d => d.inflow), 1);
-  const CHART_H = 160;
+  const currentYear = now.getFullYear().toString();
+
+  // Filter to only current year (2026, or whatever year it is)
+  const yearData = data.filter(d => d.month.includes(currentYear));
+  // Fallback: if no current-year data yet, show last 6 months available
+  const displayData = yearData.length > 0 ? yearData : data.slice(-6);
+
+  const maxVal = Math.max(...displayData.map(d => d.inflow), 1);
+  const CHART_H = 140;
   return (
     <div>
-      <div className="flex items-end gap-0.5 mb-2" style={{ height: CHART_H }}>
-        {recent.map((d, i) => {
-          const is25   = d.month.includes("2025") || d.month.includes("2026");
-          const barH   = Math.max((d.inflow / maxVal) * (CHART_H - 4), 3);
+      <div className="flex items-end gap-1 mb-2" style={{ height: CHART_H }}>
+        {displayData.map((d, i) => {
+          const barH = Math.max((d.inflow / maxVal) * (CHART_H - 4), 3);
           return (
             <div key={i} className="flex-1 relative group" style={{ height: CHART_H }}>
               <div className="absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:block z-10 whitespace-nowrap text-[10px] px-2 py-0.5 rounded bg-black/80 text-white pointer-events-none">
@@ -154,8 +157,8 @@ function InflowChart({ data, l }: { data: { month: string; inflow: number }[]; l
                 className="absolute bottom-0 left-0 right-0 rounded-t"
                 style={{
                   height: barH,
-                  background: is25 ? "linear-gradient(180deg,#60A5FA,#2563EB)" : l ? "#cbd5e1" : "#1e3a5f",
-                  boxShadow: is25 ? "0 -2px 8px rgba(96,165,250,0.4)" : "none",
+                  background: "linear-gradient(180deg,#60A5FA,#2563EB)",
+                  boxShadow: "0 -2px 8px rgba(96,165,250,0.35)",
                 }}
               />
             </div>
@@ -163,18 +166,14 @@ function InflowChart({ data, l }: { data: { month: string; inflow: number }[]; l
         })}
       </div>
       <div className={`flex justify-between text-[10px] mb-2 ${T3(l)}`}>
-        <span>{recent[0]?.month}</span>
-        <span>{recent[Math.floor(recent.length / 2)]?.month}</span>
-        <span>{recent[recent.length - 1]?.month ?? currentMonthStr}</span>
+        <span>{displayData[0]?.month}</span>
+        {displayData.length > 2 && <span>{displayData[Math.floor(displayData.length / 2)]?.month}</span>}
+        <span>{displayData[displayData.length - 1]?.month}</span>
       </div>
-      <div className={`flex gap-4 text-[10px] ${T3(l)}`}>
+      <div className={`flex items-center gap-4 text-[10px] ${T3(l)}`}>
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "linear-gradient(180deg,#60A5FA,#2563EB)" }} />
-          2025–26
-        </span>
-        <span className="flex items-center gap-1">
-          <span className={`inline-block w-2.5 h-2.5 rounded-sm ${l ? "bg-slate-300" : "bg-[#1e3a5f]"}`} />
-          2024
+          {currentYear} data
         </span>
         <span className={`ml-auto text-[9px] opacity-60 ${T3(l)}`}>Source: AMFI India (auto-updated monthly)</span>
       </div>
@@ -224,9 +223,9 @@ function DomesticCard({ item }: { item: DomesticItem }) {
 
   return (
     <div className={`rounded-2xl overflow-hidden ${CARD(l)}`}>
-      <div className="p-5">
+      <div className="p-3">
         {/* Header row */}
-        <div className="flex items-start justify-between mb-3">
+        <div className="flex items-start justify-between mb-1.5">
           <div>
             <div className="flex items-center gap-2">
               <p className={`text-xs font-black uppercase tracking-widest ${T3(l)}`}>{item.name}</p>
@@ -256,36 +255,85 @@ function DomesticCard({ item }: { item: DomesticItem }) {
             )}
           </div>
         </div>
-
         {q ? (
           <>
-            {/* INR price — large */}
-            <div className={`text-3xl font-black tracking-tight leading-none mb-1 ${T1(l)}`}>
-              {fmtINR(q.inrPrice)}
+            {/* Price LEFT + H/L/Vol/OI RIGHT — same row */}
+            <div className={`flex items-start justify-between gap-2 pb-2 mb-2 border-b ${DIV(l)}`}>
+              {/* LEFT: Price + change */}
+              <div className="min-w-0">
+                <div className={`text-xl font-black tracking-tight leading-none mb-0.5 ${T1(l)}`}>
+                  {item.dataSource === "kite-mcx"
+                    ? fmtINR(q.inrPrice)
+                    : `$${fmt(q.price)}`}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm font-semibold ${pos ? "text-emerald-400" : "text-red-400"}`}>
+                    {pos ? "+" : ""}{q.changePct.toFixed(2)}%
+                  </span>
+                  {item.dataSource === "kite-mcx" && (
+                    <span className={`text-xs ${T3(l)}`}>${fmt(q.price)} USD</span>
+                  )}
+                </div>
+              </div>
+
+              {/* RIGHT: H / L / Vol / OI */}
+              <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs shrink-0">
+                <span className={T3(l)}>H: <strong className={T1(l)}>
+                  {item.dataSource === "kite-mcx"
+                    ? fmtINR(q.inrHigh ?? q.high)
+                    : `$${fmt(q.high, 1)}`}
+                </strong></span>
+                <span className={T3(l)}>Vol: <strong className={T1(l)}>{fmtV(q.volume)}</strong></span>
+                <span className={T3(l)}>L: <strong className={T1(l)}>
+                  {item.dataSource === "kite-mcx"
+                    ? fmtINR(q.inrLow ?? q.low)
+                    : `$${fmt(q.low, 1)}`}
+                </strong></span>
+                {item.openInterest != null && item.openInterest > 0 && (
+                  <span className={T3(l)}>OI: <strong className="text-[#5194F6]">{fmtBig(item.openInterest)}</strong></span>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2 mb-3">
+
+       {/* {q ? (
+          <>
+            
+            <div className={`text-xl font-black tracking-tight leading-none mb-0.5 ${T1(l)}`}>
+              {item.dataSource === "kite-mcx"
+                ? fmtINR(q.inrPrice)
+                : `$${fmt(q.price)}`}
+            </div>
+            <div className="flex items-center gap-2 mb-1.5">
               <span className={`text-sm font-semibold ${pos ? "text-emerald-400" : "text-red-400"}`}>
                 {pos ? "+" : ""}{q.changePct.toFixed(2)}%
               </span>
-              <span className={`text-xs ${T3(l)}`}>${fmt(q.price)} USD</span>
-            </div>
-
-            {/* H / L / Vol / OI — FIX: extra space after H: and L: */}
-            <div className={`flex flex-wrap gap-3 text-xs pb-3 mb-3 border-b ${DIV(l)}`}>
-              <span className={T3(l)}>H: &nbsp;<strong className={T1(l)}>
-                {item.dataSource === "kite-mcx" ? fmtINR(q.high) : `$${fmt(q.high, 1)}`}
-              </strong></span>
-              <span className={T3(l)}>L: &nbsp;<strong className={T1(l)}>
-                {item.dataSource === "kite-mcx" ? fmtINR(q.low) : `$${fmt(q.low, 1)}`}
-              </strong></span>
-              <span className={T3(l)}>Vol: <strong className={T1(l)}>{fmtV(q.volume)}</strong></span>
-              {item.openInterest != null && item.openInterest > 0 && (
-                <span className={T3(l)}>OI: <strong className="text-[#5194F6]">{fmtBig(item.openInterest)}</strong></span>
+              {item.dataSource === "kite-mcx" && (
+                <span className={`text-xs ${T3(l)}`}>${fmt(q.price)} USD</span>
               )}
             </div>
 
+           
+            <div className={`pb-2 mb-2 border-b ${DIV(l)}`}>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs mb-1">
+                <span className={T3(l)}>H: <strong className={T1(l)}>
+                  {item.dataSource === "kite-mcx"
+                    ? fmtINR(q.inrHigh ?? q.high)
+                    : `$${fmt(q.high, 1)}`}
+                </strong></span>
+                <span className={T3(l)}>Vol: <strong className={T1(l)}>{fmtV(q.volume)}</strong></span>
+                <span className={T3(l)}>L: <strong className={T1(l)}>
+                  {item.dataSource === "kite-mcx"
+                    ? fmtINR(q.inrLow ?? q.low)
+                    : `$${fmt(q.low, 1)}`}
+                </strong></span>
+                {item.openInterest != null && item.openInterest > 0 && (
+                  <span className={T3(l)}>OI: <strong className="text-[#5194F6]">{fmtBig(item.openInterest)}</strong></span>
+                )}
+              </div>
+            </div> */}
+
             {/* Signal badges — FIX: skip "Unknown" OI signal */}
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1">
               {item.futuresCurve && item.futuresCurve.type !== "Unknown" && (
                 <span
                   className="text-[10px] font-bold px-2 py-0.5 rounded-full"
@@ -338,7 +386,7 @@ function DomesticCard({ item }: { item: DomesticItem }) {
       {/* Expand button */}
       <button
         onClick={() => setOpen(o => !o)}
-        className={`w-full flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${l ? "bg-slate-50 text-slate-400 hover:text-slate-600" : "bg-[#070e1a]/50 text-slate-600 hover:text-slate-400"}`}
+        className={`w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-colors ${l ? "bg-slate-50 text-slate-400 hover:text-slate-600" : "bg-[#070e1a]/50 text-slate-600 hover:text-slate-400"}`}
       >
         ▼ COT · Seasonal · Risk Metrics
       </button>
@@ -464,33 +512,46 @@ function ETFCard({ item }: { item: ETFItem }) {
 
   return (
     <div className={`rounded-2xl overflow-hidden ${CARD(l)}`}>
-      <div className="p-5">
-        <div className="flex items-start justify-between mb-2">
-          <div>
+      <div className="p-3">
+        <div className="flex items-start justify-between mb-1.5">
+          {/* LEFT: type badge + name + symbol */}
+          <div className="min-w-0 flex-1 pr-2">
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(81,148,246,0.12)", color: "#5194F6" }}>
               {item.type}
             </span>
             <h3 className={`text-sm font-black mt-1.5 leading-tight ${T1(l)}`}>{item.name}</h3>
             <p className={`text-[10px] mt-0.5 ${T3(l)}`}>{item.symbol} · {item.benchmark}</p>
           </div>
-          {q && (
-            <span className={`px-2 py-0.5 rounded-lg text-xs font-bold shrink-0 ml-2 ${pos ? posBadge : negBadge}`}>
-              {pos ? "▲" : "▼"} {q.changePct.toFixed(2)}%
-            </span>
-          )}
+          {/* RIGHT: % badge + H/Vol/L stacked */}
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            {q && (
+              <span className={`px-2 py-0.5 rounded-lg text-xs font-bold ${pos ? posBadge : negBadge}`}>
+                {pos ? "▲" : "▼"} {q.changePct.toFixed(2)}%
+              </span>
+            )}
+            {q && (
+              <p className={`text-[10px] text-right leading-relaxed ${T3(l)}`}>
+                H: <strong className={T1(l)}>₹{fmt(q.high)}</strong>
+                <span className="mx-1 opacity-30">·</span>
+                Vol: <strong className={T1(l)}>{fmtV(q.volume)}</strong>
+                <span className="mx-1 opacity-30">·</span>
+                L: <strong className={T1(l)}>₹{fmt(q.low)}</strong>
+              </p>
+            )}
+          </div>
         </div>
 
         {q ? (
           <>
             {/* NAV vs Market Price */}
             {item.nav != null && (
-              <div className={`p-3 rounded-xl mb-3 ${CARD2(l)}`}>
+              <div className={`p-2 rounded-xl mb-1.5 ${CARD2(l)}`}>
                 <div className={`flex justify-between text-[10px] mb-1.5 ${T3(l)}`}>
                   <span>AMFI NAV (live)</span>
                   <span>Market Price</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className={`text-lg font-black ${T1(l)}`}>₹{fmt(item.nav)}</span>
+                  <span className={`text-base font-black ${T1(l)}`}>₹{fmt(item.nav)}</span>
                   <span
                     className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                     style={{ color: pdColor, background: `${pdColor}20` }}
@@ -498,13 +559,13 @@ function ETFCard({ item }: { item: ETFItem }) {
                     {(item.premiumDiscount ?? 0) >= 0 ? "+" : ""}{item.premiumDiscount?.toFixed(2)}%
                     {(item.premiumDiscount ?? 0) >= 0 ? " Prem." : " Disc."}
                   </span>
-                  <span className={`text-lg font-black ${T1(l)}`}>₹{fmt(q.price)}</span>
+                  <span className={`text-base font-black ${T1(l)}`}>₹{fmt(q.price)}</span>
                 </div>
               </div>
             )}
 
             {/* Metrics grid — compact, consistent sizing */}
-            <div className="grid grid-cols-3 gap-2 mb-3">
+            <div className="grid grid-cols-3 gap-1 mb-1.5">
               {[
                 { label: "Expense",   val: `${item.expenseRatio}%`,                                          color: "" },
                 { label: "AUM",       val: item.aum || "—",                                                  color: "#5194F6" },
@@ -513,7 +574,7 @@ function ETFCard({ item }: { item: ETFItem }) {
                 { label: "1Y Return", val: item.rollingReturn1Y != null ? `${item.rollingReturn1Y.toFixed(1)}%` : "—", color: (item.rollingReturn1Y ?? 0) > 0 ? "#22c55e" : "#ef4444" },
                 { label: "3Y Return", val: item.rollingReturn3Y != null ? `${item.rollingReturn3Y.toFixed(1)}%` : "—", color: (item.rollingReturn3Y ?? 0) > 0 ? "#22c55e" : "#ef4444" },
               ].map(m => (
-                <div key={m.label} className={`p-2 rounded-xl flex flex-col items-center justify-center text-center gap-1 min-h-[52px] ${CARD2(l)}`}>
+                <div key={m.label} className={`p-1.5 rounded-xl flex flex-col items-center justify-center text-center gap-0.5 min-h-[40px] ${CARD2(l)}`}>
                   <p className={`text-[9px] uppercase tracking-wide font-semibold ${T3(l)}`}>{m.label}</p>
                   <p className={`text-xs font-black ${m.color ? "" : T1(l)}`} style={m.color ? { color: m.color } : undefined}>
                     {m.val}
@@ -522,12 +583,7 @@ function ETFCard({ item }: { item: ETFItem }) {
               ))}
             </div>
 
-            {/* H / L / Vol — FIX: extra space after H: and L: */}
-            <div className={`flex gap-4 text-xs pb-3 mb-3 border-b ${DIV(l)}`}>
-              <span className={T3(l)}>H: &nbsp;<strong className={T1(l)}>₹{fmt(q.high)}</strong></span>
-              <span className={T3(l)}>L: &nbsp;<strong className={T1(l)}>₹{fmt(q.low)}</strong></span>
-              <span className={T3(l)}>Vol: <strong className={T1(l)}>{fmtV(q.volume)}</strong></span>
-            </div>
+
           </>
         ) : (
           <p className={`text-sm py-3 ${T2(l)}`}>Fetching live data…</p>
@@ -554,7 +610,7 @@ function ETFCard({ item }: { item: ETFItem }) {
 
       {/* Tags */}
       {q && (
-        <div className="px-5 py-3 flex flex-wrap gap-2">
+        <div className="px-3 py-2 flex flex-wrap gap-1.5">
           {item.sipSuitable && (
             <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400">
               SIP Suitable
@@ -595,8 +651,8 @@ function GlobalCommCard({ item }: { item: GlobalItem }) {
 
   return (
     <div className={`rounded-2xl overflow-hidden ${CARD(l)}`}>
-      <div className="p-5">
-        <div className="flex items-start justify-between mb-3">
+      <div className="p-3">
+        <div className="flex items-start justify-between mb-1.5">
           <div>
             <p className={`text-xs font-black uppercase tracking-widest ${T3(l)}`}>{item.name}</p>
             <p className={`text-[10px] mt-0.5 ${T3(l)}`}>{item.unit} · {item.exchange}</p>
@@ -613,49 +669,60 @@ function GlobalCommCard({ item }: { item: GlobalItem }) {
 
         {q ? (
           <>
-            <div className={`text-2xl font-black tracking-tight mb-1 ${T1(l)}`}>${fmt(q.price)}</div>
-            <div className={`text-sm font-semibold mb-3 ${pos ? "text-emerald-400" : "text-red-400"}`}>
-              {pos ? "+" : ""}{fmt(q.change, 3)} today
+            {/* ── Price LEFT  |  H/L/Vol RIGHT ── */}
+            <div className="flex items-start justify-between gap-3 mb-1.5">
+              {/* Left: big price + change */}
+              <div className="min-w-0">
+                <div className={`text-xl font-black tracking-tight leading-none mb-0.5 ${T1(l)}`}>
+                  ${fmt(q.price)}
+                </div>
+                <div className={`text-sm font-semibold ${pos ? "text-emerald-400" : "text-red-400"}`}>
+                  {pos ? "+" : ""}{fmt(q.change, 3)} today
+                </div>
+              </div>
+              {/* Right: H / L / Vol stacked */}
+              <div className={`shrink-0 text-xs space-y-0.5 text-right ${T3(l)}`}>
+                <div>H: <strong className={T1(l)}>{fmt(q.high)}</strong></div>
+                <div>L: <strong className={T1(l)}>{fmt(q.low)}</strong></div>
+                <div>Vol: <strong className={T1(l)}>{fmtV(q.volume)}</strong></div>
+              </div>
             </div>
-            {/* FIX: H:/L: spacing */}
-            <div className={`flex flex-wrap gap-3 text-xs pb-3 mb-3 border-b ${DIV(l)}`}>
-              <span className={T3(l)}>H: &nbsp;<strong className={T1(l)}>{fmt(q.high)}</strong></span>
-              <span className={T3(l)}>L: &nbsp;<strong className={T1(l)}>{fmt(q.low)}</strong></span>
-              <span className={T3(l)}>Vol: <strong className={T1(l)}>{fmtV(q.volume)}</strong></span>
+
+            {/* Badges + TradingView link */}
+            <div className={`pt-1.5 border-t ${DIV(l)}`}>
+              <div className="flex flex-wrap gap-1 mb-1.5">
+                {item.cot && (
+                  <span
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                    style={{
+                      color: item.cot.sentiment === "Bullish" ? "#22c55e" : "#ef4444",
+                      background: `${item.cot.sentiment === "Bullish" ? "#22c55e" : "#ef4444"}20`,
+                    }}
+                  >
+                    COT: {item.cot.sentiment}
+                  </span>
+                )}
+                {item.relativeStrength != null && (
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.relativeStrength > 0 ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400"}`}>
+                    RS vs S&P {item.relativeStrength > 0 ? "+" : ""}{item.relativeStrength}%
+                  </span>
+                )}
+                {item.dxyCorrelation != null && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(99,102,241,0.12)", color: "#6366f1" }}>
+                    DXY corr. {item.dxyCorrelation}
+                  </span>
+                )}
+              </div>
+              <a
+                href={tvUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-block text-[10px] font-bold px-2.5 py-1 rounded-full transition-opacity hover:opacity-80"
+                style={{ background: "rgba(81,148,246,0.12)", color: "#5194F6" }}
+              >
+                View on TradingView ↗
+              </a>
             </div>
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {item.cot && (
-                <span
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                  style={{
-                    color: item.cot.sentiment === "Bullish" ? "#22c55e" : "#ef4444",
-                    background: `${item.cot.sentiment === "Bullish" ? "#22c55e" : "#ef4444"}20`,
-                  }}
-                >
-                  COT: {item.cot.sentiment}
-                </span>
-              )}
-              {item.relativeStrength != null && (
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.relativeStrength > 0 ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400"}`}>
-                  RS vs S&P {item.relativeStrength > 0 ? "+" : ""}{item.relativeStrength}%
-                </span>
-              )}
-              {item.dxyCorrelation != null && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(99,102,241,0.12)", color: "#6366f1" }}>
-                  DXY corr. {item.dxyCorrelation}
-                </span>
-              )}
-            </div>
-            {/* TradingView link */}
-            <a
-              href={tvUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-block text-[10px] font-bold px-2.5 py-1 rounded-full transition-opacity hover:opacity-80"
-              style={{ background: "rgba(81,148,246,0.12)", color: "#5194F6" }}
-            >
-              View on TradingView ↗
-            </a>
           </>
         ) : (
           <p className={`text-sm py-3 ${T2(l)}`}>Fetching live data…</p>
@@ -695,51 +762,57 @@ function GlobalETFCard({ item }: { item: GlobalETF }) {
 
   return (
     <div className={`rounded-2xl overflow-hidden ${CARD(l)}`}>
-      <div className="p-5">
-        <div className="flex items-start justify-between mb-3">
-          <div>
+      <div className="p-3">
+        <div className="flex items-start justify-between mb-1.5">
+          {/* LEFT: category badge + name + symbol */}
+          <div className="min-w-0 flex-1 pr-2">
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(81,148,246,0.12)", color: "#5194F6" }}>
               {item.category}
             </span>
-            <h3 className={`text-sm font-black mt-1.5 leading-tight ${T1(l)}`}>{item.name}</h3>
+            <h3 className={`text-sm font-black mt-1 leading-tight ${T1(l)}`}>{item.name}</h3>
             <p className={`text-[10px] mt-0.5 ${T3(l)}`}>{item.symbol} · {item.exchange}</p>
           </div>
-          {q && (
-            <span className={`px-2 py-0.5 rounded-lg text-xs font-bold shrink-0 ml-2 ${pos ? posBadge : negBadge}`}>
-              {pos ? "▲" : "▼"} {q.changePct.toFixed(2)}%
-            </span>
-          )}
+          {/* RIGHT: % badge + H/Vol/L stacked */}
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            {q && (
+              <span className={`px-2 py-0.5 rounded-lg text-xs font-bold ${pos ? posBadge : negBadge}`}>
+                {pos ? "▲" : "▼"} {q.changePct.toFixed(2)}%
+              </span>
+            )}
+            {q && (
+              <p className={`text-[10px] text-right leading-relaxed ${T3(l)}`}>
+                H: <strong className={T1(l)}>${fmt(q.high)}</strong>
+                <span className="mx-1 opacity-30">·</span>
+                Vol: <strong className={T1(l)}>{fmtV(q.volume)}</strong>
+                <span className="mx-1 opacity-30">·</span>
+                L: <strong className={T1(l)}>${fmt(q.low)}</strong>
+              </p>
+            )}
+          </div>
         </div>
 
         {q ? (
           <>
-            <div className={`text-3xl font-black tracking-tight mb-1 ${T1(l)}`}>${fmt(q.price)}</div>
-            <div className={`text-sm font-semibold mb-3 ${pos ? "text-emerald-400" : "text-red-400"}`}>
+            <div className={`text-xl font-black tracking-tight mb-0.5 ${T1(l)}`}>${fmt(q.price)}</div>
+            <div className={`text-sm font-semibold mb-1.5 ${pos ? "text-emerald-400" : "text-red-400"}`}>
               {pos ? "+" : ""}${fmt(q.change)} today
             </div>
 
             {/* Metric boxes — compact 2x2 grid, equal sizing */}
-            <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="grid grid-cols-2 gap-1.5 mb-1.5">
               {[
                 { label: "AUM",       val: `$${item.aum}`,                                          color: "#5194F6" },
                 { label: "Expense",   val: `${item.expenseRatio}%`,                                  color: "" },
                 { label: "Max DD",    val: item.maxDrawdown != null ? `${item.maxDrawdown}%` : "—",  color: "#ef4444" },
                 { label: "Inst. Own", val: item.institutionalOwnership || "—",                       color: "" },
               ].map(m => (
-                <div key={m.label} className={`p-2.5 rounded-xl flex flex-col items-center justify-center text-center gap-1 min-h-[56px] ${CARD2(l)}`}>
+                <div key={m.label} className={`p-1.5 rounded-xl flex flex-col items-center justify-center text-center gap-0.5 min-h-[42px] ${CARD2(l)}`}>
                   <p className={`text-[9px] uppercase tracking-wide font-semibold ${T3(l)}`}>{m.label}</p>
                   <p className={`text-sm font-black ${m.color ? "" : T1(l)}`} style={m.color ? { color: m.color } : undefined}>
                     {m.val}
                   </p>
                 </div>
               ))}
-            </div>
-
-            {/* FIX: H:/L: spacing */}
-            <div className={`flex gap-3 text-xs pb-3 border-b ${DIV(l)}`}>
-              <span className={T3(l)}>H: &nbsp;<strong className={T1(l)}>${fmt(q.high)}</strong></span>
-              <span className={T3(l)}>L: &nbsp;<strong className={T1(l)}>${fmt(q.low)}</strong></span>
-              <span className={T3(l)}>Vol: <strong className={T1(l)}>{fmtV(q.volume)}</strong></span>
             </div>
           </>
         ) : (
@@ -766,7 +839,7 @@ function GlobalETFCard({ item }: { item: GlobalETF }) {
 
       {/* Tags — FIX: removed "Est." inception tag; kept meaningful badges only */}
       {q && (
-        <div className="px-5 py-3 flex flex-wrap gap-2">
+        <div className="px-3 py-2 flex flex-wrap gap-1.5">
           {item.relativeStrength != null && (
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.relativeStrength > 0 ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400"}`}>
               RS vs S&P {item.relativeStrength > 0 ? "+" : ""}{item.relativeStrength}%
@@ -806,9 +879,9 @@ function MacroCard({ item }: { item: MacroItem }) {
   const q   = item.quote;
   const pos = (q?.changePct ?? 0) >= 0;
   return (
-    <div className={`rounded-xl p-4 ${CARD(l)}`}>
-      <p className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 ${T3(l)}`}>{item.name}</p>
-      <div className={`text-xl font-black ${T1(l)}`}>{q ? fmt(q.price) : "—"}</div>
+    <div className={`rounded-xl p-3 ${CARD(l)}`}>
+      <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${T3(l)}`}>{item.name}</p>
+      <div className={`text-lg font-black ${T1(l)}`}>{q ? fmt(q.price) : "—"}</div>
       {q && <div className={`text-xs font-semibold mt-0.5 ${pos ? "text-emerald-400" : "text-red-400"}`}>
         {pos ? "+" : ""}{q.changePct.toFixed(2)}%
       </div>}
@@ -1059,13 +1132,13 @@ export default function CommoditiesView() {
               <div className="space-y-8">
                 <SecHead
                   title="Domestic Commodities (MCX)"
-                  sub="Gold · Silver · Crude Oil · Natural Gas · Copper — Kite MCX live INR prices · Yahoo Finance fallback · COT · OI Signal · Futures Curve · Seasonal"
+              
                 />
 
                 {/* FIX: CSS columns layout — cards reflow naturally when one expands,
                     eliminating the blank space that appeared with CSS grid. */}
                 {loading && !data ? (
-                  <Skel count={4} cols="lg:grid-cols-2" h="h-[460px]" />
+                  <Skel count={4} cols="lg:grid-cols-2" h="h-[380px]" />
                 ) : (() => {
                   const all = (data?.domestic ?? []).filter(item => item.quote !== null);
                   const visible = showAllDomestic ? all : all.slice(0, CARDS_LIMIT);
@@ -1112,7 +1185,7 @@ export default function CommoditiesView() {
                         {
                           t: "Import Dependency",
                           d: "India imports ~90% crude & gold — USD/INR is the most critical MCX pricing factor.",
-                          href: "https://commerce.gov.in/trade-statistics/",
+                          href: "https://www.dgft.gov.in/CP/?opt=trade-statistics",
                         },
                       ].map(i => (
                         <a
@@ -1122,11 +1195,11 @@ export default function CommoditiesView() {
                           rel="noreferrer"
                           className={`p-3.5 rounded-xl block cursor-pointer hover:opacity-80 transition-opacity ${CARD2(l)}`}
                         >
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 mb-1">
                             <p className={`text-sm font-bold ${T1(l)}`}>{i.t}</p>
-                            <span className="text-[10px]" style={{ color: "#5194F6" }}>↗</span>
+                            <span className="text-[11px] font-bold" style={{ color: "#5194F6" }}>↗</span>
                           </div>
-                          <p className={`text-xs mt-1 leading-relaxed ${T2(l)}`}>{i.d}</p>
+                          <p className={`text-xs leading-relaxed ${T2(l)}`}>{i.d}</p>
                         </a>
                       ))}
                     </div>
@@ -1175,11 +1248,11 @@ export default function CommoditiesView() {
               <div className="space-y-8">
                 <SecHead
                   title="Domestic ETFs (NSE / BSE)"
-                  sub="Gold · Silver · Index ETFs — Live AMFI NAV · Tracking Error · AUM · 1Y/3Y Return · SIP Suitability · Premium/Discount to NAV"
+                 
                 />
 
                 {loading && !data ? (
-                  <Skel count={4} cols="lg:grid-cols-2" h="h-[480px]" />
+                  <Skel count={4} cols="lg:grid-cols-2" h="h-[400px]" />
                 ) : (() => {
                   const all = (data?.domesticEtfs ?? []).filter(item => item.quote !== null);
                   const visible = showAllDomEtfs ? all : all.slice(0, CARDS_LIMIT);
@@ -1202,7 +1275,7 @@ export default function CommoditiesView() {
                       <div>
                         <h3 className={`text-base font-black ${T1(l)}`}>Silver ETF Monthly Inflows</h3>
                         <p className={`text-xs mt-1 ${T2(l)}`}>
-                          Inflow in billion rupees · Source: <a href="https://www.amfiindia.com/research-information/mf-data" target="_blank" rel="noreferrer" className="underline" style={{ color: "#5194F6" }}>AMFI India ↗</a>
+                          Inflow in billion rupees · Source: <a href="https://www.amfiindia.com/research-information" target="_blank" rel="noreferrer" className="underline" style={{ color: "#5194F6" }}>AMFI India ↗</a>
                         </p>
                       </div>
                     </div>
@@ -1218,7 +1291,7 @@ export default function CommoditiesView() {
                         <h3 className={`text-base font-black ${T1(l)}`}>Gold ETF Monthly Inflows</h3>
                         <p className={`text-xs mt-1 ${T2(l)}`}>
                           Inflow in billion rupees · Source:{" "}
-                          <a href="https://www.amfiindia.com/research-information/mf-data" target="_blank" rel="noreferrer" className="underline" style={{ color: "#5194F6" }}>
+                          <a href="https://www.amfiindia.com/research-information" target="_blank" rel="noreferrer" className="underline" style={{ color: "#5194F6" }}>
                             AMFI India ↗
                           </a>
                         </p>
@@ -1274,11 +1347,10 @@ export default function CommoditiesView() {
               <div className="space-y-8">
                 <SecHead
                   title="Global Commodities"
-                  sub="Brent · WTI · Metals · Agriculture · Energy — CME / COMEX / ICE / LME · COT positioning · DXY correlation · Relative Strength vs S&P 500"
+                 
                 />
-
                 {loading && !data ? (
-                  <Skel count={4} cols="lg:grid-cols-2" h="h-[360px]" />
+                  <Skel count={4} cols="lg:grid-cols-2" h="h-[300px]" />
                 ) : (() => {
                   const all = (data?.global ?? []).filter(item => item.quote !== null);
                   const visible = showAllGlobal ? all : all.slice(0, CARDS_LIMIT);
@@ -1366,11 +1438,11 @@ export default function CommoditiesView() {
               <div className="space-y-8">
                 <SecHead
                   title="Global ETFs (US Markets)"
-                  sub="Precious metals · Broad commodity · Energy ETFs"
+                
                 />
 
                 {loading && !data ? (
-                  <Skel count={4} cols="lg:grid-cols-2" h="h-[400px]" />
+                  <Skel count={4} cols="lg:grid-cols-2" h="h-[330px]" />
                 ) : (() => {
                   const all = (data?.globalEtfs ?? []).filter(item => item.quote !== null);
                   const visible = showAllGlobalEtfs ? all : all.slice(0, CARDS_LIMIT);
