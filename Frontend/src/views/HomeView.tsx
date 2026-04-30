@@ -281,25 +281,7 @@ const HomeView = ({ activeTab, onChangeTab }: HomeViewProps) => {
                   {activeTab === "domestic" ? (
                     <>
                       <KiteChart height="600px" />
-                      {/* Zerodha stamp — replaces TradingView for BharatPulse */}
-                      <div
-                        className="flex items-center justify-between px-4 py-2 text-[11px]"
-                        style={{
-                          background: isLight ? "rgba(252,253,254,0.97)" : "rgba(6,27,43,0.85)",
-                          borderTop: isLight ? "1px solid rgba(4,20,33,0.08)" : "1px solid rgba(124,166,194,0.12)",
-                        }}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1 font-bold" style={{ color: "#22c55e" }}>● LIVE</span>
-                          <span style={{ color: isLight ? "#475569" : "#64748b" }}>Live Chart</span>
-                          <span style={{ color: isLight ? "#94a3b8" : "#334155" }}>|</span>
-                          <span style={{ color: isLight ? "#475569" : "#64748b" }}>NSE / BSE</span>
-                        </span>
-                        <span className="flex items-center gap-3">
-                          <ZerodhaMarketClock isLight={isLight} />
-                         
-                        </span>
-                      </div>
+                      <TVDataStamp mode="domestic" type="chart" isLight={isLight} />
                     </>
                   ) : (
                     <>

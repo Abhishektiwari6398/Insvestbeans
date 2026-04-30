@@ -132,48 +132,122 @@ const negBadge = "bg-red-500/15 text-red-400 border border-red-500/20";
 // SILVER / GOLD INFLOW CHART (shared component)
 // ─────────────────────────────────────────────────────────────────────────────
 function InflowChart({ data, l }: { data: { month: string; inflow: number }[]; l: boolean }) {
-  // Show only current year data — dynamic based on actual year
   const now = new Date();
   const currentYear = now.getFullYear().toString();
 
-  // Filter to only current year (2026, or whatever year it is)
   const yearData = data.filter(d => d.month.includes(currentYear));
-  // Fallback: if no current-year data yet, show last 6 months available
   const displayData = yearData.length > 0 ? yearData : data.slice(-6);
 
-  const maxVal = Math.max(...displayData.map(d => d.inflow), 1);
-  const CHART_H = 140;
+  // Find max absolute value for scaling
+  const maxAbs = Math.max(...displayData.map(d => Math.abs(d.inflow)), 1);
+  const HALF_H = 100; // half height above and below x-axis
+  const CHART_TOTAL = HALF_H * 2; // total chart area height
+
   return (
     <div>
-      <div className="flex items-end gap-1 mb-2" style={{ height: CHART_H }}>
-        {displayData.map((d, i) => {
-          const barH = Math.max((d.inflow / maxVal) * (CHART_H - 4), 3);
-          return (
-            <div key={i} className="flex-1 relative group" style={{ height: CHART_H }}>
-              <div className="absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:block z-10 whitespace-nowrap text-[10px] px-2 py-0.5 rounded bg-black/80 text-white pointer-events-none">
-                {d.month}: ₹{d.inflow}B
+      {/* Chart area */}
+      <div className="relative" style={{ height: CHART_TOTAL + 4 }}>
+        {/* X-axis center line */}
+        <div
+          className="absolute left-0 right-0"
+          style={{
+            top: HALF_H,
+            height: 1,
+            background: l ? "rgba(100,116,139,0.4)" : "rgba(148,163,184,0.25)",
+            zIndex: 1,
+          }}
+        />
+
+        {/* Bars */}
+        <div className="absolute inset-0 flex items-stretch gap-1 px-0.5">
+          {displayData.map((d, i) => {
+            const isPos = d.inflow >= 0;
+            const barH = Math.max((Math.abs(d.inflow) / maxAbs) * (HALF_H - 4), 3);
+            const label = isPos ? "Inflow" : "Outflow";
+
+            return (
+              <div key={i} className="flex-1 relative group" style={{ height: CHART_TOTAL }}>
+                {/* Tooltip */}
+                <div
+                  className="absolute left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center z-20 whitespace-nowrap pointer-events-none"
+                  style={{ top: isPos ? HALF_H - barH - 36 : HALF_H + barH + 4 }}
+                >
+                  <div className="text-[10px] px-2 py-1 rounded-md font-semibold leading-tight"
+                    style={{
+                      background: isPos ? "rgba(37,99,235,0.92)" : "rgba(220,38,38,0.92)",
+                      color: "#fff",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+                    }}
+                  >
+                    <div>{d.month}</div>
+                    <div>{isPos ? "+" : "−"}₹{Math.abs(d.inflow).toFixed(2)}B</div>
+                    <div className="text-[9px] opacity-80">{label}</div>
+                  </div>
+                  {/* arrow */}
+                  <div style={{
+                    width: 0, height: 0,
+                    borderLeft: "4px solid transparent",
+                    borderRight: "4px solid transparent",
+                    ...(isPos
+                      ? { borderTop: `4px solid ${isPos ? "rgba(37,99,235,0.92)" : "rgba(220,38,38,0.92)"}` }
+                      : { borderBottom: `4px solid rgba(220,38,38,0.92)`, order: -1 }
+                    ),
+                  }} />
+                </div>
+
+                {/* Positive bar — grows upward from center */}
+                {isPos && (
+                  <div
+                    className="absolute left-0 right-0 rounded-t"
+                    style={{
+                      bottom: HALF_H,
+                      height: barH,
+                      background: "linear-gradient(180deg,#60A5FA,#2563EB)",
+                      boxShadow: "0 -2px 8px rgba(96,165,250,0.35)",
+                    }}
+                  />
+                )}
+
+                {/* Negative bar — grows downward from center */}
+                {!isPos && (
+                  <div
+                    className="absolute left-0 right-0 rounded-b"
+                    style={{
+                      top: HALF_H,
+                      height: barH,
+                      background: "linear-gradient(180deg,#ef4444,#b91c1c)",
+                      boxShadow: "0 2px 8px rgba(239,68,68,0.35)",
+                    }}
+                  />
+                )}
               </div>
-              <div
-                className="absolute bottom-0 left-0 right-0 rounded-t"
-                style={{
-                  height: barH,
-                  background: "linear-gradient(180deg,#60A5FA,#2563EB)",
-                  boxShadow: "0 -2px 8px rgba(96,165,250,0.35)",
-                }}
-              />
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+
+        {/* Inflow / Outflow axis labels */}
+        <div className="absolute left-0 flex flex-col justify-between pointer-events-none" style={{ top: 2, bottom: 2 }}>
+          <span className="text-[9px] font-bold text-blue-400 leading-none">Inflow</span>
+          <span className="text-[9px] font-bold text-red-400 leading-none">Outflow</span>
+        </div>
       </div>
-      <div className={`flex justify-between text-[10px] mb-2 ${T3(l)}`}>
+
+      {/* Month labels */}
+      <div className={`flex justify-between text-[10px] mt-1 mb-2 ${T3(l)}`}>
         <span>{displayData[0]?.month}</span>
         {displayData.length > 2 && <span>{displayData[Math.floor(displayData.length / 2)]?.month}</span>}
         <span>{displayData[displayData.length - 1]?.month}</span>
       </div>
+
+      {/* Legend */}
       <div className={`flex items-center gap-4 text-[10px] ${T3(l)}`}>
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "linear-gradient(180deg,#60A5FA,#2563EB)" }} />
-          {currentYear} data
+          Inflow
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "linear-gradient(180deg,#ef4444,#b91c1c)" }} />
+          Outflow
         </span>
         <span className={`ml-auto text-[9px] opacity-60 ${T3(l)}`}>Source: AMFI India (auto-updated monthly)</span>
       </div>

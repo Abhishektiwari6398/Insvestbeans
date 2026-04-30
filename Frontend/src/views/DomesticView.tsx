@@ -690,31 +690,6 @@ function CandleChart({ token, height = 300, showControls = true, defaultPeriod =
 
   return (
     <div>
-      {showControls && (
-        <div className={`flex items-center gap-2 px-4 py-3 border-b ${l ? "border-slate-100" : "border-[#1e3a5f]/50"}`}>
-          <div className="flex gap-1.5">
-            {PERIODS.map(p => (
-              <button key={p} onClick={() => setPeriod(p)} disabled={loading}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold border transition-all disabled:opacity-60 ${period === p
-                  ? "bg-[#5194F6] text-white border-transparent"
-                  : l ? "bg-white text-slate-500 border-slate-200 hover:border-gray-300" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50 hover:border-[#1e3a5f]"
-                  }`}>{p}</button>
-            ))}
-          </div>
-          {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#5194F6] ml-1" />}
-          {error && <span className="text-[10px] text-red-500 ml-1">⚠ {error}</span>}
-          {lastFetch && !error && (() => {
-            const now = new Date();
-            const mins = now.getHours() * 60 + now.getMinutes();
-            const mktOpen = mins >= 555 && mins < 930; // 9:15 AM to 3:30 PM
-            if (mktOpen) {
-              return <span className={`text-[10px] ml-auto hidden sm:block ${l ? "text-slate-400" : "text-slate-500"}`}>{P_LABEL[period]} · Updated {lastFetch.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}</span>;
-            } else {
-              return <span className={`text-[10px] ml-auto hidden sm:block ${l ? "text-slate-400" : "text-slate-500"}`}>{P_LABEL[period]} · <span className={l ? "text-amber-500" : "text-amber-400"}>Market closed</span> · Data as of {lastFetch.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}</span>;
-            }
-          })()}
-        </div>
-      )}
       <div className={`relative transition-opacity ${loading ? "opacity-40" : "opacity-100"}`} style={{ height: showControls ? height - 80 : height }}>
         <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
         {!candles.length && !loading && (
@@ -728,6 +703,35 @@ function CandleChart({ token, height = 300, showControls = true, defaultPeriod =
           </div>
         )}
       </div>
+      {showControls && (
+        <div className={`flex items-center gap-2 px-4 py-3 border-t ${l ? "border-slate-100" : "border-[#1e3a5f]/50"}`}>
+          {/* Left: info text + status */}
+          <div className="flex items-center gap-1.5 min-w-0">
+            {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#5194F6] shrink-0" />}
+            {error && <span className="text-[10px] text-red-500">⚠ {error}</span>}
+            {lastFetch && !error && (() => {
+              const now = new Date();
+              const mins = now.getHours() * 60 + now.getMinutes();
+              const mktOpen = mins >= 555 && mins < 930;
+              if (mktOpen) {
+                return <span className={`text-[10px] hidden sm:block truncate ${l ? "text-slate-400" : "text-slate-500"}`}>{P_LABEL[period]} · Updated {lastFetch.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}</span>;
+              } else {
+                return <span className={`text-[10px] hidden sm:block truncate ${l ? "text-slate-400" : "text-slate-500"}`}>{P_LABEL[period]} · <span className={l ? "text-amber-500" : "text-amber-400"}>Market closed</span> · Data as of {lastFetch.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}</span>;
+              }
+            })()}
+          </div>
+          {/* Right: period buttons */}
+          <div className="flex gap-1.5 ml-auto shrink-0">
+            {PERIODS.map(p => (
+              <button key={p} onClick={() => setPeriod(p)} disabled={loading}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-bold border transition-all disabled:opacity-60 ${period === p
+                  ? "bg-[#5194F6] text-white border-transparent"
+                  : l ? "bg-white text-slate-500 border-slate-200 hover:border-gray-300" : "bg-[#0c1a2e] text-slate-400 border-[#1e3a5f]/50 hover:border-[#1e3a5f]"
+                  }`}>{p}</button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
