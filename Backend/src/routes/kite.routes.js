@@ -241,6 +241,7 @@ const NSE_INDEX_FALLBACK = {
   "NIFTY FMCG":        258537,
   "NIFTY ENERGY":      258409,
   "NIFTY PSU BANK":    260649,
+  "GIFT NIFTY":        291849,
 };
 
 // ── SYMBOL ALIAS MAP ──────────────────────────────────────────────────────────
@@ -1010,21 +1011,7 @@ router.get("/fii-dii", async (req, res) => {
     };
   };
 
-  async function fetchFiiDiiFromBsePublic() {
-    const today = new Date();
-    const dd = String(today.getDate()).padStart(2,'0');
-    const mm = String(today.getMonth()+1).padStart(2,'0');
-    const yyyy = today.getFullYear();
-    const r = await axios.get(
-      `https://www.bseindia.com/markets/equity/EQReports/fii_dii_data.aspx`,
-      { timeout: 10000, headers: { 
-        "User-Agent": NSE_UA, 
-        "Referer": "https://www.bseindia.com/",
-        "Accept": "text/html,*/*"
-      }}
-    );
-    // Parse response... (BSE HTML page, requires parsing)
-  }
+ 
   // ── TIER 0: MoneyControl — VPS-friendly, no IP blocking ────────────────────
   try {
     const data = await fetchFiiDiiFromMoneyControl();
@@ -1098,43 +1085,101 @@ router.get("/fii-dii", async (req, res) => {
 
 
 
-async function fetchGiftNiftyFromNse(cookies) {
-  // ── NSE equity-stockIndices se NIFTY 50 price + pChange lo ──
+
+async function fetchGiftNiftyFromNseIfsc(cookies) {
+ 
+  const NSEIX_ENDPOINTS = [
+    {
+      url: "https://www.nseindia.com/api/allIndices",
+      ref: "https://www.nseindia.com/",
+    },
+    {
+      url: "https://www.nseindia.com/api/market-data-pre-open?key=GN",
+      ref: "https://www.nseindia.com/market-data/nse-ifsc-gift-nifty",
+    },
+  ];
+
+  for (const { url, ref } of NSEIX_ENDPOINTS) {
+    try {
+      const r = await axios.get(url, {
+        timeout: 10000,
+        headers: nseApiHeaders(cookies, ref),
+      });
+
+      const rows = Array.isArray(r.data?.data) ? r.data.data
+        : Array.isArray(r.data) ? r.data : [];
+
+        const giftRow = rows.find(i => {
+          const name = (
+            i.index ?? i.indexSymbol ?? i.key ?? i.name ?? i.symbol ?? ""
+          ).toUpperCase();
+          return (
+            name.includes("GIFT") ||
+            name.includes("IFSC") ||
+            name === "GIFT NIFTY 50"
+          );
+        });
+
+      if (!giftRow) continue;
+
+      const price     = parseFloat(giftRow.last ?? giftRow.lastPrice ?? giftRow.current ?? giftRow.value ?? "0");
+      const prevClose = parseFloat(giftRow.previousClose ?? giftRow.prev_close ?? "0");
+      const pChange   = parseFloat(giftRow.pChange ?? giftRow.percentChange ?? "0");
+      const changePct = pChange || (prevClose > 0 ? ((price - prevClose) / prevClose) * 100 : 0);
+
+      if (!price || price <= 0) continue;
+
+      console.log(`[GIFT NIFTY] ✅ NSE world endpoint: ${price} (${changePct.toFixed(2)}%)`);
+      return {
+        symbol:         "GIFT NIFTY 50",
+        last_price:     price,
+        change_percent: +changePct.toFixed(2),
+        source:         "nse-ifsc",
+      };
+    } catch (e) {
+      console.warn(`[GIFT NIFTY] Endpoint ${url.split("/").pop()} failed: ${e.message}`);
+    }
+  }
+
+  // Agar koi NSE endpoint nahi chala — Yahoo ^NSEI (best free proxy, ~17pts off)
+// ✅ FIXED: ^NIFTYIFSC = actual GIFT Nifty 50 on Yahoo Finance (not a proxy!)
+let yPrice, yChangePct;
+try {
+  const r1 = await fetchYahooSymbol("^NIFTYIFSC"); // GIFT Nifty 50 actual
+  yPrice = r1.price; yChangePct = r1.changePct;
+  console.log(`[GIFT NIFTY] Yahoo ^NIFTYIFSC: ${yPrice} (${Number(yChangePct).toFixed(2)}%)`);
+} catch (_) {
+  const r2 = await fetchYahooSymbol("^NIFTYIFSC"); // last resort: Nifty 50 spot
+  yPrice = r2.price; yChangePct = r2.changePct;
+  console.log(`[GIFT NIFTY] Yahoo ^NSEI fallback: ${yPrice}`);
+}
+if (!yPrice || yPrice <= 0) throw new Error("Yahoo: invalid price");
+return {
+  symbol:         "GIFT NIFTY 50",
+  last_price:     yPrice,
+  change_percent: yChangePct != null ? +Number(yChangePct).toFixed(2) : null,
+  source:         "yahoo-giftnifty",
+};
+}
+
+async function fetchNifty50SpotAsProxy(cookies) {
   const r = await axios.get(
     "https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%2050",
     { timeout: 10000, headers: nseApiHeaders(cookies, "https://www.nseindia.com/market-data/live-equity-market") }
   );
-
-  const rows = Array.isArray(r.data?.data) ? r.data.data : [];
-  // Pehli row hamesha "NIFTY 50" summary hoti hai
-  const nifty = rows.find(i => {
-    const name = (i.index ?? i.indexSymbol ?? i.symbol ?? "").toUpperCase();
-    return name === "NIFTY 50";
-  }) ?? rows[0];
-
-  if (!nifty) throw new Error("NIFTY 50 not found in equity-stockIndices");
-
+  const rows  = Array.isArray(r.data?.data) ? r.data.data : [];
+  const nifty = rows.find(i => (i.index ?? i.indexSymbol ?? i.symbol ?? "").toUpperCase() === "NIFTY 50") ?? rows[0];
+  if (!nifty) throw new Error("NIFTY 50 not found");
   const price     = parseFloat(nifty.last ?? nifty.lastPrice ?? nifty.current ?? "0");
   const prevClose = parseFloat(nifty.previousClose ?? nifty.prev_close ?? "0");
   const pChange   = parseFloat(nifty.pChange ?? nifty.percentChange ?? "0");
   const changePct = pChange || (prevClose > 0 ? ((price - prevClose) / prevClose) * 100 : 0);
-
-  if (!price || price <= 0) throw new Error("GIFT NIFTY: invalid price from NSE equity-stockIndices");
-
-  console.log(`[GIFT NIFTY] NSE equity-stockIndices: ${price} (${changePct.toFixed(2)}%)`);
-  return {
-    symbol:         "NIFTY 50",
-    last_price:     price,
-    change_percent: +changePct.toFixed(2),
-    source:         "nse",
-  };
+  if (!price || price <= 0) throw new Error("NIFTY 50 proxy: invalid price");
+  console.log(`[GIFT NIFTY] ⚠️ Nifty 50 spot proxy: ${price}`);
+  return { symbol: "NIFTY 50 (proxy)", last_price: price, change_percent: +changePct.toFixed(2), source: "nse-spot-proxy" };
 }
 
 
-//
-// Primary:  Kite /quote for NSE_IFSC near-month NIFTY futures
-// Fallback: Yahoo ^NSEI  (Nifty 50 spot — best publicly available proxy)
-// ─────────────────────────────────────────────────────────────────────────────
 const _giftMeta  = { symbol: null, ts: 0 };
 const _giftCache = { data: null,   ts: 0 };
 
@@ -1167,87 +1212,143 @@ async function resolveGiftNiftySymbol() {
   return _giftMeta.symbol;
 }
 
+// router.get("/gift-nifty", async (req, res) => {
+//   // 30-second cache
+//   if (_giftCache.data && Date.now() - _giftCache.ts < 30 * 1000) {
+//     return res.json({ status: "success", data: _giftCache.data, cached: true });
+//   }
+
+//   // ── Try Kite NSE_IFSC first ───────────────────────────────────────────────
+//   try {
+//     const sym        = await resolveGiftNiftySymbol();
+//     const kiteSymbol = `NSE_IFSC:${sym}`;
+//     const r          = await axios.get(
+//       `https://api.kite.trade/quote?i=${encodeURIComponent(kiteSymbol)}`,
+//       { headers: headers(), timeout: 8000 }
+//     );
+//     const q = r.data?.data?.[kiteSymbol];
+//     if (!q) throw new Error(`No data for ${kiteSymbol} — plan may not include NSE_IFSC`);
+
+//     const lastPrice = q.last_price;
+//     const prevClose = q.ohlc?.close ?? null;
+//     // ✅ FIX: Use q.change (%) directly from /quote — more accurate than manual ohlc calc
+//     const changePct = (lastPrice && prevClose && prevClose !== 0)
+//     ? ((lastPrice - prevClose) / prevClose) * 100
+//     : null;
+  
+//   const data = { symbol: sym, last_price: lastPrice, change_percent: changePct, ohlc: q.ohlc, source: "kite" };
+//     _giftCache.data = data;
+//     _giftCache.ts   = Date.now();
+//     return res.json({ status: "success", data });
+
+//   } catch (kiteErr) {
+//     // 403 = not subscribed to NSE_IFSC; any other error → try NSE allIndices, then Yahoo
+//     console.warn(`[GIFT NIFTY] Kite NSE_IFSC failed (${kiteErr.message}) — trying NSE allIndices`);
+//     _giftMeta.symbol = null; // force re-resolve next time
+
+//     // ── Fallback A: NSE allIndices (most accurate — uses NSE session, same % as NSE website) ──
+//     try {
+//       const cookies = await getNseSession();
+//       const data    = await fetchGiftNiftyFromNse(cookies);
+//       _giftCache.data = data;
+//       _giftCache.ts   = Date.now();
+//       return res.json({ status: "success", data });
+//     } catch (nseErr) {
+//       console.warn(`[GIFT NIFTY] NSE allIndices failed (${nseErr.message}) — trying fresh session`);
+//       // Retry with fresh session once
+//       try {
+//         _nseSession.cookies = ""; _nseSession.ts = 0;
+//         const fresh = await getNseSession(true);
+//         const data  = await fetchGiftNiftyFromNse(fresh);
+//         _giftCache.data = data;
+//         _giftCache.ts   = Date.now();
+//         return res.json({ status: "success", data });
+//       } catch (nseErr2) {
+//         console.warn(`[GIFT NIFTY] NSE retry failed (${nseErr2.message}) — falling back to Yahoo ^NSEI`);
+//       }
+//     }
+
+//  // ── Fallback B: Yahoo ^NSEI ──
+//  try {
+//   const { price, changePct } = await fetchYahooSymbol("^NSEI");
+//   const data = {
+//     symbol:         "NIFTY 50 (Yahoo proxy)",
+//     last_price:     price,
+//     change_percent: changePct != null ? +Number(changePct).toFixed(2) : null,
+//     source:         "yahoo",
+//   };
+//   console.log(`[GIFT NIFTY] Yahoo ^NSEI fallback: ${price} (${data.change_percent}%)`);
+//   _giftCache.data = data;
+//   _giftCache.ts   = Date.now();
+//   return res.json({ status: "success", data });
+// } catch (yahooErr) {
+//   console.error("[GIFT NIFTY] All sources failed:", yahooErr.message);
+//   if (_giftCache.data) {
+//     return res.json({ status: "success", data: _giftCache.data, stale: true });
+//   }
+//   return res.status(500).json({ status: "error", message: yahooErr.message });
+// }
+//   }
+// });
+
 router.get("/gift-nifty", async (req, res) => {
-  // 30-second cache
   if (_giftCache.data && Date.now() - _giftCache.ts < 30 * 1000) {
     return res.json({ status: "success", data: _giftCache.data, cached: true });
   }
 
-  // ── Try Kite NSE_IFSC first ───────────────────────────────────────────────
+  // ✅ TIER 1: KiteWS tick — token 291849 (GIFT NIFTY)
   try {
-    const sym        = await resolveGiftNiftySymbol();
-    const kiteSymbol = `NSE_IFSC:${sym}`;
-    const r          = await axios.get(
-      `https://api.kite.trade/quote?i=${encodeURIComponent(kiteSymbol)}`,
-      { headers: headers(), timeout: 8000 }
-    );
-    const q = r.data?.data?.[kiteSymbol];
-    if (!q) throw new Error(`No data for ${kiteSymbol} — plan may not include NSE_IFSC`);
+    const ticks = kiteWS.getLastTicks();  // tumhara existing WebSocket
+    // const GIFT_TOKEN =ticks["NSE:GIFT NIFTY"];
+    // const tick = ticks[GIFT_TOKEN];
+    const tick  = ticks["NSE:GIFT NIFTY"];
 
-    const lastPrice = q.last_price;
-    const prevClose = q.ohlc?.close ?? null;
-    // ✅ FIX: Use q.change (%) directly from /quote — more accurate than manual ohlc calc
-    const changePct = (lastPrice && prevClose && prevClose !== 0)
-    ? ((lastPrice - prevClose) / prevClose) * 100
-    : null;
-  
-  const data = { symbol: sym, last_price: lastPrice, change_percent: changePct, ohlc: q.ohlc, source: "kite" };
+    if (tick?.last_price) {
+      const lastPrice = tick.last_price;
+      const prevClose = tick.ohlc?.close ?? null;
+      const changePct = (lastPrice && prevClose)
+        ? +((( lastPrice - prevClose) / prevClose) * 100).toFixed(2)
+        : null;
+
+      const data = {
+        symbol:         "GIFT NIFTY",
+        last_price:     lastPrice,
+        change_percent: changePct,
+        source:         "kite-ws",
+      };
+      _giftCache.data = data;
+      _giftCache.ts   = Date.now();
+      console.log(`[GIFT NIFTY] ✅ KiteWS tick: ${lastPrice} (${changePct}%)`);
+      return res.json({ status: "success", data });
+    }
+    throw new Error("Token 291849 not in ticks");
+
+  } catch (wsErr) {
+    console.warn(`[GIFT NIFTY] KiteWS failed: ${wsErr.message} — subscribing token`);
+
+    // Token subscribe karo agar nahi hai
+    try {
+      kiteWS.subscribe([291849]);
+    } catch(_) {}
+  }
+
+  // TIER 2: Yahoo fallback
+  try {
+    const { price, changePct } = await fetchYahooSymbol("^NSEI");
+    const data = {
+      symbol:         "GIFT NIFTY (approx)",
+      last_price:     price,
+      change_percent: changePct != null ? +Number(changePct).toFixed(2) : null,
+      source:         "yahoo",
+    };
     _giftCache.data = data;
     _giftCache.ts   = Date.now();
     return res.json({ status: "success", data });
-
-  } catch (kiteErr) {
-    // 403 = not subscribed to NSE_IFSC; any other error → try NSE allIndices, then Yahoo
-    console.warn(`[GIFT NIFTY] Kite NSE_IFSC failed (${kiteErr.message}) — trying NSE allIndices`);
-    _giftMeta.symbol = null; // force re-resolve next time
-
-    // ── Fallback A: NSE allIndices (most accurate — uses NSE session, same % as NSE website) ──
-    try {
-      const cookies = await getNseSession();
-      const data    = await fetchGiftNiftyFromNse(cookies);
-      _giftCache.data = data;
-      _giftCache.ts   = Date.now();
-      return res.json({ status: "success", data });
-    } catch (nseErr) {
-      console.warn(`[GIFT NIFTY] NSE allIndices failed (${nseErr.message}) — trying fresh session`);
-      // Retry with fresh session once
-      try {
-        _nseSession.cookies = ""; _nseSession.ts = 0;
-        const fresh = await getNseSession(true);
-        const data  = await fetchGiftNiftyFromNse(fresh);
-        _giftCache.data = data;
-        _giftCache.ts   = Date.now();
-        return res.json({ status: "success", data });
-      } catch (nseErr2) {
-        console.warn(`[GIFT NIFTY] NSE retry failed (${nseErr2.message}) — falling back to Yahoo ^NSEI`);
-      }
-    }
-
- // ── Fallback B: Yahoo ^NSEI ──
- try {
-  const { price, changePct } = await fetchYahooSymbol("^NSEI");
-  const data = {
-    symbol:         "NIFTY 50 (Yahoo proxy)",
-    last_price:     price,
-    change_percent: changePct != null ? +Number(changePct).toFixed(2) : null,
-    source:         "yahoo",
-  };
-  console.log(`[GIFT NIFTY] Yahoo ^NSEI fallback: ${price} (${data.change_percent}%)`);
-  _giftCache.data = data;
-  _giftCache.ts   = Date.now();
-  return res.json({ status: "success", data });
-} catch (yahooErr) {
-  console.error("[GIFT NIFTY] All sources failed:", yahooErr.message);
-  if (_giftCache.data) {
-    return res.json({ status: "success", data: _giftCache.data, stale: true });
-  }
-  return res.status(500).json({ status: "error", message: yahooErr.message });
-}
+  } catch (e) {
+    if (_giftCache.data) return res.json({ status: "success", data: _giftCache.data, stale: true });
+    return res.status(500).json({ status: "error", message: e.message });
   }
 });
-
-
-
 const GOLD_DUTY_FACTOR   = 1.146;
 const SILVER_DUTY_FACTOR = 1.146;
 
@@ -2337,18 +2438,123 @@ async function resolveUsdInrSymbol() {
   return _usdInrMeta.symbol;
 }
 
+// router.get("/usdinr", async (req, res) => {
+//   // 30-second cache
+//   if (_usdInrCache.data && Date.now() - _usdInrCache.ts < 30_000) {
+//     return res.json({ status: "success", data: _usdInrCache.data, cached: true });
+//   }
+
+//   // ── TIER 1: Kite CDS USDINR futures (most accurate — same as Zerodha app) ──
+//   try {
+//     const sym       = await resolveUsdInrSymbol();
+//     const kiteSymbol = `CDS:${sym}`;
+//     // ✅ FIX: Use /quote instead of /ohlc — /quote provides 'change' (% change) directly
+//     // /ohlc only gives last_price + ohlc fields, no 'change' field → manual calc drifts
+//     const r = await axios.get(
+//       `https://api.kite.trade/quote?${symQS([kiteSymbol])}`,
+//       { headers: headers(), timeout: 8000 }
+//     );
+//     const q = r.data?.data?.[kiteSymbol];
+//     if (!q) throw new Error(`No quote data for ${kiteSymbol}`);
+
+//     const price     = q.last_price;
+//     // ✅ FIX: price=0 reject karo — CDS band hone pe 0 aata hai, fallback trigger karo
+//     if (!price || price <= 0) throw new Error(`USDINR: invalid price (${price}) — market may be closed`);
+
+//     const prevClose = q.ohlc?.close ?? null;
+//     // ✅ FIX: 'change' = % change in /quote response (direct from Kite, matches Zerodha app)
+//     const changePct = (q.change != null && q.change !== 0)
+//       ? q.change
+//       : (price && prevClose && prevClose > 0
+//         ? ((price - prevClose) / prevClose) * 100
+//         : null);
+
+//     const data = {
+//       rate:       +price.toFixed(4),
+//       change_pct: changePct != null ? +changePct.toFixed(3) : null,
+//       symbol:     sym,
+//       ohlc:       q.ohlc,
+//       source:     "kite-cds",
+//     };
+//     _usdInrCache.data = data;
+//     _usdInrCache.ts   = Date.now();
+//     console.log(`[USDINR] Kite CDS: ₹${data.rate} (${data.change_pct?.toFixed(3)}%)`);
+//     return res.json({ status: "success", data });
+
+//   } catch (kiteErr) {
+//     console.warn(`[USDINR] Kite CDS failed (${kiteErr.message}) — trying NSE session`);
+//     _usdInrMeta.symbol = null; // force re-resolve
+//   }
+
+//   // ── TIER 2: NSE currency derivatives API ──
+//   try {
+//     const cookies = await getNseSession();
+//     const data    = await fetchUsdInrFromNse(cookies);
+//     _usdInrCache.data = data;
+//     _usdInrCache.ts   = Date.now();
+//     return res.json({ status: "success", data });
+//   } catch (nseErr) {
+//     console.warn(`[USDINR] NSE session failed (${nseErr.message}) — trying Yahoo`);
+//     // Retry with fresh session
+//     try {
+//       _nseSession.cookies = ""; _nseSession.ts = 0;
+//       const fresh = await getNseSession(true);
+//       const data  = await fetchUsdInrFromNse(fresh);
+//       _usdInrCache.data = data;
+//       _usdInrCache.ts   = Date.now();
+//       return res.json({ status: "success", data });
+//     } catch (nseErr2) {
+//       console.warn(`[USDINR] NSE retry failed (${nseErr2.message}) — falling back to Yahoo`);
+//     }
+//   }
+
+//   // ── TIER 3: Yahoo USDINR=X ──
+//   try {
+//     const fx = await fetchYahooSymbol("USDINR=X");
+//     const data = {
+//       rate:       +fx.price.toFixed(4),
+//       change_pct: +fx.changePct.toFixed(3),
+//       source:     "yahoo",
+//     };
+//     _usdInrCache.data = data;
+//     _usdInrCache.ts   = Date.now();
+//     console.log(`[USDINR] Yahoo fallback: ₹${data.rate} (${data.change_pct}%)`);
+//     return res.json({ status: "success", data });
+//   } catch (yahooErr) {
+//     console.error("[USDINR] All tiers failed:", yahooErr.message);
+//     if (_usdInrCache.data) {
+//       return res.json({ status: "success", data: _usdInrCache.data, stale: true });
+//     }
+//     return res.status(500).json({ status: "error", message: "USD/INR unavailable" });
+//   }
+// });
 router.get("/usdinr", async (req, res) => {
   // 30-second cache
   if (_usdInrCache.data && Date.now() - _usdInrCache.ts < 30_000) {
     return res.json({ status: "success", data: _usdInrCache.data, cached: true });
   }
 
-  // ── TIER 1: Kite CDS USDINR futures (most accurate — same as Zerodha app) ──
+  // ── TIER 1: Yahoo USDINR=X (primary — user preference, 24x7 available) ──
   try {
-    const sym       = await resolveUsdInrSymbol();
+    const fx = await fetchYahooSymbol("USDINR=X");
+    if (!fx?.price) throw new Error("Yahoo: no price returned");
+    const data = {
+      rate:       +fx.price.toFixed(4),
+      change_pct: +fx.changePct.toFixed(3),
+      source:     "yahoo",
+    };
+    _usdInrCache.data = data;
+    _usdInrCache.ts   = Date.now();
+    console.log(`[USDINR] Yahoo: ₹${data.rate} (${data.change_pct}%)`);
+    return res.json({ status: "success", data });
+  } catch (yahooErr) {
+    console.warn(`[USDINR] Yahoo failed (${yahooErr.message}) — trying Kite CDS`);
+  }
+
+  // ── TIER 2: Kite CDS USDINR futures (fallback) ──
+  try {
+    const sym        = await resolveUsdInrSymbol();
     const kiteSymbol = `CDS:${sym}`;
-    // ✅ FIX: Use /quote instead of /ohlc — /quote provides 'change' (% change) directly
-    // /ohlc only gives last_price + ohlc fields, no 'change' field → manual calc drifts
     const r = await axios.get(
       `https://api.kite.trade/quote?${symQS([kiteSymbol])}`,
       { headers: headers(), timeout: 8000 }
@@ -2357,11 +2563,9 @@ router.get("/usdinr", async (req, res) => {
     if (!q) throw new Error(`No quote data for ${kiteSymbol}`);
 
     const price     = q.last_price;
-    // ✅ FIX: price=0 reject karo — CDS band hone pe 0 aata hai, fallback trigger karo
-    if (!price || price <= 0) throw new Error(`USDINR: invalid price (${price}) — market may be closed`);
+    if (!price || price <= 0) throw new Error(`USDINR: invalid price (${price})`);
 
     const prevClose = q.ohlc?.close ?? null;
-    // ✅ FIX: 'change' = % change in /quote response (direct from Kite, matches Zerodha app)
     const changePct = (q.change != null && q.change !== 0)
       ? q.change
       : (price && prevClose && prevClose > 0
@@ -2377,15 +2581,15 @@ router.get("/usdinr", async (req, res) => {
     };
     _usdInrCache.data = data;
     _usdInrCache.ts   = Date.now();
-    console.log(`[USDINR] Kite CDS: ₹${data.rate} (${data.change_pct?.toFixed(3)}%)`);
+    console.log(`[USDINR] Kite CDS fallback: ₹${data.rate} (${data.change_pct?.toFixed(3)}%)`);
     return res.json({ status: "success", data });
 
   } catch (kiteErr) {
-    console.warn(`[USDINR] Kite CDS failed (${kiteErr.message}) — trying NSE session`);
-    _usdInrMeta.symbol = null; // force re-resolve
+    console.warn(`[USDINR] Kite CDS also failed (${kiteErr.message}) — trying NSE session`);
+    _usdInrMeta.symbol = null;
   }
 
-  // ── TIER 2: NSE currency derivatives API ──
+  // ── TIER 3: NSE currency derivatives (last resort) ──
   try {
     const cookies = await getNseSession();
     const data    = await fetchUsdInrFromNse(cookies);
@@ -2393,41 +2597,15 @@ router.get("/usdinr", async (req, res) => {
     _usdInrCache.ts   = Date.now();
     return res.json({ status: "success", data });
   } catch (nseErr) {
-    console.warn(`[USDINR] NSE session failed (${nseErr.message}) — trying Yahoo`);
-    // Retry with fresh session
-    try {
-      _nseSession.cookies = ""; _nseSession.ts = 0;
-      const fresh = await getNseSession(true);
-      const data  = await fetchUsdInrFromNse(fresh);
-      _usdInrCache.data = data;
-      _usdInrCache.ts   = Date.now();
-      return res.json({ status: "success", data });
-    } catch (nseErr2) {
-      console.warn(`[USDINR] NSE retry failed (${nseErr2.message}) — falling back to Yahoo`);
-    }
+    console.warn(`[USDINR] NSE also failed: ${nseErr.message}`);
   }
 
-  // ── TIER 3: Yahoo USDINR=X ──
-  try {
-    const fx = await fetchYahooSymbol("USDINR=X");
-    const data = {
-      rate:       +fx.price.toFixed(4),
-      change_pct: +fx.changePct.toFixed(3),
-      source:     "yahoo",
-    };
-    _usdInrCache.data = data;
-    _usdInrCache.ts   = Date.now();
-    console.log(`[USDINR] Yahoo fallback: ₹${data.rate} (${data.change_pct}%)`);
-    return res.json({ status: "success", data });
-  } catch (yahooErr) {
-    console.error("[USDINR] All tiers failed:", yahooErr.message);
-    if (_usdInrCache.data) {
-      return res.json({ status: "success", data: _usdInrCache.data, stale: true });
-    }
-    return res.status(500).json({ status: "error", message: "USD/INR unavailable" });
+  // ── Stale cache fallback ──
+  if (_usdInrCache.data) {
+    return res.json({ status: "success", data: _usdInrCache.data, stale: true });
   }
+  return res.status(500).json({ status: "error", message: "USD/INR unavailable" });
 });
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INDIA TRADING HOLIDAYS

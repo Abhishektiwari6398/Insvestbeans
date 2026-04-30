@@ -38,6 +38,7 @@ export const TOKEN_SYMBOL = {
   // ── NSE Volatility ──────────────────────────────────────────────
   264969:  "NSE:INDIA VIX",
   // ── NSE Sectoral Indices ────────────────────────────────────────
+  291849:  "NSE:GIFT NIFTY",
   258529:  "NSE:NIFTY IT",
   258049:  "NSE:NIFTY AUTO",
   259849:  "NSE:NIFTY PHARMA",
@@ -59,6 +60,8 @@ export const TOKEN_SYMBOL = {
   969473:  "NSE:WIPRO",
   356865:  "NSE:HINDUNILVR",
   424961:  "NSE:ITC",
+ 
+ 
 };
 
 // MCX commodity token map — populated dynamically at runtime
@@ -203,6 +206,7 @@ const INDEX_TOKENS = [
   258537,  // NIFTY FMCG
   258409,  // NIFTY ENERGY
   260649,  // NIFTY PSU BANK
+  291849,
 ];
 
 const STOCK_TOKENS = [738561, 2953217, 341249, 408065, 1270529, 969473, 356865, 424961];

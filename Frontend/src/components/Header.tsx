@@ -516,14 +516,37 @@ const Header = () => {
 
   const closeMobile = () => setIsMobileMenuOpen(false);
 
+  // const getUserInitials = () => {
+  //   if (!user?.name) return "U";
+  //   const names = user.name.split(" ");
+  //   return names.length >= 2
+  //     ? `${names[0][0]}${names[1][0]}`.toUpperCase()
+  //     : user.name.substring(0, 2).toUpperCase();
+  // };
   const getUserInitials = () => {
-    if (!user?.name) return "U";
-    const names = user.name.split(" ");
-    return names.length >= 2
-      ? `${names[0][0]}${names[1][0]}`.toUpperCase()
-      : user.name.substring(0, 2).toUpperCase();
+    const fullName =
+      user?.name ||
+   
+      user?.email ||
+      "";
+  
+    if (!fullName.trim()) return "U";
+  
+    const cleanName = fullName.trim();
+  
+    // CamelCase split: InvestBeans -> Invest Beans
+    const words = cleanName
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .split(/\s+/);
+  
+    // 2+ words => first letters
+    if (words.length >= 2) {
+      return `${words[0][0]}${words[1][0]}`.toUpperCase();
+    }
+  
+    // Single word => first 2 letters
+    return cleanName.substring(0, 2).toUpperCase();
   };
-
   const handleSignOut = async () => {
     await signOut(() => {
       showToast("Logged out successfully. See you soon!", "success");
