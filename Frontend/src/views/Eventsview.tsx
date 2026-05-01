@@ -1150,7 +1150,7 @@ const EventTerminalCard: React.FC<{
   const Icon = catCfg.icon;
   const catColor = (tk as any)[catCfg.colorKey] ?? tk.accent;
   const d = parseDate(event.date);
-  const hasDetail = !!(event.whatHappened || event.whyItMatters || event.marketImpact || event.whoAffected);
+  const hasDetail = !!(event.whatHappened || event.whyItMatters || event.marketImpact || event.whoAffected || event.investbeansInsight);
   const miCfg = event.marketImpact ? MI_CONFIG[event.marketImpact] : null;
   const MiIcon = miCfg?.icon ?? Minus;
   const miColor = miCfg ? (tk as any)[miCfg.colorKey] : tk.textMuted;
@@ -1450,6 +1450,24 @@ const EventTerminalCard: React.FC<{
                   {event.whoAffected.sectors.join("  ·  ")}
                 </p>
               )}
+            </div>
+          )}
+
+          {/* 4 — InvestBeans Insight */}
+          {event.investbeansInsight && (
+            <div style={{ padding: "12px 18px", borderBottom: `1px solid ${tk.border}`, background: tk.elevated }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", color: tk.purple }}>04 — INVESTBEANS INSIGHT</span>
+                <Zap size={10} color={tk.purple} />
+              </div>
+              <p style={{
+                fontSize: 11.5, color: tk.textSecond, margin: 0, lineHeight: 1.75,
+                padding: "8px 12px", borderRadius: 6,
+                background: `${tk.purple}0d`,
+                border: `1px solid ${tk.purple}22`,
+              }}>
+                {event.investbeansInsight}
+              </p>
             </div>
           )}
 
