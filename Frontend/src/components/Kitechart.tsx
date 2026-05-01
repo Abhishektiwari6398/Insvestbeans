@@ -644,12 +644,12 @@ const KiteChart = ({ height = '600px' }: { height?: string }) => {
         <h3 className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-widest mb-1.5 ${nameCls}`}>
           {symbol.exchange && <span className="mr-1 opacity-60">{symbol.exchange}:</span>}
           {symbol.label}
-          <span className="ml-2 text-[9px] font-semibold px-1.5 py-0.5 rounded" style={{
+          {/* <span className="ml-2 text-[9px] font-semibold px-1.5 py-0.5 rounded" style={{
             background: dark ? 'rgba(34,197,94,0.12)' : 'rgba(34,197,94,0.1)',
             color: '#22c55e', border: '1px solid rgba(34,197,94,0.25)',
           }}>
             Zerodha Live
-          </span>
+          </span> */}
         </h3>
 
         <div className="flex items-start justify-between mb-2">

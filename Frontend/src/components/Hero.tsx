@@ -173,13 +173,13 @@ const SensexNiftyCard = ({ cardBg, cardBorder, cardShadow, isLight, sensex, nift
 const FiiDiiCard = ({ cardBg, cardBorder, cardShadow, isLight, fiiNet, diiNet, fiiDate }) => {
   // fiiNet < 0 → selling, diiNet > 0 → buying (values in Crores)
   // null means data unavailable (VPS IP blocked by NSE) — show placeholder instead of blank
-  const loading  = false; // never block render
+  const loading = false; // never block render
   const dataUnavailable = fiiNet == null && diiNet == null;
-  const absFii   = Math.abs(fiiNet ?? 0);
-  const absDii   = Math.abs(diiNet ?? 0);
-  const total    = absFii + absDii || 1;
-  const fiiPct   = Math.round((absFii / total) * 100);
-  const diiPct   = 100 - fiiPct;
+  const absFii = Math.abs(fiiNet ?? 0);
+  const absDii = Math.abs(diiNet ?? 0);
+  const total = absFii + absDii || 1;
+  const fiiPct = Math.round((absFii / total) * 100);
+  const diiPct = 100 - fiiPct;
   // ── BUG FIX: derive buying/selling direction from actual net values ──
   const fiiBuying = (fiiNet ?? 0) >= 0;
   const diiBuying = (diiNet ?? 0) >= 0;
@@ -213,22 +213,22 @@ const FiiDiiCard = ({ cardBg, cardBorder, cardShadow, isLight, fiiNet, diiNet, f
             <div style={{ fontSize: "8px", color: isLight ? "#0A3656" : "#74A8C9", marginTop: 4, fontWeight: 600 }}>Auto-refreshes every 5 min</div>
           </div>
         ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 8 }}>
-          <div style={{ background: fiiBuying ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${fiiBuying ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`, borderRadius: 8, padding: "5px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div>
-              <div style={{ fontSize: "8px", fontWeight: 700, color: fiiBuying ? "rgba(34,197,94,0.7)" : "rgba(239,68,68,0.7)", marginBottom: 1 }}>FII {fiiBuying ? "BUY" : "SELL"}</div>
-              <div style={{ fontSize: "8px", color: fiiBuying ? "rgba(34,197,94,0.6)" : "rgba(239,68,68,0.6)" }}>{fiiBuying ? "inflow" : "outflow"}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 8 }}>
+            <div style={{ background: fiiBuying ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${fiiBuying ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`, borderRadius: 8, padding: "5px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontSize: "8px", fontWeight: 700, color: fiiBuying ? "rgba(34,197,94,0.7)" : "rgba(239,68,68,0.7)", marginBottom: 1 }}>FII {fiiBuying ? "BUY" : "SELL"}</div>
+                <div style={{ fontSize: "8px", color: fiiBuying ? "rgba(34,197,94,0.6)" : "rgba(239,68,68,0.6)" }}>{fiiBuying ? "inflow" : "outflow"}</div>
+              </div>
+              <div style={{ fontSize: "12px", fontWeight: 800, color: fiiValueColor }}>{fiiLabel}</div>
             </div>
-            <div style={{ fontSize: "12px", fontWeight: 800, color: fiiValueColor }}>{fiiLabel}</div>
-          </div>
-          <div style={{ background: diiBuying ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${diiBuying ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`, borderRadius: 8, padding: "5px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div>
-              <div style={{ fontSize: "8px", fontWeight: 700, color: diiBuying ? "rgba(34,197,94,0.7)" : "rgba(239,68,68,0.7)", marginBottom: 1 }}>DII {diiBuying ? "BUY" : "SELL"}</div>
-              <div style={{ fontSize: "8px", color: diiBuying ? "rgba(34,197,94,0.6)" : "rgba(239,68,68,0.6)" }}>{diiBuying ? "inflow" : "outflow"}</div>
+            <div style={{ background: diiBuying ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${diiBuying ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`, borderRadius: 8, padding: "5px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontSize: "8px", fontWeight: 700, color: diiBuying ? "rgba(34,197,94,0.7)" : "rgba(239,68,68,0.7)", marginBottom: 1 }}>DII {diiBuying ? "BUY" : "SELL"}</div>
+                <div style={{ fontSize: "8px", color: diiBuying ? "rgba(34,197,94,0.6)" : "rgba(239,68,68,0.6)" }}>{diiBuying ? "inflow" : "outflow"}</div>
+              </div>
+              <div style={{ fontSize: "12px", fontWeight: 800, color: diiValueColor }}>{diiLabel}</div>
             </div>
-            <div style={{ fontSize: "12px", fontWeight: 800, color: diiValueColor }}>{diiLabel}</div>
           </div>
-        </div>
         )}
         <div style={{ height: 5, borderRadius: 99, overflow: "hidden", display: "flex", gap: 2 }}>
           <div style={{ width: `${fiiPct}%`, background: fiiBarGrad, borderRadius: 99 }} />
@@ -259,19 +259,19 @@ const FiiDiiCard = ({ cardBg, cardBorder, cardShadow, isLight, fiiNet, diiNet, f
             <span className={`text-[9px] font-semibold ${isLight ? "text-[#0A3656]/60" : "text-[#74A8C9]/60"}`}>Auto-refreshes every 5 min</span>
           </div>
         ) : (<>
-        <div className="flex justify-between items-end mb-2">
-          <div><div className={`text-[11px] font-semibold mb-1 ${isLight ? "text-navy/50" : "text-white/40"}`}>FII</div><div className={`text-base md:text-lg font-bold ${fiiBuying ? "text-emerald-400" : "text-red-400"}`}>{fiiLabel}</div></div>
-          <div className="text-right"><div className={`text-[11px] font-semibold mb-1 ${isLight ? "text-navy/50" : "text-white/40"}`}>DII</div><div className={`text-base md:text-lg font-bold ${diiBuying ? "text-emerald-400" : "text-red-400"}`}>{diiLabel}</div></div>
-        </div>
-        <div className="h-2.5 rounded-full overflow-hidden flex" style={{ background: isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)" }}>
-          <div style={{ width: `${fiiPct}%`, background: fiiBarGrad, borderRadius: "999px 0 0 999px" }} />
-          <div style={{ width: `${diiPct}%`, background: diiBarGrad, borderRadius: "0 999px 999px 0" }} />
-        </div>
-        <div className="flex justify-between mt-1.5">
-          <span className={`text-[10px] font-semibold ${fiiBuying ? "text-emerald-400/80" : "text-red-400/80"}`}>{`${fiiPct}% ${fiiBuying ? "buying" : "selling"}`}</span>
-          <span className={`text-[10px] font-semibold ${diiBuying ? "text-emerald-400/80" : "text-red-400/80"}`}>{`${diiPct}% ${diiBuying ? "buying" : "selling"}`}</span>
-        </div>
-        {dateLabel && <div className={`text-[9px] mt-1.5 ${isLight ? "text-navy/35" : "text-white/30"}`}>{dateLabel}</div>}
+          <div className="flex justify-between items-end mb-2">
+            <div><div className={`text-[11px] font-semibold mb-1 ${isLight ? "text-navy/50" : "text-white/40"}`}>FII</div><div className={`text-base md:text-lg font-bold ${fiiBuying ? "text-emerald-400" : "text-red-400"}`}>{fiiLabel}</div></div>
+            <div className="text-right"><div className={`text-[11px] font-semibold mb-1 ${isLight ? "text-navy/50" : "text-white/40"}`}>DII</div><div className={`text-base md:text-lg font-bold ${diiBuying ? "text-emerald-400" : "text-red-400"}`}>{diiLabel}</div></div>
+          </div>
+          <div className="h-2.5 rounded-full overflow-hidden flex" style={{ background: isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)" }}>
+            <div style={{ width: `${fiiPct}%`, background: fiiBarGrad, borderRadius: "999px 0 0 999px" }} />
+            <div style={{ width: `${diiPct}%`, background: diiBarGrad, borderRadius: "0 999px 999px 0" }} />
+          </div>
+          <div className="flex justify-between mt-1.5">
+            <span className={`text-[10px] font-semibold ${fiiBuying ? "text-emerald-400/80" : "text-red-400/80"}`}>{`${fiiPct}% ${fiiBuying ? "buying" : "selling"}`}</span>
+            <span className={`text-[10px] font-semibold ${diiBuying ? "text-emerald-400/80" : "text-red-400/80"}`}>{`${diiPct}% ${diiBuying ? "buying" : "selling"}`}</span>
+          </div>
+          {dateLabel && <div className={`text-[9px] mt-1.5 ${isLight ? "text-navy/35" : "text-white/30"}`}>{dateLabel}</div>}
         </>)}
       </div>
     </div>
@@ -415,16 +415,16 @@ const UsdInrCard = ({ cardBg, cardBorder, cardShadow, isLight, liveValue, liveCh
   // Source badge label
   const sourceLabel = source === "kite-cds" ? "via Kite CDS"
     : source === "nse-cd" || source === "nse-cd2" ? "via NSE"
-    : "via Yahoo Finance";
+      : "via Yahoo Finance";
   const sourceBadgeColor = source?.startsWith("kite") ? "#0ea5e9"
     : source?.startsWith("nse") ? "#f59e0b"
-    : "#6366f1";
+      : "#6366f1";
   const sourceBadgeBg = source?.startsWith("kite") ? "rgba(14,165,233,0.1)"
     : source?.startsWith("nse") ? "rgba(245,158,11,0.1)"
-    : "rgba(99,102,241,0.1)";
+      : "rgba(99,102,241,0.1)";
   const sourceBadgeBorder = source?.startsWith("kite") ? "rgba(14,165,233,0.25)"
     : source?.startsWith("nse") ? "rgba(245,158,11,0.25)"
-    : "rgba(99,102,241,0.25)";
+      : "rgba(99,102,241,0.25)";
   return (
     <div style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, backdropFilter: "blur(12px)" }} className="rounded-2xl relative overflow-hidden group hover:border-blue-400/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer md:p-3">
       <div className="md:hidden" style={{ padding: "10px 10px 10px 14px", position: "relative" }}>
@@ -552,7 +552,7 @@ const GoldSilverCard = ({ cardBg, cardBorder, cardShadow, isLight, liveGold, liv
         </div>
         <div className="space-y-2">
           {[
-            { Icon: GoldBrickIcon,   label: "Gold",   price: fmtPrice(gold),   chg: fmtChg(goldChg, goldPos),     pos: goldPos,   bar: "linear-gradient(90deg,#C9A84C,#f5d78e)", barW: "72%", unit: "per 10g" },
+            { Icon: GoldBrickIcon, label: "Gold", price: fmtPrice(gold), chg: fmtChg(goldChg, goldPos), pos: goldPos, bar: "linear-gradient(90deg,#C9A84C,#f5d78e)", barW: "72%", unit: "per 10g" },
             { Icon: SilverBrickIcon, label: "Silver", price: fmtPrice(silver), chg: fmtChg(silverChg, silverPos), pos: silverPos, bar: "linear-gradient(90deg,#94a3b8,#cbd5e1)", barW: "58%", unit: "per kg" },
           ].map(({ Icon, label, price, chg, pos, bar, barW, unit }) => (
             <div key={label}>
@@ -584,10 +584,10 @@ const GoldSilverCard = ({ cardBg, cardBorder, cardShadow, isLight, liveGold, liv
 // ─── US Stat Card ────────────────────────────────────────────────────────────
 // TradingView URLs for US stat cards
 const TV_URLS: Record<string, string> = {
-  "NASDAQ":    "https://www.tradingview.com/symbols/NASDAQ-NDX/",
+  "NASDAQ": "https://www.tradingview.com/symbols/NASDAQ-IXIC/",
   "Dow Jones": "https://www.tradingview.com/symbols/DJ-DJI/",
   "USD / INR": "https://www.tradingview.com/symbols/USDINR/",
-  "Gold":      "https://www.tradingview.com/symbols/COMEX-GC1!/",
+  "Gold": "https://www.tradingview.com/symbols/COMEX-GC1!/",
 };
 
 const USStatCard = ({ label, value, absPrice, absPricePrefix, positive, cardBg, cardBorder, cardShadow, isLight }) => {
@@ -700,9 +700,9 @@ const Hero = () => {
       const data = await fetchKiteQuote(API, symbols);
       setBharatData(prev => ({
         ...prev,
-        nifty50:  parseKiteItem(data, "NSE:NIFTY 50")   ?? prev.nifty50,
-        sensex:   parseKiteItem(data, "BSE:SENSEX")      ?? prev.sensex,
-        indiaVix: parseKiteItem(data, "NSE:INDIA VIX")   ?? prev.indiaVix,
+        nifty50: parseKiteItem(data, "NSE:NIFTY 50") ?? prev.nifty50,
+        sensex: parseKiteItem(data, "BSE:SENSEX") ?? prev.sensex,
+        indiaVix: parseKiteItem(data, "NSE:INDIA VIX") ?? prev.indiaVix,
       }));
     };
     load();
@@ -748,28 +748,28 @@ const Hero = () => {
     fetch(`${API}/markets/global`)
       .then(r => r.json())
       .then(data => {
-        const us    = data?.indices?.us   || [];
-        const comms = data?.commodities    || [];
-  
-        const nasdaq  = us.find(m => m.symbol === "^IXIC");
-        const dow     = us.find(m => m.symbol === "^DJI");
-        const gold    = comms.find(m => m.symbol === "GC=F");
-  
+        const us = data?.indices?.us || [];
+        const comms = data?.commodities || [];
+
+        const nasdaq = us.find(m => m.symbol === "^IXIC");
+        const dow = us.find(m => m.symbol === "^DJI");
+        const gold = comms.find(m => m.symbol === "GC=F");
+
         const fmt = (v) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
-  
+
         setUsData({
-          nasdaq:    nasdaq ? fmt(nasdaq.changePercent) : "N/A",
-          gold:      gold   ? fmt(gold.changePercent)   : "N/A",
-          dow:       dow    ? fmt(dow.changePercent)    : "N/A",
+          nasdaq: nasdaq ? fmt(nasdaq.changePercent) : "N/A",
+          gold: gold ? fmt(gold.changePercent) : "N/A",
+          dow: dow ? fmt(dow.changePercent) : "N/A",
 
           nasdaqPos: nasdaq ? nasdaq.changePercent >= 0 : null,
-          goldPos:   gold   ? gold.changePercent >= 0   : null,
-          dowPos:    dow    ? dow.changePercent >= 0    : null,
+          goldPos: gold ? gold.changePercent >= 0 : null,
+          dowPos: dow ? dow.changePercent >= 0 : null,
 
           // Absolute prices
           nasdaqPrice: nasdaq?.price ?? null,
-          goldPrice:   gold?.price   ?? null,
-          dowPrice:    dow?.price    ?? null,
+          goldPrice: gold?.price ?? null,
+          dowPrice: dow?.price ?? null,
 
           // ❌ USDINR removed from here
           usdInr: "N/A",
@@ -778,7 +778,7 @@ const Hero = () => {
           usdInrAbsPrice: null,
         });
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [API]);
 
   // ── USD/INR — dedicated accurate route (Kite CDS futures → NSE → Yahoo) ───
@@ -786,9 +786,9 @@ const Hero = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const r   = await fetch(`${API}/kite/usdinr`);
+        const r = await fetch(`${API}/kite/usdinr`);
         const json = await r.json();
-        const fx   = json?.data;
+        const fx = json?.data;
         if (!fx) return;
 
         const fmt = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
@@ -797,9 +797,9 @@ const Hero = () => {
         // ✅ FIX: rate=0 aur change_pct=null dono guard karo
         setUsData(prev => ({
           ...prev,
-          usdInr:        fx.change_pct != null ? fmt(fx.change_pct) : prev.usdInr,
-          usdInrPos:     fx.change_pct != null ? fx.change_pct >= 0 : prev.usdInrPos,
-          usdInrRate:    (fx.rate && fx.rate > 0) ? fx.rate : prev.usdInrRate,
+          usdInr: fx.change_pct != null ? fmt(fx.change_pct) : prev.usdInr,
+          usdInrPos: fx.change_pct != null ? fx.change_pct >= 0 : prev.usdInrPos,
+          usdInrRate: (fx.rate && fx.rate > 0) ? fx.rate : prev.usdInrRate,
           usdInrAbsPrice: (fx.rate && fx.rate > 0) ? fx.rate : prev.usdInrAbsPrice,
         }));
 
@@ -807,32 +807,32 @@ const Hero = () => {
         // ✅ FIX: rate=0 reject karo (CDS band hone pe 0 aata hai) — prev value rakhho
         setBharatData(prev => ({
           ...prev,
-          usdInr:       (fx.rate && fx.rate > 0)       ? fx.rate       : prev.usdInr,
-          usdInrChange: (fx.change_pct != null)         ? fx.change_pct : prev.usdInrChange,
-          usdInrSource: fx.source                      ?? prev.usdInrSource,
+          usdInr: (fx.rate && fx.rate > 0) ? fx.rate : prev.usdInr,
+          usdInrChange: (fx.change_pct != null) ? fx.change_pct : prev.usdInrChange,
+          usdInrSource: fx.source ?? prev.usdInrSource,
         }));
-      } catch (_) {}
+      } catch (_) { }
     };
     load();
     // NSE CDS is open 9:00–17:00 IST; refresh every 30s
     const t = setInterval(load, 30000);
     return () => clearInterval(t);
   }, [API]);
-  
+
   // ── GIFT NIFTY — Kite NSE_IFSC near-month futures ───────────────────────
   useEffect(() => {
     const load = async () => {
       try {
-        const r    = await fetch(`${API}/kite/gift-nifty`);
+        const r = await fetch(`${API}/kite/gift-nifty`);
         const json = await r.json();
         if (json.status === "success" && json.data?.last_price) {
           setBharatData(prev => ({
             ...prev,
-            giftNifty:       json.data.last_price      ?? prev.giftNifty,
-            giftNiftyChange: json.data.change_percent  ?? prev.giftNiftyChange,
+            giftNifty: json.data.last_price ?? prev.giftNifty,
+            giftNiftyChange: json.data.change_percent ?? prev.giftNiftyChange,
           }));
         }
-      } catch (_) {}
+      } catch (_) { }
     };
     load();
     const t = setInterval(load, 30000);
@@ -845,21 +845,21 @@ const Hero = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const r    = await fetch(`${API}/kite/commodities`);
+        const r = await fetch(`${API}/kite/commodities`);
         const json = await r.json();
         if (json.status === "success" && json.data) {
           const { gold, silver } = json.data;
           setBharatData(prev => ({
             ...prev,
-            goldInr:      gold?.price_per_10g   ?? prev.goldInr,
-            goldChange:   gold?.change_percent  ?? prev.goldChange,
-            goldSource:   gold?.source          ?? "kite-mcx",
-            silverInr:    silver?.price_per_kg  ?? prev.silverInr,
+            goldInr: gold?.price_per_10g ?? prev.goldInr,
+            goldChange: gold?.change_percent ?? prev.goldChange,
+            goldSource: gold?.source ?? "kite-mcx",
+            silverInr: silver?.price_per_kg ?? prev.silverInr,
             silverChange: silver?.change_percent ?? prev.silverChange,
-            silverSource: silver?.source        ?? "kite-mcx",
+            silverSource: silver?.source ?? "kite-mcx",
           }));
         }
-      } catch (_) {}
+      } catch (_) { }
     };
     load();
     // MCX market hours: refresh every 30s during market, 5min otherwise
@@ -871,18 +871,18 @@ const Hero = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const r    = await fetch(`${API}/kite/fii-dii`);
+        const r = await fetch(`${API}/kite/fii-dii`);
         const json = await r.json();
         if (json.status === "success" && json.data) {
           const { fii, dii } = json.data;
           setBharatData(prev => ({
             ...prev,
-            fiiNet:  fii?.net  ?? prev.fiiNet,
-            diiNet:  dii?.net  ?? prev.diiNet,
+            fiiNet: fii?.net ?? prev.fiiNet,
+            diiNet: dii?.net ?? prev.diiNet,
             fiiDate: fii?.date ?? prev.fiiDate,
           }));
         }
-      } catch (_) {}
+      } catch (_) { }
     };
     load();
     const t = setInterval(load, 5 * 60 * 1000);   // NSE updates a few times/day
@@ -969,8 +969,8 @@ const Hero = () => {
           >
             Where Vision Meets Values
           </h1>
-            {/* ── Coming Soon badge ── */}
-            <div style={{ marginTop: 10, marginBottom: 8 }}>
+          {/* ── Coming Soon badge ── */}
+          <div style={{ marginTop: 10, marginBottom: 8 }}>
             <span style={{
               display: "inline-flex", alignItems: "center", gap: 7,
               padding: "4px 12px 4px 6px", borderRadius: 99,
@@ -1014,7 +1014,7 @@ const Hero = () => {
             , not assumptions.
           </p>
 
-        
+
 
           {/* Divider + Tab Switcher */}
           <div className="flex flex-col items-center" style={{ marginTop: 12 }}>
@@ -1086,12 +1086,10 @@ const Hero = () => {
                 positive={usData.usdInrPos ?? (bharatData.usdInrChange != null ? bharatData.usdInrChange >= 0 : null)}
                 cardBg={cardBg} cardBorder={cardBorder} cardShadow={cardShadow} isLight={isLight} />
               <USStatCard label="Gold"
-                value={bharatData.goldChange != null
-                  ? `${bharatData.goldChange >= 0 ? "+" : ""}${bharatData.goldChange.toFixed(2)}%`
-                  : usData.gold}
-                absPrice={bharatData.goldInr ?? usData.goldPrice}
-                absPricePrefix={bharatData.goldInr ? "₹" : "$"}
-                positive={bharatData.goldChange != null ? bharatData.goldChange >= 0 : usData.goldPos}
+                value={usData.gold}
+                absPrice={usData.goldPrice}
+                absPricePrefix=""
+                positive={usData.goldPos}
                 cardBg={cardBg} cardBorder={cardBorder} cardShadow={cardShadow} isLight={isLight} />
             </div>
           )}

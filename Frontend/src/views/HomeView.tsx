@@ -24,13 +24,53 @@ type HomeViewProps = { activeTab: ActiveTab; onChangeTab: (tab: ActiveTab) => vo
 
 
 // ── ZerodhaMarketClock: IST clock + market open/closed status ──────────────
+// ✅ FIXED: Dynamic NSE holiday fetch — holiday pe bhi sahi "Market Closed" dikhega
 const ZerodhaMarketClock = ({ isLight }: { isLight: boolean }) => {
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow]             = useState(() => new Date());
+  const [isHoliday, setIsHoliday] = useState(false);
 
+  const API = import.meta.env.VITE_API_URL ?? "http://localhost:8080/api/v1";
+
+  // Tick every second — clock update
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // ✅ NSE holidays dynamically fetch karo — din mein ek baar kaafi hai
+  useEffect(() => {
+    const fetchHolidays = async () => {
+      try {
+        const year  = new Date().getFullYear();
+        const r     = await fetch(`${API}/kite/holidays?year=${year}`);
+        const json  = await r.json();
+        const dates: string[] = (json?.data ?? []).map((h: any) => h.date as string);
+
+        // Aaj ki IST date "YYYY-MM-DD" format mein
+        const istMs   = Date.now() + (5.5 * 60 * 60 * 1000);
+        const istDate = new Date(istMs);
+        const today   = [
+          istDate.getUTCFullYear(),
+          String(istDate.getUTCMonth() + 1).padStart(2, "0"),
+          String(istDate.getUTCDate()).padStart(2, "0"),
+        ].join("-");
+
+        setIsHoliday(dates.includes(today));
+        console.log(`[MarketClock] Today: ${today} | Holiday: ${dates.includes(today)} | Total holidays: ${dates.length}`);
+      } catch (e) {
+        // Fail silently — default to non-holiday (time-based check still works)
+        setIsHoliday(false);
+      }
+    };
+
+    fetchHolidays();
+    // Roz midnight ke baad refresh karo (new day = new holiday check)
+    const midnight = new Date();
+    midnight.setHours(24, 0, 0, 0);
+    const msUntilMidnight = midnight.getTime() - Date.now();
+    const timer = setTimeout(() => fetchHolidays(), msUntilMidnight);
+    return () => clearTimeout(timer);
+  }, [API]);
 
   // Convert to IST (UTC+5:30)
   const IST_OFFSET = 5.5 * 60 * 60 * 1000;
@@ -43,15 +83,17 @@ const ZerodhaMarketClock = ({ isLight }: { isLight: boolean }) => {
   const mins = hh * 60 + mm;
 
   // NSE/BSE hours: 9:15 AM – 3:30 PM IST, Mon–Fri
-  const dayOfWeek  = istDate.getUTCDay(); // 0=Sun, 6=Sat
-  const isWeekday  = dayOfWeek >= 1 && dayOfWeek <= 5;
-  const OPEN_MIN   = 9 * 60 + 15;  // 555
-  const CLOSE_MIN  = 15 * 60 + 30; // 930
-  const isOpen     = isWeekday && mins >= OPEN_MIN && mins <= CLOSE_MIN;
+  const dayOfWeek = istDate.getUTCDay(); // 0=Sun, 6=Sat
+  const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+  const OPEN_MIN  = 9 * 60 + 15;   // 555
+  const CLOSE_MIN = 15 * 60 + 30;  // 930
 
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const period = hh < 12 ? "AM" : "PM";
-  const h12    = hh % 12 || 12;
+  // ✅ Holiday check include — holiday pe "Market Closed" dikhega
+  const isOpen = isWeekday && !isHoliday && mins >= OPEN_MIN && mins <= CLOSE_MIN;
+
+  const pad     = (n: number) => String(n).padStart(2, "0");
+  const period  = hh < 12 ? "AM" : "PM";
+  const h12     = hh % 12 || 12;
   const timeStr = `${pad(h12)}:${pad(mm)}:${pad(ss)} ${period} IST`;
 
   return (

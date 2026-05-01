@@ -1303,11 +1303,24 @@ router.get("/gift-nifty", async (req, res) => {
     // const tick = ticks[GIFT_TOKEN];
     const tick  = ticks["NSE:GIFT NIFTY"];
 
+    // if (tick?.last_price) {
+    //   const lastPrice = tick.last_price;
+    //   const prevClose = tick.ohlc?.close ?? null;
+    //   const changePct = (lastPrice && prevClose)
+    //     ? +((( lastPrice - prevClose) / prevClose) * 100).toFixed(2)
+    //     : null;
     if (tick?.last_price) {
       const lastPrice = tick.last_price;
+    
+      // Kite quote mode mein 'change' = absolute change, ohlc.close = prev close
+      // net_change % = (change / (last_price - change)) * 100
+      const absChange = tick.change ?? null;
       const prevClose = tick.ohlc?.close ?? null;
-      const changePct = (lastPrice && prevClose)
-        ? +((( lastPrice - prevClose) / prevClose) * 100).toFixed(2)
+    
+      const changePct = absChange != null && prevClose && prevClose > 0
+      ? +((absChange / prevClose) * 100).toFixed(2)
+      : (lastPrice && prevClose && prevClose > 0)
+        ? +(((lastPrice - prevClose) / prevClose) * 100).toFixed(2)
         : null;
 
       const data = {
@@ -1334,7 +1347,7 @@ router.get("/gift-nifty", async (req, res) => {
 
   // TIER 2: Yahoo fallback
   try {
-    const { price, changePct } = await fetchYahooSymbol("^NSEI");
+    const { price, changePct } = await fetchYahooSymbol("^NIFTY1!");
     const data = {
       symbol:         "GIFT NIFTY (approx)",
       last_price:     price,
@@ -2737,7 +2750,11 @@ router.get("/holidays", async (req, res) => {
         return d.getFullYear() === year;
       })
       .map((h, i) => ({
-        date:   new Date(h.tradingDate).toISOString().split("T")[0],
+        date: (() => {
+          const d = new Date(h.tradingDate);
+          const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+          return `${ist.getUTCFullYear()}-${String(ist.getUTCMonth()+1).padStart(2,"0")}-${String(ist.getUTCDate()).padStart(2,"0")}`;
+        })(),
         reason: h.description ?? h.reason ?? "Market Holiday",
       }));
 

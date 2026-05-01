@@ -136,7 +136,8 @@ export async function fetchMCXTokens(apiKey, accessToken) {
         !i.tradingsymbol.includes("MICRO") &&
         !i.tradingsymbol.includes("PETAL") &&
         !i.tradingsymbol.includes("GUINEA") &&
-        !i.tradingsymbol.includes("TEN")
+        !i.tradingsymbol.includes("TEN") &&
+        !new RegExp(`^${cfg.tradingSymbol}M\\d`).test(i.tradingsymbol) 
       );
 
       if (contracts.length === 0) {
