@@ -34,4 +34,20 @@ jobs:
         working-directory: ./Backend
         run: npm install
 
-      # Step 5: Render handles deployment automatically after this build check passes
+      # Step 5: Deploy to VPS via SSH
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          script: |
+            cd /var/www/investbeans
+            git pull origin main
+            cd Frontend
+            npm install
+            npm run build
+            cd ../Backend
+            npm install
+            pm2 restart investbeans-backend
+            echo "Deployment Complete!"
