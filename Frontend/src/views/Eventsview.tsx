@@ -29,11 +29,11 @@ import {
 
 // ─── API base ─────────────────────────────────────────────────────────────────
 const _ROOT = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/api\/v1\/?$/, "");
-const API   = `${_ROOT}/api/v1`;
+const API = `${_ROOT}/api/v1`;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type Region   = "india" | "global";
-type Section  = "events" | "holidays";
+type Region = "india" | "global";
+type Section = "events" | "holidays";
 type Category = "monetary" | "budget" | "earnings" | "economic" | "policy" | "holiday" | "geopolitical";
 
 interface ApiEvent {
@@ -73,56 +73,56 @@ interface BannerInsight {
 
 // ─── Static fallbacks ─────────────────────────────────────────────────────────
 const INDIA_HOLIDAYS_STATIC: MarketEvent[] = [
-  { id:"h-in-01", date:"2025-01-26", title:"Republic Day", description:"NSE & BSE closed.", region:"india", category:"holiday", impact:"Medium", source:"static" },
-  { id:"h-in-02", date:"2025-02-26", title:"Mahashivratri", description:"NSE & BSE closed.", region:"india", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-in-03", date:"2025-03-14", title:"Holi", description:"NSE & BSE closed.", region:"india", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-in-04", date:"2025-03-31", title:"Id-Ul-Fitr (Eid)", description:"NSE & BSE closed.", region:"india", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-in-05", date:"2025-04-10", title:"Shri Ram Navami", description:"NSE & BSE closed.", region:"india", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-in-06", date:"2025-04-14", title:"Dr. Ambedkar Jayanti", description:"NSE & BSE closed.", region:"india", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-in-07", date:"2025-04-18", title:"Good Friday", description:"NSE & BSE closed.", region:"india", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-in-08", date:"2025-05-01", title:"Maharashtra Day", description:"BSE closed. NSE open.", region:"india", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-in-09", date:"2025-08-15", title:"Independence Day", description:"NSE & BSE closed.", region:"india", category:"holiday", impact:"Medium", source:"static" },
-  { id:"h-in-10", date:"2025-08-27", title:"Ganesh Chaturthi", description:"NSE & BSE closed.", region:"india", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-in-11", date:"2025-10-02", title:"Gandhi Jayanti / Dussehra", description:"NSE & BSE closed.", region:"india", category:"holiday", impact:"Medium", source:"static" },
-  { id:"h-in-12", date:"2025-10-20", title:"Diwali — Laxmi Puja", description:"NSE & BSE closed. Special Muhurat Trading after market hours.", region:"india", category:"holiday", impact:"High", source:"static" },
-  { id:"h-in-13", date:"2025-10-21", title:"Diwali — Balipratipada", description:"NSE & BSE closed.", region:"india", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-in-14", date:"2025-11-05", title:"Guru Nanak Jayanti", description:"NSE & BSE closed.", region:"india", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-in-15", date:"2025-12-25", title:"Christmas", description:"NSE & BSE closed.", region:"india", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-in-16", date:"2026-01-26", title:"Republic Day 2026", description:"NSE & BSE closed.", region:"india", category:"holiday", impact:"Medium", source:"static" },
-  { id:"h-in-17", date:"2026-02-14", title:"Maha Shivratri 2026", description:"NSE & BSE closed (tentative).", region:"india", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-in-18", date:"2026-03-04", title:"Holi 2026", description:"NSE & BSE closed (tentative).", region:"india", category:"holiday", impact:"Low", source:"static" },
+  { id: "h-in-01", date: "2025-01-26", title: "Republic Day", description: "NSE & BSE closed.", region: "india", category: "holiday", impact: "Medium", source: "static" },
+  { id: "h-in-02", date: "2025-02-26", title: "Mahashivratri", description: "NSE & BSE closed.", region: "india", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-in-03", date: "2025-03-14", title: "Holi", description: "NSE & BSE closed.", region: "india", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-in-04", date: "2025-03-31", title: "Id-Ul-Fitr (Eid)", description: "NSE & BSE closed.", region: "india", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-in-05", date: "2025-04-10", title: "Shri Ram Navami", description: "NSE & BSE closed.", region: "india", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-in-06", date: "2025-04-14", title: "Dr. Ambedkar Jayanti", description: "NSE & BSE closed.", region: "india", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-in-07", date: "2025-04-18", title: "Good Friday", description: "NSE & BSE closed.", region: "india", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-in-08", date: "2025-05-01", title: "Maharashtra Day", description: "BSE closed. NSE open.", region: "india", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-in-09", date: "2025-08-15", title: "Independence Day", description: "NSE & BSE closed.", region: "india", category: "holiday", impact: "Medium", source: "static" },
+  { id: "h-in-10", date: "2025-08-27", title: "Ganesh Chaturthi", description: "NSE & BSE closed.", region: "india", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-in-11", date: "2025-10-02", title: "Gandhi Jayanti / Dussehra", description: "NSE & BSE closed.", region: "india", category: "holiday", impact: "Medium", source: "static" },
+  { id: "h-in-12", date: "2025-10-20", title: "Diwali — Laxmi Puja", description: "NSE & BSE closed. Special Muhurat Trading after market hours.", region: "india", category: "holiday", impact: "High", source: "static" },
+  { id: "h-in-13", date: "2025-10-21", title: "Diwali — Balipratipada", description: "NSE & BSE closed.", region: "india", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-in-14", date: "2025-11-05", title: "Guru Nanak Jayanti", description: "NSE & BSE closed.", region: "india", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-in-15", date: "2025-12-25", title: "Christmas", description: "NSE & BSE closed.", region: "india", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-in-16", date: "2026-01-26", title: "Republic Day 2026", description: "NSE & BSE closed.", region: "india", category: "holiday", impact: "Medium", source: "static" },
+  { id: "h-in-17", date: "2026-02-14", title: "Maha Shivratri 2026", description: "NSE & BSE closed (tentative).", region: "india", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-in-18", date: "2026-03-04", title: "Holi 2026", description: "NSE & BSE closed (tentative).", region: "india", category: "holiday", impact: "Low", source: "static" },
 ];
 
 const GLOBAL_HOLIDAYS_STATIC: MarketEvent[] = [
-  { id:"h-gl-01", date:"2025-01-01", title:"New Year's Day", description:"NYSE, NASDAQ, LSE, Euronext all closed.", region:"global", category:"holiday", impact:"Medium", source:"static" },
-  { id:"h-gl-02", date:"2025-01-20", title:"Martin Luther King Jr. Day", description:"NYSE & NASDAQ closed.", region:"global", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-gl-03", date:"2025-02-17", title:"Presidents' Day (US)", description:"NYSE & NASDAQ closed.", region:"global", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-gl-04", date:"2025-04-18", title:"Good Friday", description:"NYSE, NASDAQ, LSE, Euronext all closed.", region:"global", category:"holiday", impact:"Medium", source:"static" },
-  { id:"h-gl-05", date:"2025-04-21", title:"Easter Monday", description:"LSE & Euronext closed. NYSE open.", region:"global", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-gl-06", date:"2025-05-05", title:"Early May Bank Holiday (UK)", description:"LSE closed.", region:"global", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-gl-07", date:"2025-05-26", title:"Memorial Day (US)", description:"NYSE & NASDAQ closed.", region:"global", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-gl-08", date:"2025-07-04", title:"US Independence Day", description:"NYSE & NASDAQ closed.", region:"global", category:"holiday", impact:"Medium", source:"static" },
-  { id:"h-gl-09", date:"2025-09-01", title:"Labor Day (US)", description:"NYSE & NASDAQ closed.", region:"global", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-gl-10", date:"2025-11-27", title:"Thanksgiving Day (US)", description:"NYSE & NASDAQ closed.", region:"global", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-gl-11", date:"2025-12-25", title:"Christmas Day", description:"NYSE, NASDAQ, LSE, Euronext all closed.", region:"global", category:"holiday", impact:"Medium", source:"static" },
-  { id:"h-gl-12", date:"2025-12-26", title:"Boxing Day", description:"LSE & Euronext closed.", region:"global", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-gl-13", date:"2026-01-01", title:"New Year's Day 2026", description:"All major global exchanges closed.", region:"global", category:"holiday", impact:"Medium", source:"static" },
-  { id:"h-gl-14", date:"2026-01-19", title:"MLK Day 2026", description:"NYSE & NASDAQ closed.", region:"global", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-gl-15", date:"2026-02-16", title:"Presidents' Day 2026", description:"NYSE & NASDAQ closed.", region:"global", category:"holiday", impact:"Low", source:"static" },
-  { id:"h-gl-16", date:"2026-04-03", title:"Good Friday 2026", description:"NYSE, NASDAQ, LSE, Euronext all closed.", region:"global", category:"holiday", impact:"Medium", source:"static" },
+  { id: "h-gl-01", date: "2025-01-01", title: "New Year's Day", description: "NYSE, NASDAQ, LSE, Euronext all closed.", region: "global", category: "holiday", impact: "Medium", source: "static" },
+  { id: "h-gl-02", date: "2025-01-20", title: "Martin Luther King Jr. Day", description: "NYSE & NASDAQ closed.", region: "global", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-gl-03", date: "2025-02-17", title: "Presidents' Day (US)", description: "NYSE & NASDAQ closed.", region: "global", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-gl-04", date: "2025-04-18", title: "Good Friday", description: "NYSE, NASDAQ, LSE, Euronext all closed.", region: "global", category: "holiday", impact: "Medium", source: "static" },
+  { id: "h-gl-05", date: "2025-04-21", title: "Easter Monday", description: "LSE & Euronext closed. NYSE open.", region: "global", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-gl-06", date: "2025-05-05", title: "Early May Bank Holiday (UK)", description: "LSE closed.", region: "global", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-gl-07", date: "2025-05-26", title: "Memorial Day (US)", description: "NYSE & NASDAQ closed.", region: "global", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-gl-08", date: "2025-07-04", title: "US Independence Day", description: "NYSE & NASDAQ closed.", region: "global", category: "holiday", impact: "Medium", source: "static" },
+  { id: "h-gl-09", date: "2025-09-01", title: "Labor Day (US)", description: "NYSE & NASDAQ closed.", region: "global", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-gl-10", date: "2025-11-27", title: "Thanksgiving Day (US)", description: "NYSE & NASDAQ closed.", region: "global", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-gl-11", date: "2025-12-25", title: "Christmas Day", description: "NYSE, NASDAQ, LSE, Euronext all closed.", region: "global", category: "holiday", impact: "Medium", source: "static" },
+  { id: "h-gl-12", date: "2025-12-26", title: "Boxing Day", description: "LSE & Euronext closed.", region: "global", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-gl-13", date: "2026-01-01", title: "New Year's Day 2026", description: "All major global exchanges closed.", region: "global", category: "holiday", impact: "Medium", source: "static" },
+  { id: "h-gl-14", date: "2026-01-19", title: "MLK Day 2026", description: "NYSE & NASDAQ closed.", region: "global", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-gl-15", date: "2026-02-16", title: "Presidents' Day 2026", description: "NYSE & NASDAQ closed.", region: "global", category: "holiday", impact: "Low", source: "static" },
+  { id: "h-gl-16", date: "2026-04-03", title: "Good Friday 2026", description: "NYSE, NASDAQ, LSE, Euronext all closed.", region: "global", category: "holiday", impact: "Medium", source: "static" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const MONTHS_FULL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS_FULL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 function parseDate(s: string) { return new Date(s + "T00:00:00"); }
-function isPast(d: string) { return parseDate(d) < new Date(new Date().setHours(0,0,0,0)); }
+function isPast(d: string) { return parseDate(d) < new Date(new Date().setHours(0, 0, 0, 0)); }
 function isToday(d: string) {
   const t = new Date(); const p = parseDate(d);
-  return p.getDate()===t.getDate() && p.getMonth()===t.getMonth() && p.getFullYear()===t.getFullYear();
+  return p.getDate() === t.getDate() && p.getMonth() === t.getMonth() && p.getFullYear() === t.getFullYear();
 }
 function daysUntil(d: string) {
-  const diff = parseDate(d).getTime() - new Date(new Date().setHours(0,0,0,0)).getTime();
+  const diff = parseDate(d).getTime() - new Date(new Date().setHours(0, 0, 0, 0)).getTime();
   return Math.ceil(diff / 86400000);
 }
 function timeAgo(dateStr: string): string {
@@ -130,7 +130,7 @@ function timeAgo(dateStr: string): string {
   const h = Math.floor(diff / 3600000); const d = Math.floor(diff / 86400000);
   if (h < 1) return "Just now"; if (h < 24) return `${h}h ago`;
   if (d < 7) return `${d}d ago`;
-  return new Date(dateStr).toLocaleDateString("en-IN", { day:"numeric", month:"short" });
+  return new Date(dateStr).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 }
 function mapRegion(r: string): Region { return r.toLowerCase().includes("india") ? "india" : "global"; }
 function inferCategory(title: string): Category {
@@ -154,94 +154,94 @@ function buildDescription(e: ApiEvent): string {
 // Light/dark variants
 const T = {
   dark: {
-    pageBg:       "#070e1a",
-    panelBg:      "#040810",
-    cardBg:       "#0c1a2e",
-    cardHover:    "#0f1e35",
-    elevated:     "#070e1a",
-    border:       "rgba(30,58,95,0.5)",
+    pageBg: "#070e1a",
+    panelBg: "#040810",
+    cardBg: "#0c1a2e",
+    cardHover: "#0f1e35",
+    elevated: "#070e1a",
+    border: "rgba(30,58,95,0.5)",
     borderBright: "rgba(30,58,95,0.8)",
-    accent:       "#5194F6",
-    accentDim:    "rgba(81,148,246,0.12)",
+    accent: "#5194F6",
+    accentDim: "rgba(81,148,246,0.12)",
     accentBorder: "rgba(81,148,246,0.25)",
-    green:        "#22c55e",
-    greenDim:     "rgba(34,197,94,0.12)",
-    red:          "#ef4444",
-    redDim:       "rgba(239,68,68,0.12)",
-    amber:        "#f59e0b",
-    amberDim:     "rgba(245,158,11,0.12)",
-    blue:         "#5194F6",
-    blueDim:      "rgba(81,148,246,0.12)",
-    purple:       "#8b5cf6",
-    purpleDim:    "rgba(139,92,246,0.12)",
-    textPrimary:  "#ffffff",
-    textSecond:   "#94a3b8",
-    textMuted:    "#64748b",
-    textTiny:     "#475569",
-    tickerBg:     "#040810",
+    green: "#22c55e",
+    greenDim: "rgba(34,197,94,0.12)",
+    red: "#ef4444",
+    redDim: "rgba(239,68,68,0.12)",
+    amber: "#f59e0b",
+    amberDim: "rgba(245,158,11,0.12)",
+    blue: "#5194F6",
+    blueDim: "rgba(81,148,246,0.12)",
+    purple: "#8b5cf6",
+    purpleDim: "rgba(139,92,246,0.12)",
+    textPrimary: "#ffffff",
+    textSecond: "#94a3b8",
+    textMuted: "#64748b",
+    textTiny: "#475569",
+    tickerBg: "#040810",
   },
   light: {
-    pageBg:       "#f0f7fe",
-    panelBg:      "#ffffff",
-    cardBg:       "#ffffff",
-    cardHover:    "#f8fafc",
-    elevated:     "#f1f5f9",
-    border:       "#e2e8f0",
+    pageBg: "#f0f7fe",
+    panelBg: "#ffffff",
+    cardBg: "#ffffff",
+    cardHover: "#f8fafc",
+    elevated: "#f1f5f9",
+    border: "#e2e8f0",
     borderBright: "#cbd5e1",
-    accent:       "#5194F6",
-    accentDim:    "rgba(81,148,246,0.08)",
+    accent: "#5194F6",
+    accentDim: "rgba(81,148,246,0.08)",
     accentBorder: "rgba(81,148,246,0.25)",
-    green:        "#16a34a",
-    greenDim:     "rgba(22,163,74,0.08)",
-    red:          "#dc2626",
-    redDim:       "rgba(220,38,38,0.08)",
-    amber:        "#d97706",
-    amberDim:     "rgba(217,119,6,0.08)",
-    blue:         "#5194F6",
-    blueDim:      "rgba(81,148,246,0.08)",
-    purple:       "#7c3aed",
-    purpleDim:    "rgba(124,58,237,0.08)",
-    textPrimary:  "#0f172a",
-    textSecond:   "#334155",
-    textMuted:    "#64748b",
-    textTiny:     "#94a3b8",
-    tickerBg:     "#0d1117",
+    green: "#16a34a",
+    greenDim: "rgba(22,163,74,0.08)",
+    red: "#dc2626",
+    redDim: "rgba(220,38,38,0.08)",
+    amber: "#d97706",
+    amberDim: "rgba(217,119,6,0.08)",
+    blue: "#5194F6",
+    blueDim: "rgba(81,148,246,0.08)",
+    purple: "#7c3aed",
+    purpleDim: "rgba(124,58,237,0.08)",
+    textPrimary: "#0f172a",
+    textSecond: "#334155",
+    textMuted: "#64748b",
+    textTiny: "#94a3b8",
+    tickerBg: "#0d1117",
   },
 };
 
 // ─── Category config ──────────────────────────────────────────────────────────
 const CAT_CONFIG: Record<Category, { icon: React.ElementType; label: string; colorKey: string }> = {
-  monetary:    { icon: TrendingUp,  label: "Monetary",    colorKey: "blue"   },
-  budget:      { icon: Landmark,    label: "Budget",      colorKey: "purple" },
-  earnings:    { icon: BarChart2,   label: "Earnings",    colorKey: "green"  },
-  economic:    { icon: Activity,    label: "Economic",    colorKey: "blue"   },
-  policy:      { icon: BookOpen,    label: "Policy",      colorKey: "amber"  },
-  holiday:     { icon: Umbrella,    label: "Holiday",     colorKey: "textMuted" },
-  geopolitical:{ icon: Globe,       label: "Geopolitical",colorKey: "red"    },
+  monetary: { icon: TrendingUp, label: "Monetary", colorKey: "blue" },
+  budget: { icon: Landmark, label: "Budget", colorKey: "purple" },
+  earnings: { icon: BarChart2, label: "Earnings", colorKey: "green" },
+  economic: { icon: Activity, label: "Economic", colorKey: "blue" },
+  policy: { icon: BookOpen, label: "Policy", colorKey: "amber" },
+  holiday: { icon: Umbrella, label: "Holiday", colorKey: "textMuted" },
+  geopolitical: { icon: Globe, label: "Geopolitical", colorKey: "red" },
 };
 const IMP_CONFIG = {
-  High:   { label: "HIGH",   bar: 3 },
-  Medium: { label: "MED",    bar: 2 },
-  Low:    { label: "LOW",    bar: 1 },
+  High: { label: "HIGH", bar: 3 },
+  Medium: { label: "MED", bar: 2 },
+  Low: { label: "LOW", bar: 1 },
 };
 const MI_CONFIG = {
-  bullish: { icon: ArrowUpRight,   label: "BULLISH",  colorKey: "green"  },
-  bearish: { icon: ArrowDownRight, label: "BEARISH",  colorKey: "red"    },
-  mixed:   { icon: Minus,          label: "MIXED",    colorKey: "amber"  },
+  bullish: { icon: ArrowUpRight, label: "BULLISH", colorKey: "green" },
+  bearish: { icon: ArrowDownRight, label: "BEARISH", colorKey: "red" },
+  mixed: { icon: Minus, label: "MIXED", colorKey: "amber" },
 };
 const ASSET_COLOR: Record<string, string> = {
-  "Equity":      "#74A8C9",
-  "Bonds":       "#a78bfa",
-  "Forex":       "#ffa825",
+  "Equity": "#74A8C9",
+  "Bonds": "#a78bfa",
+  "Forex": "#ffa825",
   "Commodities": "#00d084",
 };
 
 // ─── Hooks (UNCHANGED from v3) ────────────────────────────────────────────────
 function useMarketEvents() {
-  const [apiEvents,   setApiEvents]   = useState<MarketEvent[]>([]);
-  const [macro,       setMacro]       = useState<MacroSnapshot>({});
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState<string | null>(null);
+  const [apiEvents, setApiEvents] = useState<MarketEvent[]>([]);
+  const [macro, setMacro] = useState<MacroSnapshot>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -252,7 +252,7 @@ function useMarketEvents() {
       // All events come exclusively from DB so deletes are permanent and consistent
       const [adminRes, legacyRes] = await Promise.allSettled([
         fetch(`${API}/admin/events/public`, { credentials: "include" }),
-        fetch(`${API}/markets/global`,      { credentials: "include" }),
+        fetch(`${API}/markets/global`, { credentials: "include" }),
       ]);
 
       // ── Macro data from legacy feed (USD/INR, VIX only) ──
@@ -261,7 +261,7 @@ function useMarketEvents() {
           const data = await legacyRes.value.json();
           setMacro({
             usdInr: data?.forex?.find((f: any) => f.pair === "USD/INR")?.rate,
-            vix:    data?.vix?.value,
+            vix: data?.vix?.value,
           });
         } catch { /* ignore macro parse errors */ }
       }
@@ -273,21 +273,21 @@ function useMarketEvents() {
         if (adminData.success && Array.isArray(adminData.data)) {
           for (const e of adminData.data) {
             dbEvents.push({
-              id:                 e.id ?? e._id?.toString() ?? Math.random().toString(36),
-              date:               e.date,
-              title:              e.title,
-              description:        e.description || buildDescription(e),
-              region:             mapRegion(e.region ?? "india"),
-              category:           (e.category as Category) ?? inferCategory(e.title),
-              impact:             (e.impact as any) ?? "Medium",
-              source:             "api" as const,
-              whatHappened:       e.whatHappened,
-              whyItMatters:       e.whyItMatters,
-              marketImpact:       e.marketImpact,
-              impactTerm:         e.impactTerm,
-              whoAffected:        e.whoAffected,
+              id: e.id ?? e._id?.toString() ?? Math.random().toString(36),
+              date: e.date,
+              title: e.title,
+              description: e.description || buildDescription(e),
+              region: mapRegion(e.region ?? "india"),
+              category: (e.category as Category) ?? inferCategory(e.title),
+              impact: (e.impact as any) ?? "Medium",
+              source: "api" as const,
+              whatHappened: e.whatHappened,
+              whyItMatters: e.whyItMatters,
+              marketImpact: e.marketImpact,
+              impactTerm: e.impactTerm,
+              whoAffected: e.whoAffected,
               investbeansInsight: e.investbeansInsight,
-              sourceUrl:          e.sourceUrl,
+              sourceUrl: e.sourceUrl,
             });
           }
         }
@@ -311,7 +311,7 @@ function useMarketEvents() {
     if (/^[0-9a-f]{24}$/i.test(event.id)) {
       try {
         const token = localStorage.getItem("accessToken");
-        const authH: Record<string,string> = token ? { Authorization: `Bearer ${token}` } : {};
+        const authH: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
         const res = await fetch(`${API}/admin/events/${event.id}`, {
           method: "DELETE", headers: authH, credentials: "include",
         });
@@ -333,13 +333,13 @@ function useMarketEvents() {
 function useInsightBanner() {
   const [insight, setInsight] = useState<BannerInsight | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true); setError(null);
       try {
-        const res  = await fetch(`${API}/insights/events-banner`, { credentials: "include" });
+        const res = await fetch(`${API}/insights/events-banner`, { credentials: "include" });
         if (!res.ok) throw new Error(`${res.status}`);
         const json = await res.json();
         if (!cancelled) setInsight(json?.data ?? null);
@@ -393,7 +393,7 @@ function useKiteHolidays() {
         // ✅ Dono saal parallel fetch karo — exactly like useGlobalHolidays
         const [r1, r2] = await Promise.allSettled([
           fetch(`${API}/kite/holidays?year=${currentYear}`, { credentials: "include" }),
-          fetch(`${API}/kite/holidays?year=${nextYear}`,    { credentials: "include" }),
+          fetch(`${API}/kite/holidays?year=${nextYear}`, { credentials: "include" }),
         ]);
 
         const holidays: MarketEvent[] = [];
@@ -407,14 +407,14 @@ function useKiteHolidays() {
           for (const h of json.data) {
             if (!h.date || !h.reason) continue;
             holidays.push({
-              id:          `kite-h-${idx++}`,
-              date:        h.date,
-              title:       h.reason,
+              id: `kite-h-${idx++}`,
+              date: h.date,
+              title: h.reason,
               description: "NSE & BSE closed",
-              region:      "india" as Region,
-              category:    "holiday" as Category,
-              impact:      "Medium" as const,
-              source:      "api" as const,
+              region: "india" as Region,
+              category: "holiday" as Category,
+              impact: "Medium" as const,
+              source: "api" as const,
             });
           }
         }
@@ -445,7 +445,7 @@ function useGlobalHolidays() {
         const nextYear = currentYear + 1;
         const [r1, r2] = await Promise.allSettled([
           fetch(`${API}/kite/global-holidays?year=${currentYear}`, { credentials: "include" }),
-          fetch(`${API}/kite/global-holidays?year=${nextYear}`,    { credentials: "include" }),
+          fetch(`${API}/kite/global-holidays?year=${nextYear}`, { credentials: "include" }),
         ]);
         const holidays: MarketEvent[] = [];
         let idx = 0;
@@ -475,17 +475,17 @@ function useGlobalHolidays() {
 // ─── LiveTicker bar ───────────────────────────────────────────────────────────
 const LiveTickerBar: React.FC<{ macro: MacroSnapshot; eventCount: number; upcomingCount: number; isLight: boolean }> = ({ macro, eventCount, upcomingCount, isLight }) => {
   // Light mode: visible dark-navy bar; dark mode: near-black
-  const bg         = isLight ? "#1e3a5f"   : "#080b10";
-  const borderCol  = isLight ? "#2d5a8e"   : "#1a2535";
-  const labelCol   = isLight ? "#93c5fd"   : "#4d6a82";
-  const dividerCol = isLight ? "#2d5a8e"   : "#1e3248";
-  const accentCol  = "#74A8C9";
-  const valueCol   = isLight ? "#ffffff"   : "#e2e8f0";
-  const greenCol   = "#00d084";
+  const bg = isLight ? "#1e3a5f" : "#080b10";
+  const borderCol = isLight ? "#2d5a8e" : "#1a2535";
+  const labelCol = isLight ? "#93c5fd" : "#4d6a82";
+  const dividerCol = isLight ? "#2d5a8e" : "#1e3248";
+  const accentCol = "#74A8C9";
+  const valueCol = isLight ? "#ffffff" : "#e2e8f0";
+  const greenCol = "#00d084";
 
   const items = [
-    { label: "EVENTS",   value: String(eventCount),   color: accentCol },
-    { label: "UPCOMING", value: String(upcomingCount), color: greenCol  },
+    { label: "EVENTS", value: String(eventCount), color: accentCol },
+    { label: "UPCOMING", value: String(upcomingCount), color: greenCol },
   ];
   return (
     <div style={{
@@ -551,8 +551,8 @@ const InsightTerminalBox: React.FC<{ isLight: boolean; tk: typeof T.dark }> = ({
   const scoreColor = ibi.impactScore >= 7 ? tk.red : ibi.impactScore >= 4 ? tk.amber : tk.green;
   const sentColors = {
     positive: { c: tk.green, bg: tk.greenDim },
-    negative: { c: tk.red,   bg: tk.redDim   },
-    neutral:  { c: tk.textSecond, bg: tk.elevated },
+    negative: { c: tk.red, bg: tk.redDim },
+    neutral: { c: tk.textSecond, bg: tk.elevated },
   };
   const sc = sentColors[insight.sentiment] ?? sentColors.neutral;
 
@@ -653,7 +653,7 @@ const ImpactMeter: React.FC<{ impact: "High" | "Medium" | "Low"; tk: typeof T.da
   const color = impact === "High" ? tk.red : impact === "Medium" ? tk.amber : tk.textMuted;
   return (
     <div style={{ display: "flex", gap: 2, alignItems: "center" }}>
-      {[1,2,3].map(i => (
+      {[1, 2, 3].map(i => (
         <div key={i} style={{
           width: 3, height: i <= bars ? 10 : 6,
           borderRadius: 2,
@@ -669,10 +669,10 @@ const ImpactMeter: React.FC<{ impact: "High" | "Medium" | "Low"; tk: typeof T.da
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ASSETS_LIST = ["Equity", "Commodities", "Forex", "Bonds"];
 const ASSET_PILL_COLOR: Record<string, { c: string; bg: string }> = {
-  Equity:      { c: "#74A8C9", bg: "rgba(116,168,201,0.15)" },
-  Commodities: { c: "#00d084", bg: "rgba(0,208,132,0.12)"   },
-  Forex:       { c: "#ffa825", bg: "rgba(255,168,37,0.12)"  },
-  Bonds:       { c: "#a78bfa", bg: "rgba(167,139,250,0.12)" },
+  Equity: { c: "#74A8C9", bg: "rgba(116,168,201,0.15)" },
+  Commodities: { c: "#00d084", bg: "rgba(0,208,132,0.12)" },
+  Forex: { c: "#ffa825", bg: "rgba(255,168,37,0.12)" },
+  Bonds: { c: "#a78bfa", bg: "rgba(167,139,250,0.12)" },
 };
 
 // ─── AdminFullEventModal — Complete Create / Edit modal ──────────────────────
@@ -687,29 +687,29 @@ const AdminFullEventModal: React.FC<{
   const isCreate = !event;
 
   // ── Basic fields ──
-  const [title,       setTitle]       = useState(event?.title       ?? "");
-  const [date,        setDate]        = useState(event?.date        ?? new Date().toISOString().slice(0, 10));
-  const [region,      setRegion]      = useState<"india"|"global">(event?.region ?? "india");
-  const [impact,      setImpact]      = useState<"High"|"Medium"|"Low">(event?.impact ?? "Medium");
+  const [title, setTitle] = useState(event?.title ?? "");
+  const [date, setDate] = useState(event?.date ?? new Date().toISOString().slice(0, 10));
+  const [region, setRegion] = useState<"india" | "global">(event?.region ?? "india");
+  const [impact, setImpact] = useState<"High" | "Medium" | "Low">(event?.impact ?? "Medium");
   const [description, setDescription] = useState(event?.description ?? "");
-  const [whatHappened,setWhatHappened] = useState(event?.whatHappened ?? "");
-  const [sourceUrl,   setSourceUrl]   = useState(event?.sourceUrl   ?? "");
+  const [whatHappened, setWhatHappened] = useState(event?.whatHappened ?? "");
+  const [sourceUrl, setSourceUrl] = useState(event?.sourceUrl ?? "");
   const [investbeansInsight, setInvestbeansInsight] = useState(event?.investbeansInsight ?? "");
 
   // ── Market Impact ──
   const [marketImpact, setMarketImpact] = useState(event?.marketImpact ?? "");
-  const [impactTerm,   setImpactTerm]   = useState(event?.impactTerm   ?? "");
+  const [impactTerm, setImpactTerm] = useState(event?.impactTerm ?? "");
 
   // ── Who Affected ──
-  const [asset,   setAsset]   = useState<string>((event?.whoAffected?.assets ?? [])[0] ?? "");
+  const [asset, setAsset] = useState<string>((event?.whoAffected?.assets ?? [])[0] ?? "");
   const [sectors, setSectors] = useState<string>(
     Array.isArray(event?.whoAffected?.sectors)
       ? event!.whoAffected!.sectors.join(", ")
       : (event?.whoAffected?.sectors as any as string) ?? ""
   );
 
-  const [saving,  setSaving]  = useState(false);
-  const [error,   setError]   = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const wc = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
   const sectorWC = wc(sectors);
@@ -759,40 +759,40 @@ const AdminFullEventModal: React.FC<{
 
   const MI_OPTS = [
     { val: "bullish", label: "▲ BULLISH", c: tk.green, bg: tk.greenDim },
-    { val: "bearish", label: "▼ BEARISH", c: tk.red,   bg: tk.redDim   },
-    { val: "mixed",   label: "— MIXED",   c: tk.amber, bg: tk.amberDim },
+    { val: "bearish", label: "▼ BEARISH", c: tk.red, bg: tk.redDim },
+    { val: "mixed", label: "— MIXED", c: tk.amber, bg: tk.amberDim },
   ];
   const TERM_OPTS = [
-    { val: "short",        label: "SHORT"     },
-    { val: "medium",       label: "MEDIUM"    },
-    { val: "long",         label: "LONG"      },
+    { val: "short", label: "SHORT" },
+    { val: "medium", label: "MEDIUM" },
+    { val: "long", label: "LONG" },
     { val: "short-medium", label: "SHORT-MED" },
   ];
-  const IMPACT_OPTS: Array<{ val: "High"|"Medium"|"Low"; c: string }> = [
-    { val: "High",   c: tk.red   },
+  const IMPACT_OPTS: Array<{ val: "High" | "Medium" | "Low"; c: string }> = [
+    { val: "High", c: tk.red },
     { val: "Medium", c: tk.amber },
-    { val: "Low",    c: tk.green },
+    { val: "Low", c: tk.green },
   ];
 
   const handleSave = async () => {
     setError("");
-    if (!title.trim())  return setError("Title is required.");
-    if (!date)          return setError("Date is required.");
-    if (sectorWC > 70)  return setError("Sectors must be ≤70 words.");
+    if (!title.trim()) return setError("Title is required.");
+    if (!date) return setError("Date is required.");
+    if (sectorWC > 70) return setError("Sectors must be ≤70 words.");
     if (insightWC > 300) return setError("InvestBeans Insight must be ≤300 words.");
 
     setSaving(true);
     try {
       const token = localStorage.getItem("accessToken");
-      const authH: Record<string,string> = token ? { Authorization: `Bearer ${token}` } : {};
+      const authH: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
       const body = {
-        title:        title.trim(),
+        title: title.trim(),
         date,
         region,
         impact,
-        description:        description.trim(),
-        whatHappened:       whatHappened.trim(),
-        sourceUrl:          sourceUrl.trim(),
+        description: description.trim(),
+        whatHappened: whatHappened.trim(),
+        sourceUrl: sourceUrl.trim(),
         investbeansInsight: investbeansInsight.trim(),
         marketImpact,
         impactTerm,
@@ -1143,9 +1143,9 @@ const EventTerminalCard: React.FC<{
   onDelete?: (event: MarketEvent) => void;
 }> = ({ event, isLight, tk, idx, section, isAdmin, onRefresh, onEdit, onDelete }) => {
   const [expanded, setExpanded] = useState(false);
-  const past   = isPast(event.date);
+  const past = isPast(event.date);
   const today_ = isToday(event.date);
-  const days   = daysUntil(event.date);
+  const days = daysUntil(event.date);
   const catCfg = CAT_CONFIG[event.category] ?? CAT_CONFIG.economic;
   const Icon = catCfg.icon;
   const catColor = (tk as any)[catCfg.colorKey] ?? tk.accent;
@@ -1163,8 +1163,8 @@ const EventTerminalCard: React.FC<{
     today_
       ? <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 3, background: `${tk.green}18`, color: tk.green, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: "0.1em" }}>TODAY</span>
       : days <= 7
-      ? <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 3, background: tk.amberDim, color: tk.amber, fontFamily: "'IBM Plex Mono', monospace" }}>{days}D</span>
-      : null
+        ? <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 3, background: tk.amberDim, color: tk.amber, fontFamily: "'IBM Plex Mono', monospace" }}>{days}D</span>
+        : null
   );
 
   return (
@@ -1251,23 +1251,29 @@ const EventTerminalCard: React.FC<{
               {event.marketImpact && (() => {
                 const c = event.marketImpact === "bullish" ? tk.green : event.marketImpact === "bearish" ? tk.red : tk.amber;
                 return (
-                  <span style={{ fontSize: 8, fontWeight: 700, padding: "2px 6px", borderRadius: 3,
-                    background: `${c}15`, color: c, letterSpacing: "0.04em", whiteSpace: "nowrap" }}>
+                  <span style={{
+                    fontSize: 8, fontWeight: 700, padding: "2px 6px", borderRadius: 3,
+                    background: `${c}15`, color: c, letterSpacing: "0.04em", whiteSpace: "nowrap"
+                  }}>
                     {event.marketImpact.toUpperCase()}
                   </span>
                 );
               })()}
               {event.impactTerm && (
-                <span style={{ fontSize: 8, fontWeight: 600, padding: "2px 6px", borderRadius: 3,
-                  background: tk.elevated, color: tk.textSecond, border: `1px solid ${tk.border}`, whiteSpace: "nowrap" }}>
+                <span style={{
+                  fontSize: 8, fontWeight: 600, padding: "2px 6px", borderRadius: 3,
+                  background: tk.elevated, color: tk.textSecond, border: `1px solid ${tk.border}`, whiteSpace: "nowrap"
+                }}>
                   {event.impactTerm.replace("-", " ").toUpperCase()}
                 </span>
               )}
               {(event.whoAffected?.assets ?? []).map(a => {
                 const ac = ASSET_COLOR[a] ?? tk.blue;
                 return (
-                  <span key={a} style={{ fontSize: 8, fontWeight: 700, padding: "2px 6px", borderRadius: 3,
-                    background: `${ac}14`, color: ac, letterSpacing: "0.04em", whiteSpace: "nowrap" }}>
+                  <span key={a} style={{
+                    fontSize: 8, fontWeight: 700, padding: "2px 6px", borderRadius: 3,
+                    background: `${ac}14`, color: ac, letterSpacing: "0.04em", whiteSpace: "nowrap"
+                  }}>
                     {a.toUpperCase()}
                   </span>
                 );
@@ -1278,99 +1284,99 @@ const EventTerminalCard: React.FC<{
 
         {/* Right column — UPCOMING/PAST status + chevron + admin edit — hidden for holidays */}
         {section !== "holidays" && (
-        <div style={{
-          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-          padding: "0 10px", gap: 6, borderLeft: `1px solid ${tk.border}`,
-          minWidth: 60, flexShrink: 0,
-        }}>
-          {/* Status — events section only */}
-          {section === "events" && (
-            past
-              ? <span style={{ fontSize: 8, color: tk.textMuted, fontWeight: 600 }}>PAST</span>
-              : <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+          <div style={{
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            padding: "0 10px", gap: 6, borderLeft: `1px solid ${tk.border}`,
+            minWidth: 60, flexShrink: 0,
+          }}>
+            {/* Status — events section only */}
+            {section === "events" && (
+              past
+                ? <span style={{ fontSize: 8, color: tk.textMuted, fontWeight: 600 }}>PAST</span>
+                : <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
                   <span style={{ width: 4, height: 4, borderRadius: "50%", background: tk.green, animation: "tickerPulse 2s infinite", flexShrink: 0 }} />
                   <span style={{ fontSize: 8, color: tk.green, fontWeight: 600 }}>UPCOMING</span>
                 </span>
-          )}
-          {/* Chevron — centered */}
-          {hasDetail && (
-            <div style={{
-              width: 22, height: 22, borderRadius: 4,
-              background: expanded ? tk.accentDim : tk.elevated,
-              border: `1px solid ${expanded ? tk.accentBorder : tk.border}`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              {expanded ? <ChevronUp size={11} color={tk.accent} /> : <ChevronDown size={11} color={tk.textMuted} />}
-            </div>
-          )}
-          {/* Source link — LIVE badge only for events, never for holidays */}
-          {/* ✅ FIX 3: section !== "holidays" check added to hide LIVE badge on holidays */}
-          {!hasDetail && event.source === "api" && section !== "holidays" && (
-            <span style={{ fontSize: 8, color: tk.accent, fontWeight: 600 }}>LIVE</span>
-          )}
+            )}
+            {/* Chevron — centered */}
+            {hasDetail && (
+              <div style={{
+                width: 22, height: 22, borderRadius: 4,
+                background: expanded ? tk.accentDim : tk.elevated,
+                border: `1px solid ${expanded ? tk.accentBorder : tk.border}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                {expanded ? <ChevronUp size={11} color={tk.accent} /> : <ChevronDown size={11} color={tk.textMuted} />}
+              </div>
+            )}
+            {/* Source link — LIVE badge only for events, never for holidays */}
+            {/* ✅ FIX 3: section !== "holidays" check added to hide LIVE badge on holidays */}
+            {!hasDetail && event.source === "api" && section !== "holidays" && (
+              <span style={{ fontSize: 8, color: tk.accent, fontWeight: 600 }}>LIVE</span>
+            )}
 
-          {/* ── Admin actions — edit + delete for ALL non-holiday events ── */}
-          {isAdmin && event.category !== "holiday" && (
-            <>
-              {/* Edit — only meaningful for DB events, but show for all so admin can enrich */}
-              <button
-                title="Edit Event"
-                onClick={e => { e.stopPropagation(); onEdit?.(event); }}
-                style={{
-                  width: 24, height: 24, borderRadius: 5, cursor: "pointer",
-                  background: "transparent", border: `1px solid ${tk.border}`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  transition: "all 0.12s",
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLButtonElement).style.background = tk.accentDim;
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = tk.accentBorder;
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = tk.border;
-                }}
-              >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
-                  stroke={tk.accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-              </button>
-              {/* Delete — shown for ALL events; DB events get backend delete, legacy just hide locally */}
-              <button
-                title="Delete Event"
-                onClick={async (ev) => {
-                  ev.stopPropagation();
-                  if (!confirm(`Delete "${event.title}"?`)) return;
-                  onDelete?.(event);
-                }}
-                style={{
-                  width: 24, height: 24, borderRadius: 5, cursor: "pointer",
-                  background: "transparent", border: `1px solid ${tk.border}`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  transition: "all 0.12s",
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.12)";
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(239,68,68,0.4)";
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = tk.border;
-                }}
-              >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
-                  stroke={tk.red} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="3 6 5 6 21 6"/>
-                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                  <path d="M10 11v6M14 11v6"/>
-                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                </svg>
-              </button>
-            </>
-          )}
-        </div>
+            {/* ── Admin actions — edit + delete for ALL non-holiday events ── */}
+            {isAdmin && event.category !== "holiday" && (
+              <>
+                {/* Edit — only meaningful for DB events, but show for all so admin can enrich */}
+                <button
+                  title="Edit Event"
+                  onClick={e => { e.stopPropagation(); onEdit?.(event); }}
+                  style={{
+                    width: 24, height: 24, borderRadius: 5, cursor: "pointer",
+                    background: "transparent", border: `1px solid ${tk.border}`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    transition: "all 0.12s",
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLButtonElement).style.background = tk.accentDim;
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = tk.accentBorder;
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = tk.border;
+                  }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                    stroke={tk.accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </button>
+                {/* Delete — shown for ALL events; DB events get backend delete, legacy just hide locally */}
+                <button
+                  title="Delete Event"
+                  onClick={async (ev) => {
+                    ev.stopPropagation();
+                    if (!confirm(`Delete "${event.title}"?`)) return;
+                    onDelete?.(event);
+                  }}
+                  style={{
+                    width: 24, height: 24, borderRadius: 5, cursor: "pointer",
+                    background: "transparent", border: `1px solid ${tk.border}`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    transition: "all 0.12s",
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.12)";
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(239,68,68,0.4)";
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = tk.border;
+                  }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                    stroke={tk.red} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                    <path d="M10 11v6M14 11v6" />
+                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                  </svg>
+                </button>
+              </>
+            )}
+          </div>
         )}
       </div>
 
@@ -1385,7 +1391,8 @@ const EventTerminalCard: React.FC<{
                 <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", color: tk.accent }}>01 — WHAT HAPPENED</span>
                 <Eye size={10} color={tk.accent} />
               </div>
-              <p style={{ fontSize: 12, color: tk.textSecond, margin: 0, lineHeight: 1.7,
+              <p style={{
+                fontSize: 12, color: tk.textSecond, margin: 0, lineHeight: 1.7,
                 overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as any,
               }}>
                 {event.whatHappened}
@@ -1444,7 +1451,8 @@ const EventTerminalCard: React.FC<{
                 </div>
               )}
               {event.whoAffected.sectors.length > 0 && (
-                <p style={{ fontSize: 11.5, color: tk.textSecond, margin: 0, lineHeight: 1.7,
+                <p style={{
+                  fontSize: 11.5, color: tk.textSecond, margin: 0, lineHeight: 1.7,
                   overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" as any,
                 }}>
                   {event.whoAffected.sectors.join("  ·  ")}
@@ -1495,25 +1503,26 @@ const EventTerminalCard: React.FC<{
 
 // ─── Main EventsView ──────────────────────────────────────────────────────────
 const EventsView: React.FC = () => {
-  const { theme }  = useTheme();
+  const { theme } = useTheme();
   const { isAdmin } = useAuth();
-  const isLight    = theme === "light";
-  const tk         = isLight ? T.light : T.dark;
+  const isLight = theme === "light";
+  const tk = isLight ? T.light : T.dark;
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const [region,   setRegion]   = useState<Region>((searchParams.get("region")  as Region)  ?? "india");
-  const [section,  setSection]  = useState<Section>((searchParams.get("section") as Section) ?? "events");
+  const [region, setRegion] = useState<Region>((searchParams.get("region") as Region) ?? "india");
+  const [section, setSection] = useState<Section>((searchParams.get("section") as Section) ?? "events");
   const [selMonth, setSelMonth] = useState<string | null>(null);
   const [sideOpen, setSideOpen] = useState(true);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  const [sentimentFilter, setSentimentFilter] = useState<"all" | "bullish" | "mixed" | "bearish">("all");
+  // const [sentimentFilter, setSentimentFilter] = useState<"all" | "bullish" | "mixed" | "bearish">("all");
+  const [sentimentFilter, setSentimentFilter] = useState<"all" | "High" | "Medium" | "Low">("all");
 
   // Admin modal state — null=closed, undefined=create new, MarketEvent=edit existing
   const [adminModal, setAdminModal] = useState<MarketEvent | null | undefined>(undefined);
   const adminModalOpen = adminModal !== undefined;
 
   useEffect(() => {
-    setRegion((searchParams.get("region")  as Region)  ?? "india");
+    setRegion((searchParams.get("region") as Region) ?? "india");
     setSection((searchParams.get("section") as Section) ?? "events");
     setSelMonth(null);
   }, [searchParams]);
@@ -1537,7 +1546,7 @@ const EventsView: React.FC = () => {
     for (const e of sourceEvents) {
       const d = parseDate(e.date);
       // ✅ FIX 4b: Pad month with 0 so "2026-01" sorts before "2026-09" correctly
-      const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2,"0")}`;
+      const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}`;
       if (!map.has(key)) map.set(key, `${MONTHS[d.getMonth()]} ${d.getFullYear()}`);
     }
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
@@ -1565,21 +1574,16 @@ const EventsView: React.FC = () => {
       evts = evts.filter(e => {
         const d = parseDate(e.date);
         // ✅ FIX 4c: Use padded key to match availableMonths format
-        return `${d.getFullYear()}-${String(d.getMonth()).padStart(2,"0")}` === selMonth;
+        return `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}` === selMonth;
       });
     }
 
-    // Sentiment filter (events only)
     if (!isHolidaySection && sentimentFilter !== "all") {
-      evts = evts.filter(e =>
-        sentimentFilter === "bullish" ? e.marketImpact === "bullish" :
-        sentimentFilter === "bearish" ? e.marketImpact === "bearish" :
-        e.marketImpact === "mixed"
-      );
+      evts = evts.filter(e => e.impact === sentimentFilter);
     }
 
-    const up   = evts.filter(e => !isPast(e.date)).sort((a, b) => parseDate(a.date).getTime() - parseDate(b.date).getTime());
-    const past = evts.filter(e =>  isPast(e.date)).sort((a, b) => parseDate(b.date).getTime() - parseDate(a.date).getTime());
+    const up = evts.filter(e => !isPast(e.date)).sort((a, b) => parseDate(a.date).getTime() - parseDate(b.date).getTime());
+    const past = evts.filter(e => isPast(e.date)).sort((a, b) => parseDate(b.date).getTime() - parseDate(a.date).getTime());
     return [...up, ...past];
   }, [sourceEvents, selMonth, sentimentFilter, section]);
 
@@ -1589,7 +1593,7 @@ const EventsView: React.FC = () => {
     // Build map in that order — Map preserves insertion order
     for (const e of filteredEvents) {
       const d = parseDate(e.date);
-      const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2,"0")}`;
+      const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}`;
       if (!map.has(key)) map.set(key, { label: `${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`, events: [] });
       map.get(key)!.events.push(e);
     }
@@ -1601,8 +1605,8 @@ const EventsView: React.FC = () => {
   }, [filteredEvents]);
 
   const upcomingCount = filteredEvents.filter(e => !isPast(e.date)).length;
-  const pastCount     = filteredEvents.filter(e => isPast(e.date)).length;
-  const highCount     = filteredEvents.filter(e => e.impact === "High").length;
+  const pastCount = filteredEvents.filter(e => isPast(e.date)).length;
+  const highCount = filteredEvents.filter(e => e.impact === "High").length;
 
   const btnStyle = (active: boolean): React.CSSProperties => ({
     display: "flex", alignItems: "center", gap: 6,
@@ -1749,7 +1753,7 @@ const EventsView: React.FC = () => {
                   letterSpacing: "0.04em", whiteSpace: "nowrap",
                 }}
               >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                 CREATE EVENT
               </button>
             )}
@@ -1760,9 +1764,8 @@ const EventsView: React.FC = () => {
             {/* Sentiment filter pills */}
             {section === "events" && (
               <div style={{ display: "flex", gap: 4, padding: "3px", borderRadius: 8, background: tk.elevated, border: `1px solid ${tk.border}` }} className="sentiment-pills">
-                {(["all", "bullish", "mixed", "bearish"] as const).map(s => {
-                  const labels: Record<string, string> = { all: "All", bullish: "Positive", mixed: "Stable", bearish: "Negative" };
-                  const colors: Record<string, string> = { bullish: tk.green, mixed: tk.amber, bearish: tk.red, all: tk.accent };
+                {(["all", "High", "Medium", "Low"] as const).map(s => {
+                  const colors: Record<string, string> = { High: tk.red, Medium: tk.amber, Low: tk.green, all: tk.accent };
                   const active = sentimentFilter === s;
                   return (
                     <button key={s} onClick={() => setSentimentFilter(s)} style={{
@@ -1771,7 +1774,7 @@ const EventsView: React.FC = () => {
                       background: active ? (s === "all" ? tk.accentDim : `${colors[s]}18`) : "transparent",
                       color: active ? (s === "all" ? tk.accent : colors[s]) : tk.textMuted,
                     }}>
-                      {labels[s]}
+                      {s === "all" ? "All" : s}
                     </button>
                   );
                 })}
@@ -1860,197 +1863,197 @@ const EventsView: React.FC = () => {
 
         {/* ── Main layout ─────────────────────────────────────── */}
         <div style={{ padding: "0 24px" }} className="events-outer-pad">
-        <div style={{
-          display: "flex",
-          alignItems: "flex-start",
-          minHeight: "calc(100vh - 120px)",
-          maxWidth: 1400,
-          margin: "0 auto",
-        }} className="events-main-grid">
+          <div style={{
+            display: "flex",
+            alignItems: "flex-start",
+            minHeight: "calc(100vh - 120px)",
+            maxWidth: 1400,
+            margin: "0 auto",
+          }} className="events-main-grid">
 
-          {/* ── LEFT SIDEBAR ─────────────────────────────────── */}
-          {sideOpen && (
-            <div className="desktop-sidebar" style={{
-              background: tk.panelBg,
-              borderRight: `1px solid ${tk.border}`,
-              padding: "18px 14px",
-              position: "sticky", top: 64,
-              height: "calc(100vh - 64px)",
-              overflowY: "auto",
-              flexShrink: 0,
-              width: 220,
-              alignSelf: "flex-start",
-            }}>
-
-              {/* REGION — with inline Events/Holidays sub-tabs */}
-              <div style={{ marginBottom: 20 }}>
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.16em", color: tk.textMuted, display: "block", marginBottom: 8 }}>
-                  REGION
-                </span>
-
-                {/* INDIA */}
-                <div style={{ marginBottom: 6 }}>
-                  <button
-                    onClick={() => handleTab("india", section)}
-                    style={{
-                      width: "100%", display: "flex", alignItems: "center", gap: 8,
-                      padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600,
-                      cursor: "pointer", transition: "all 0.15s", textAlign: "left",
-                      border: `1px solid ${region === "india" ? tk.accentBorder : tk.border}`,
-                      background: region === "india" ? tk.accentDim : "transparent",
-                      color: region === "india" ? tk.accent : tk.textSecond,
-                    }}
-                  >
-                    <Flag size={12} /> INDIA
-                  </button>
-                  {region === "india" && (
-                    <div style={{ display: "flex", gap: 3, padding: "4px 4px 0", marginTop: 3 }}>
-                      <button style={sectionBtnStyle(section === "events")} onClick={() => handleTab("india", "events")}>Events</button>
-                      <button style={sectionBtnStyle(section === "holidays")} onClick={() => handleTab("india", "holidays")}>Holidays</button>
-                    </div>
-                  )}
-                </div>
-
-                {/* GLOBAL — Events + Holidays */}
-                <div>
-                  <button
-                    onClick={() => handleTab("global", section)}
-                    style={{
-                      width: "100%", display: "flex", alignItems: "center", gap: 8,
-                      padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600,
-                      cursor: "pointer", transition: "all 0.15s", textAlign: "left",
-                      border: `1px solid ${region === "global" ? tk.accentBorder : tk.border}`,
-                      background: region === "global" ? tk.accentDim : "transparent",
-                      color: region === "global" ? tk.accent : tk.textSecond,
-                    }}
-                  >
-                    <Globe size={12} /> GLOBAL
-                  </button>
-                  {region === "global" && (
-                    <div style={{ display: "flex", gap: 3, padding: "4px 4px 0", marginTop: 3 }}>
-                      <button style={sectionBtnStyle(section === "events")} onClick={() => handleTab("global", "events")}>Events</button>
-                      <button style={sectionBtnStyle(section === "holidays")} onClick={() => handleTab("global", "holidays")}>Holidays</button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Month filter — dropdown */}
-              <div style={{ marginBottom: 20 }}>
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.16em", color: tk.textMuted, display: "block", marginBottom: 8 }}>
-                  MONTH
-                </span>
-                <select
-                  value={selMonth ?? ""}
-                  onChange={e => setSelMonth(e.target.value === "" ? null : e.target.value)}
-                  style={{
-                    width: "100%", padding: "7px 10px", borderRadius: 8, fontSize: 12, fontWeight: 600,
-                    border: `1px solid ${selMonth !== null ? tk.accentBorder : tk.border}`,
-                    background: selMonth !== null ? tk.accentDim : (isLight ? "#fff" : "#060d1c"),
-                    color: selMonth !== null ? tk.accent : tk.textSecond,
-                    cursor: "pointer", outline: "none", appearance: "none" as any,
-                    WebkitAppearance: "none" as any,
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
-                    backgroundRepeat: "no-repeat",
-                    backgroundPosition: "right 10px center",
-                    paddingRight: 30,
-                  }}
-                >
-                  <option value="">ALL MONTHS</option>
-                  {availableMonths.map(([key, label]) => (
-                    <option key={key} value={key}>{label}</option>
-                  ))}
-                </select>
-              </div>
-
-            </div>
-          )}
-
-          {/* ── MAIN FEED ──────────────────────────────────────── */}
-          <div style={{ flex: 1, minWidth: 0, padding: "18px 20px", overflowY: "auto" }} className="events-feed">
-
-            {/* Error banner */}
-            {error && section === "events" && !loading && (
-              <div style={{
-                display: "flex", alignItems: "center", gap: 10,
-                padding: "10px 14px", borderRadius: 7, marginBottom: 14,
-                background: tk.redDim, border: `1px solid rgba(255,71,87,0.25)`,
+            {/* ── LEFT SIDEBAR ─────────────────────────────────── */}
+            {sideOpen && (
+              <div className="desktop-sidebar" style={{
+                background: tk.panelBg,
+                borderRight: `1px solid ${tk.border}`,
+                padding: "18px 14px",
+                position: "sticky", top: 64,
+                height: "calc(100vh - 64px)",
+                overflowY: "auto",
+                flexShrink: 0,
+                width: 220,
+                alignSelf: "flex-start",
               }}>
-                <AlertCircle size={13} color={tk.red} />
-                <span style={{ fontSize: 11, color: tk.red, fontFamily: "'IBM Plex Mono', monospace", flex: 1 }}>
-                  SIGNAL LOST — {error}
-                </span>
-                <button onClick={refresh} style={{
-                  fontSize: 9, fontWeight: 700, color: tk.accent,
-                  background: "none", border: "none", cursor: "pointer",
-                  fontFamily: "'IBM Plex Mono', monospace",
-                }}>RETRY</button>
-              </div>
-            )}
 
-            {/* Loading */}
-            {loading && section === "events" && (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "80px 0" }}>
-                <div style={{
-                  width: 40, height: 40, borderRadius: 10,
-                  background: tk.accentDim, border: `1px solid ${tk.accentBorder}`,
-                  display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14,
-                }}>
-                  <RefreshCw size={18} color={tk.accent} style={{ animation: "spin 1s linear infinite" }} />
-                </div>
-                <span style={{ fontSize: 11, color: tk.accent, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: "0.14em" }}>FETCHING LIVE DATA…</span>
-                <span style={{ fontSize: 9, color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace", marginTop: 4 }}>YAHOO FINANCE · RBI · FOMC · ECB</span>
-              </div>
-            )}
+                {/* REGION — with inline Events/Holidays sub-tabs */}
+                <div style={{ marginBottom: 20 }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.16em", color: tk.textMuted, display: "block", marginBottom: 8 }}>
+                    REGION
+                  </span>
 
-            {/* Empty state */}
-            {!loading && grouped.size === 0 && (
-              <div style={{
-                display: "flex", flexDirection: "column", alignItems: "center",
-                padding: "80px 0", textAlign: "center",
-                border: `1px dashed ${tk.border}`, borderRadius: 10,
-              }}>
-                <Calendar size={28} color={tk.textMuted} style={{ marginBottom: 12 }} />
-                <span style={{ fontSize: 12, color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace" }}>NO DATA — TRY A DIFFERENT FILTER</span>
-              </div>
-            )}
-
-            {/* Event groups */}
-            {!loading && Array.from(grouped.values()).map(({ label, events }) => {
-              return (
-                <div key={label} style={{ marginBottom: 28 }}>
-                  {/* Month header */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                    <div style={{
-                      padding: "4px 12px 4px 10px", borderRadius: 5,
-                      background: tk.elevated, border: `1px solid ${tk.border}`,
-                      display: "flex", alignItems: "center", gap: 7,
-                    }}>
-                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: tk.accent, flexShrink: 0 }} />
-                      <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.18em", color: tk.textSecond, textTransform: "uppercase" }}>
-                        {label}
-                      </span>
-                    </div>
-                    <div style={{ flex: 1, height: 1, background: tk.border }} />
+                  {/* INDIA */}
+                  <div style={{ marginBottom: 6 }}>
+                    <button
+                      onClick={() => handleTab("india", section)}
+                      style={{
+                        width: "100%", display: "flex", alignItems: "center", gap: 8,
+                        padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                        cursor: "pointer", transition: "all 0.15s", textAlign: "left",
+                        border: `1px solid ${region === "india" ? tk.accentBorder : tk.border}`,
+                        background: region === "india" ? tk.accentDim : "transparent",
+                        color: region === "india" ? tk.accent : tk.textSecond,
+                      }}
+                    >
+                      <Flag size={12} /> INDIA
+                    </button>
+                    {region === "india" && (
+                      <div style={{ display: "flex", gap: 3, padding: "4px 4px 0", marginTop: 3 }}>
+                        <button style={sectionBtnStyle(section === "events")} onClick={() => handleTab("india", "events")}>Events</button>
+                        <button style={sectionBtnStyle(section === "holidays")} onClick={() => handleTab("india", "holidays")}>Holidays</button>
+                      </div>
+                    )}
                   </div>
 
-                  <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                    {events.map((e, i) => (
-                      <EventTerminalCard
-                        key={e.id} event={e} isLight={isLight} tk={tk} idx={i} section={section}
-                        isAdmin={isAdmin}
-                        onRefresh={refresh}
-                        onEdit={isAdmin ? (ev) => setAdminModal(ev) : undefined}
-                        onDelete={isAdmin ? handleDelete : undefined}
-                      />
+                  {/* GLOBAL — Events + Holidays */}
+                  <div>
+                    <button
+                      onClick={() => handleTab("global", section)}
+                      style={{
+                        width: "100%", display: "flex", alignItems: "center", gap: 8,
+                        padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                        cursor: "pointer", transition: "all 0.15s", textAlign: "left",
+                        border: `1px solid ${region === "global" ? tk.accentBorder : tk.border}`,
+                        background: region === "global" ? tk.accentDim : "transparent",
+                        color: region === "global" ? tk.accent : tk.textSecond,
+                      }}
+                    >
+                      <Globe size={12} /> GLOBAL
+                    </button>
+                    {region === "global" && (
+                      <div style={{ display: "flex", gap: 3, padding: "4px 4px 0", marginTop: 3 }}>
+                        <button style={sectionBtnStyle(section === "events")} onClick={() => handleTab("global", "events")}>Events</button>
+                        <button style={sectionBtnStyle(section === "holidays")} onClick={() => handleTab("global", "holidays")}>Holidays</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Month filter — dropdown */}
+                <div style={{ marginBottom: 20 }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.16em", color: tk.textMuted, display: "block", marginBottom: 8 }}>
+                    MONTH
+                  </span>
+                  <select
+                    value={selMonth ?? ""}
+                    onChange={e => setSelMonth(e.target.value === "" ? null : e.target.value)}
+                    style={{
+                      width: "100%", padding: "7px 10px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                      border: `1px solid ${selMonth !== null ? tk.accentBorder : tk.border}`,
+                      background: selMonth !== null ? tk.accentDim : (isLight ? "#fff" : "#060d1c"),
+                      color: selMonth !== null ? tk.accent : tk.textSecond,
+                      cursor: "pointer", outline: "none", appearance: "none" as any,
+                      WebkitAppearance: "none" as any,
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 10px center",
+                      paddingRight: 30,
+                    }}
+                  >
+                    <option value="">ALL MONTHS</option>
+                    {availableMonths.map(([key, label]) => (
+                      <option key={key} value={key}>{label}</option>
                     ))}
-                  </div>
+                  </select>
                 </div>
-              );
-            })}
 
-            {/* Footer note */}
-            {/* {!loading && grouped.size > 0 && (
+              </div>
+            )}
+
+            {/* ── MAIN FEED ──────────────────────────────────────── */}
+            <div style={{ flex: 1, minWidth: 0, padding: "18px 20px", overflowY: "auto" }} className="events-feed">
+
+              {/* Error banner */}
+              {error && section === "events" && !loading && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "10px 14px", borderRadius: 7, marginBottom: 14,
+                  background: tk.redDim, border: `1px solid rgba(255,71,87,0.25)`,
+                }}>
+                  <AlertCircle size={13} color={tk.red} />
+                  <span style={{ fontSize: 11, color: tk.red, fontFamily: "'IBM Plex Mono', monospace", flex: 1 }}>
+                    SIGNAL LOST — {error}
+                  </span>
+                  <button onClick={refresh} style={{
+                    fontSize: 9, fontWeight: 700, color: tk.accent,
+                    background: "none", border: "none", cursor: "pointer",
+                    fontFamily: "'IBM Plex Mono', monospace",
+                  }}>RETRY</button>
+                </div>
+              )}
+
+              {/* Loading */}
+              {loading && section === "events" && (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "80px 0" }}>
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 10,
+                    background: tk.accentDim, border: `1px solid ${tk.accentBorder}`,
+                    display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14,
+                  }}>
+                    <RefreshCw size={18} color={tk.accent} style={{ animation: "spin 1s linear infinite" }} />
+                  </div>
+                  <span style={{ fontSize: 11, color: tk.accent, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: "0.14em" }}>FETCHING LIVE DATA…</span>
+                  <span style={{ fontSize: 9, color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace", marginTop: 4 }}>YAHOO FINANCE · RBI · FOMC · ECB</span>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {!loading && grouped.size === 0 && (
+                <div style={{
+                  display: "flex", flexDirection: "column", alignItems: "center",
+                  padding: "80px 0", textAlign: "center",
+                  border: `1px dashed ${tk.border}`, borderRadius: 10,
+                }}>
+                  <Calendar size={28} color={tk.textMuted} style={{ marginBottom: 12 }} />
+                  <span style={{ fontSize: 12, color: tk.textMuted, fontFamily: "'IBM Plex Mono', monospace" }}>NO DATA — TRY A DIFFERENT FILTER</span>
+                </div>
+              )}
+
+              {/* Event groups */}
+              {!loading && Array.from(grouped.values()).map(({ label, events }) => {
+                return (
+                  <div key={label} style={{ marginBottom: 28 }}>
+                    {/* Month header */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                      <div style={{
+                        padding: "4px 12px 4px 10px", borderRadius: 5,
+                        background: tk.elevated, border: `1px solid ${tk.border}`,
+                        display: "flex", alignItems: "center", gap: 7,
+                      }}>
+                        <span style={{ width: 5, height: 5, borderRadius: "50%", background: tk.accent, flexShrink: 0 }} />
+                        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.18em", color: tk.textSecond, textTransform: "uppercase" }}>
+                          {label}
+                        </span>
+                      </div>
+                      <div style={{ flex: 1, height: 1, background: tk.border }} />
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                      {events.map((e, i) => (
+                        <EventTerminalCard
+                          key={e.id} event={e} isLight={isLight} tk={tk} idx={i} section={section}
+                          isAdmin={isAdmin}
+                          onRefresh={refresh}
+                          onEdit={isAdmin ? (ev) => setAdminModal(ev) : undefined}
+                          onDelete={isAdmin ? handleDelete : undefined}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Footer note */}
+              {/* {!loading && grouped.size > 0 && (
               <div style={{
                 marginTop: 32, padding: "12px 16px", borderRadius: 7,
                 background: tk.elevated, border: `1px solid ${tk.border}`,
@@ -2066,9 +2069,9 @@ const EventsView: React.FC = () => {
               </div>
             )} */}
 
-            <div style={{ height: 60 }} />
+              <div style={{ height: 60 }} />
+            </div>
           </div>
-        </div>
         </div>
       </div>
       {/* ── Admin Full Event Modal (Create / Edit) ── */}

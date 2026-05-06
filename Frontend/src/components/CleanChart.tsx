@@ -1,42 +1,32 @@
-// src/components/CleanChart.tsx
-// Lightweight Charts v5 — pure display component
-// Parent (MktSelector) owns period state + history fetch.
-// CleanChart just renders whatever candles it receives.
-
 import { useEffect, useRef, useState } from 'react';
 import {
   createChart, CandlestickSeries, ColorType,
   type IChartApi, type ISeriesApi, type CandlestickSeriesOptions,
 } from 'lightweight-charts';
-import { TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import { useTheme } from '@/controllers/Themecontext';
 
-// ── Types ──────────────────────────────────────────────────────────
 interface CandlePoint {
-  x: number;                              // ms epoch
-  y: [number, number, number, number];    // [open, high, low, close]
+  x: number;
+  y: [number, number, number, number];
 }
 
 interface CleanChartProps {
-  name:          string;
-  symbol:        string;
-  price:         number;
-  change:        number;
-  changePercent: number;
-  high:          number;
-  low:           number;
-  isPositive:    boolean;
-  candles?:      CandlePoint[];
-  // period is passed from parent so we can configure axis + delay label correctly
-  period?:       string;
-  // tzOffset in hours from UTC — e.g. -5 for EST (US), +1 for CET (Europe), +8 for CST (Asia)
-  // This is used to convert UTC epoch timestamps → exchange local time on X-axis
-  tzOffset?:     number;
-  // when provided, CleanChart fetches its own history when user changes period
-  historyUrl?:   string;
+  name:              string;
+  symbol:            string;
+  price:             number;
+  change:            number;
+  changePercent:     number;
+  high:              number;
+  low:               number;
+  isPositive:        boolean;
+  candles?:          CandlePoint[];
+  period?:           string;
+  exchangeTimezone?: string;
+  tzOffset?:         number;
+  historyUrl?:       string;
 }
 
-// ── Delay/description label per period ────────────────────────────
 const DELAY_LABEL: Record<string, string> = {
   '1D':  '~15 min delayed · 2 min bars · today only',
   '5D':  '~15 min delayed · 15 min bars · last 5 trading days',
@@ -48,25 +38,62 @@ const DELAY_LABEL: Record<string, string> = {
   'MAX': 'End-of-day · monthly bars · all available history',
 };
 
-// ── Bar spacing per period ─────────────────────────────────────────
-// 5D has 15-min bars × 5 days = ~130 bars → small spacing needed
-// 1M has ~21 daily bars → wider spacing for readability
-// 1Y has ~52 weekly bars → comfortable spacing
 const BAR_SPACING: Record<string, number> = {
-  '1D':  3,   // ~195 × 2-min bars
-  '5D':  3,   // ~130 × 15-min bars across 5 days
-  '1M':  14,  // ~21 daily bars — wide spacing, dates clearly readable
-  '6M':  5,   // ~126 daily bars
-  'YTD': 6,   // varies — daily bars
-  '1Y':  12,  // ~52 weekly bars — "Apr '25" labels need space
-  '5Y':  4,   // ~260 weekly bars
-  'MAX': 18,  // ~50+ monthly bars — "Apr 2024" labels need most space
+  '1D':  3,
+  '5D':  3,
+  '1M':  14,
+  '6M':  5,
+  'YTD': 6,
+  '1Y':  12,
+  '5Y':  4,
+  'MAX': 18,
 };
 
-// ── Month names for X-axis date labels ────────────────────────────
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-// ── Helpers ────────────────────────────────────────────────────────
+// ── Get current UTC offset in SECONDS for an IANA timezone ────────
+// e.g. "Asia/Tokyo" → +32400 (9 hours)
+// e.g. "America/New_York" → -14400 (EDT) or -18000 (EST)
+// This is DST-aware because we call it at runtime.
+function getOffsetSeconds(ianaTimezone: string): number {
+  const now = new Date();
+  // Format current time in both UTC and target timezone
+  const utcStr = now.toLocaleString('en-US', { timeZone: 'UTC', hour12: false,
+    hour: '2-digit', minute: '2-digit' });
+  const tzStr  = now.toLocaleString('en-US', { timeZone: ianaTimezone, hour12: false,
+    hour: '2-digit', minute: '2-digit' });
+  const toMins = (s: string) => {
+    const [h, m] = s.split(':').map(Number);
+    return h * 60 + m;
+  };
+  let diff = toMins(tzStr) - toMins(utcStr);
+  if (diff > 720)  diff -= 1440;
+  if (diff < -720) diff += 1440;
+  return diff * 60; // return seconds
+}
+
+// ── THE REAL FIX ─────────────────────────────────────────────────
+// LWC stores timestamps as UTC epoch seconds and renders them using
+// the BROWSER's local timezone when timeVisible=true.
+// localization.timeFormatter does affect tick labels BUT LWC still
+// uses its own internal date math for positioning — so "May" date
+// boundary appears at UTC midnight, not exchange-local midnight.
+//
+// The ONLY reliable solution: shift all timestamps by the exchange's
+// UTC offset so that LWC thinks "UTC midnight" = exchange midnight.
+// Then use simple HH:MM formatter (no timezone conversion needed
+// since timestamps are already pre-shifted).
+//
+// Example: Nikkei (Asia/Tokyo = UTC+9):
+//   Real candle at 09:00 JST = 00:00 UTC (epoch 1746489600)
+//   Shifted timestamp = 00:00 UTC + 9h = epoch 1746489600 + 32400
+//   LWC renders this as "09:00" using getUTCHours() — correct! ✓
+function shiftCandles(candles: CandlePoint[], offsetSeconds: number): CandlePoint[] {
+  return candles.map(c => ({
+    x: c.x + offsetSeconds * 1000,  // shift ms timestamp
+    y: c.y,
+  }));
+}
 
 function calcChange(candles: CandlePoint[]) {
   if (candles.length < 2) return { change: 0, changePercent: 0 };
@@ -133,37 +160,51 @@ function toLWC(candles: CandlePoint[]) {
     .sort((a, b) => (a.time as unknown as number) - (b.time as unknown as number));
 }
 
-// ── Chart colour palettes ─────────────────────────────────────────
+// ── Time formatter — simple UTC read on pre-shifted timestamps ────
+// Since timestamps are already shifted by exchange offset,
+// getUTCHours/getUTCMinutes give the correct exchange-local time.
+function makeTimeFormatter(p: string) {
+  return (timestamp: number): string => {
+    // timestamp from LWC is UTC epoch SECONDS (already shifted)
+    const d = new Date(timestamp * 1000);
+    const hh  = d.getUTCHours().toString().padStart(2, '0');
+    const mm  = d.getUTCMinutes().toString().padStart(2, '0');
+    const day = d.getUTCDate().toString().padStart(2, '0');
+    const mon = MONTHS[d.getUTCMonth()];
+    const yr2 = d.getUTCFullYear().toString().slice(2);
+    const yr4 = d.getUTCFullYear();
+
+    if (p === '1D') return `${hh}:${mm}`;
+
+    if (p === '5D') {
+      if (hh === '00' && mm === '00') return `${day} ${mon}`;
+      return `${day} ${mon} ${hh}:${mm}`;
+    }
+
+    if (p === '1M' || p === '6M' || p === 'YTD') return `${day} ${mon}`;
+    if (p === '1Y') return `${mon} '${yr2}`;
+    return `${mon} ${yr4}`;
+  };
+}
+
 const C = {
   dark: {
-    bg:        '#0e2038',
-    grid:      'rgba(255,255,255,0.05)',
-    text:      'rgba(148,163,184,0.9)',
-    cross:     'rgba(148,163,184,0.25)',
-    crossLbl:  '#1e3a5f',
-    up:        '#26a69a',
-    down:      '#ef5350',
+    bg: '#0e2038', grid: 'rgba(255,255,255,0.05)', text: 'rgba(148,163,184,0.9)',
+    cross: 'rgba(148,163,184,0.25)', crossLbl: '#1e3a5f', up: '#26a69a', down: '#ef5350',
   },
   light: {
-    bg:        '#ffffff',
-    grid:      'rgba(226,232,240,0.7)',
-    text:      'rgba(100,116,139,0.9)',
-    cross:     'rgba(100,116,139,0.3)',
-    crossLbl:  '#475569',
-    up:        '#26a69a',
-    down:      '#ef5350',
+    bg: '#ffffff', grid: 'rgba(226,232,240,0.7)', text: 'rgba(100,116,139,0.9)',
+    cross: 'rgba(100,116,139,0.3)', crossLbl: '#475569', up: '#26a69a', down: '#ef5350',
   },
 };
 
-// ══════════════════════════════════════════════════════════════════
-// COMPONENT
-// ══════════════════════════════════════════════════════════════════
 const CleanChart = ({
   name, symbol, price, change, changePercent,
   high, low, isPositive,
   candles: propCandles,
   period: propPeriod = '1D',
-  tzOffset = 0,
+  exchangeTimezone = 'UTC',
+  tzOffset,
   historyUrl,
 }: CleanChartProps) => {
   const { theme } = useTheme();
@@ -185,7 +226,12 @@ const CleanChart = ({
   const [pLow,       setPLow]        = useState(low);
   const [fetching,   setFetching]    = useState(false);
 
-  // ── Fetch history when period changes (only if historyUrl provided) ──
+  // ── Compute exchange offset ONCE per timezone ─────────────────
+  // Use exchangeTimezone if provided, else fall back to tzOffset
+  const offsetSeconds = exchangeTimezone !== 'UTC'
+    ? getOffsetSeconds(exchangeTimezone)
+    : (tzOffset ?? 0) * 3600;
+
   useEffect(() => {
     if (!historyUrl) return;
     setFetching(true);
@@ -200,130 +246,42 @@ const CleanChart = ({
           setChartData(candles);
           setFallback(false);
           const { change: ch, changePercent: cp } = calcChange(candles);
-          setPChange(ch);
-          setPChangePct(cp);
+          setPChange(ch); setPChangePct(cp);
           setPHigh(Math.max(...candles.map(k => k.y[1])));
           setPLow(Math.min(...candles.map(k => k.y[2])));
         } else {
           const fb = generateFallback(price, high, low, changePercent, isPositive);
-          setChartData(fb);
-          setFallback(true);
+          setChartData(fb); setFallback(true);
           setPChange(change); setPChangePct(changePercent); setPHigh(high); setPLow(low);
         }
       })
       .catch(() => {
         const fb = generateFallback(price, high, low, changePercent, isPositive);
-        setChartData(fb);
-        setFallback(true);
+        setChartData(fb); setFallback(true);
         setPChange(change); setPChangePct(changePercent); setPHigh(high); setPLow(low);
       })
       .finally(() => setFetching(false));
   }, [activePeriod, historyUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Sync candles from parent (when historyUrl not provided) ──
   useEffect(() => {
     if (historyUrl) return;
     const src = propCandles;
     if (src && src.length >= 3) {
-      setChartData(src);
-      setFallback(false);
+      setChartData(src); setFallback(false);
       const { change: ch, changePercent: cp } = calcChange(src);
-      setPChange(ch);
-      setPChangePct(cp);
+      setPChange(ch); setPChangePct(cp);
       setPHigh(Math.max(...src.map(k => k.y[1])));
       setPLow(Math.min(...src.map(k => k.y[2])));
     } else {
       const fb = generateFallback(price, high, low, changePercent, isPositive);
-      setChartData(fb);
-      setFallback(true);
-      setPChange(change);
-      setPChangePct(changePercent);
-      setPHigh(high);
-      setPLow(low);
+      setChartData(fb); setFallback(true);
+      setPChange(change); setPChangePct(changePercent); setPHigh(high); setPLow(low);
     }
   }, [propCandles]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Derived chart config ───────────────────────────────────────
-  // timeVisible = true for 1D and 5D so LWC renders time component on axis
-  // For daily/weekly/monthly periods it's false — only date labels needed
   const timeVisible = period === '1D' || period === '5D';
   const barSpacing  = BAR_SPACING[period] ?? 6;
 
-  // ── FIX: Convert tzOffset (hours) → seconds for LWC localization ──
-  // LWC timestamps are UTC epoch seconds. We shift them by tzOffset so
-  // that the displayed labels show the EXCHANGE's local time, not UTC.
-  // Example: US market (EST = UTC-5): tzOffset = -5
-  //   A candle at 14:30 UTC becomes 09:30 EST on the X-axis ✓
-  // Example: Europe (CET = UTC+1): tzOffset = +1
-  //   A candle at 08:00 UTC becomes 09:00 CET on the X-axis ✓
-  // Example: Asia (CST = UTC+8): tzOffset = +8
-  //   A candle at 01:30 UTC becomes 09:30 CST on the X-axis ✓
-  const tzOffsetSeconds = Math.round(tzOffset * 3600);
-
-  // ── timeFormatter: formats each X-axis tick label ─────────────
-  // We add tzOffsetSeconds to the raw UTC timestamp before formatting,
-  // then use getUTC* methods (which read the shifted value as-is).
-  // This avoids the browser's local timezone interfering with display.
-  //
-  // FORMAT GUIDE (what user expects to see):
-  //   1D  → "09:30"               (HH:MM exchange local time only)
-  //   5D  → "28 Apr 09:30"        (Date + Time — spans multiple days)
-  //   1M  → "28 Apr"              (Day + Month — daily bars)
-  //   6M  → "28 Apr"              (Day + Month — daily bars)
-  //   YTD → "28 Apr"              (Day + Month — daily bars)
-  //   1Y  → "Apr '25"             (Month + Short Year — weekly bars)
-  //   5Y  → "Apr 2024"            (Month + Full Year — weekly bars)
-  //   MAX → "Apr 2024"            (Month + Full Year — monthly bars)
-  const makeTimeFormatter = (p: string) => (timestamp: number) => {
-    // timestamp from LWC is UTC epoch seconds
-    // Shift to exchange local time by adding tzOffset
-    const localMs = (timestamp + tzOffsetSeconds) * 1000;
-    const d = new Date(localMs);
-
-    const day = d.getUTCDate().toString().padStart(2, '0');
-    const mon = MONTHS[d.getUTCMonth()];
-    const hh  = d.getUTCHours().toString().padStart(2, '0');
-    const mm  = d.getUTCMinutes().toString().padStart(2, '0');
-    const yr2 = d.getUTCFullYear().toString().slice(2);
-    const yr4 = d.getUTCFullYear();
-
-    if (p === '1D') {
-      // ── Intraday 1D: only time, no date (single day chart) ──
-      // e.g. "09:30", "10:15", "15:45"
-      return `${hh}:${mm}`;
-    }
-
-    if (p === '5D') {
-      // ── 5D: Date + Time — user needs to see WHICH day + what time ──
-      // e.g. "28 Apr 09:30", "29 Apr 14:00"
-      // Only show time label on non-midnight ticks to reduce clutter
-      const isSessionOpen = !(hh === '00' && mm === '00');
-      if (isSessionOpen) {
-        return `${day} ${mon} ${hh}:${mm}`;
-      }
-      // midnight tick → just show the date
-      return `${day} ${mon}`;
-    }
-
-    if (p === '1M' || p === '6M' || p === 'YTD') {
-      // ── Daily bars: show "28 Apr" — user needs exact date ──
-      // e.g. "01 Apr", "15 Apr", "28 Apr"
-      return `${day} ${mon}`;
-    }
-
-    if (p === '1Y') {
-      // ── 1Y weekly bars: "Apr '25" — month + short year ──
-      // e.g. "Jan '25", "Apr '25", "Oct '25"
-      return `${mon} '${yr2}`;
-    }
-
-    // ── 5Y / MAX: "Apr 2024" — month + full year for clarity ──
-    // e.g. "Jan 2022", "Jun 2023", "Apr 2026"
-    return `${mon} ${yr4}`;
-  };
-
-  // ── Create lightweight-charts instance ────────────────────────
-  // Re-runs only on theme change (dark/light)
   useEffect(() => {
     if (!containerRef.current) return;
     if (chartRef.current) {
@@ -362,7 +320,9 @@ const CleanChart = ({
         fixRightEdge:   true,
         barSpacing,
         rightOffset:    3,
-        // ── FIX: Use exchange timezone offset to display correct local time ──
+        // ── KEY: datetimeUTC=true so LWC uses getUTC* methods ──
+        // Our timestamps are pre-shifted by exchange offset,
+        // so getUTCHours() returns the correct exchange-local hour.
         localization: {
           timeFormatter: makeTimeFormatter(period),
         },
@@ -373,8 +333,8 @@ const CleanChart = ({
     });
 
     const series = chart.addSeries(CandlestickSeries, {
-      upColor:      col.up,
-      downColor:    col.down,
+      upColor:       col.up,
+      downColor:     col.down,
       borderVisible: false,
       wickUpColor:   col.up,
       wickDownColor: col.down,
@@ -384,7 +344,8 @@ const CleanChart = ({
     seriesRef.current = series;
 
     if (chartData.length > 0) {
-      series.setData(toLWC(chartData));
+      // Shift timestamps to exchange local time before passing to LWC
+      series.setData(toLWC(shiftCandles(chartData, offsetSeconds)));
       chart.timeScale().fitContent();
     }
 
@@ -399,14 +360,13 @@ const CleanChart = ({
       chartRef.current  = null;
       seriesRef.current = null;
     };
-  }, [dark]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dark, exchangeTimezone]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Update chart whenever data or period changes ──────────────
   useEffect(() => {
     if (!seriesRef.current || !chartRef.current || !chartData.length) return;
-    seriesRef.current.setData(toLWC(chartData));
+    // Always shift candles before rendering
+    seriesRef.current.setData(toLWC(shiftCandles(chartData, offsetSeconds)));
     chartRef.current.timeScale().fitContent();
-    // ── FIX: Re-apply correct timeFormatter every time period changes ──
     chartRef.current.applyOptions({
       timeScale: {
         timeVisible,
@@ -416,35 +376,27 @@ const CleanChart = ({
         },
       },
     });
-  }, [chartData, period, timeVisible, barSpacing]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chartData, period, timeVisible, barSpacing, offsetSeconds]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const isPos       = pChangePct >= 0;
-  const delayLabel  = DELAY_LABEL[period] ?? '~15 min delayed';
+  const isPos      = pChangePct >= 0;
 
-  // ── Styling tokens ────────────────────────────────────────────
-  const cardBg   = dark ? 'bg-[#0e2038] border-white/[0.08]'    : 'bg-white border-slate-200';
-  const nameCls  = dark ? 'text-slate-500'                       : 'text-slate-400';
-  const priceCls = dark ? 'text-slate-100'                       : 'text-slate-900';
-  const hlCls    = dark ? 'bg-white/5 border-white/[0.08] text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700';
-  const footBg   = dark ? 'bg-white/[0.02] border-white/[0.05] text-slate-600' : 'bg-slate-50/60 border-slate-100 text-slate-400';
+  const cardBg  = dark ? 'bg-[#0e2038] border-white/[0.08]'    : 'bg-white border-slate-200';
+  const nameCls = dark ? 'text-slate-500'                       : 'text-slate-400';
+  const priceCls= dark ? 'text-slate-100'                       : 'text-slate-900';
+  const hlCls   = dark ? 'bg-white/5 border-white/[0.08] text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700';
+  const footBg  = dark ? 'bg-white/[0.02] border-white/[0.05] text-slate-600' : 'bg-slate-50/60 border-slate-100 text-slate-400';
 
   return (
     <div className={`rounded-2xl border shadow-sm overflow-hidden transition-all ${cardBg}`}>
-
-      {/* ── Header: index name + price + period H/L ─────────────── */}
       <div className="px-4 pt-3 pb-2">
         <h3 className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 ${nameCls}`}>
           {name}
         </h3>
-
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            {/* Live price */}
             <div className={`text-3xl sm:text-4xl font-black tracking-tight leading-none mb-1 ${priceCls}`}>
               {price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
-
-            {/* Change for the selected period */}
             <div className={`flex items-center gap-1.5 text-sm font-bold ${isPos ? 'text-emerald-500' : 'text-red-500'}`}>
               {isPos ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
               <span>
@@ -453,68 +405,43 @@ const CleanChart = ({
               </span>
             </div>
           </div>
-
-          {/* Period High / Low — compact boxes */}
           <div className="flex flex-col items-end gap-0.5 shrink-0 min-w-[72px]">
             <div className={`w-full px-1.5 py-0.5 rounded border text-right text-[10px] ${hlCls}`}>
-              H:&nbsp;<span className="font-semibold">
-                {pHigh.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-              </span>
+              H:&nbsp;<span className="font-semibold">{pHigh.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
             </div>
             <div className={`w-full px-1.5 py-0.5 rounded border text-right text-[10px] ${hlCls}`}>
-              L:&nbsp;<span className="font-semibold">
-                {pLow.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-              </span>
+              L:&nbsp;<span className="font-semibold">{pLow.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Candlestick chart ─────────────────────────────────────── */}
       <div style={{ height: 220, position: 'relative' }}>
         {fetching && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: dark ? 'rgba(14,32,56,0.6)' : 'rgba(255,255,255,0.6)', zIndex: 5, borderRadius: 0 }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: dark ? 'rgba(14,32,56,0.6)' : 'rgba(255,255,255,0.6)', zIndex: 5 }}>
             <span style={{ fontSize: 11, color: dark ? '#94a3b8' : '#64748b' }}>Loading…</span>
           </div>
         )}
         <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
       </div>
 
-      {/* ── Footer: lock/delay label LEFT · period tabs RIGHT ──────── */}
-      <div className={`flex items-center justify-between gap-2 px-3 py-1.5 text-[10px] border-t ${footBg}`}>
-
-        {/* Left — lock or delay label */}
-        <span className=" hidden md:block flex items-center gap-1 shrink-0">
-          {isFallback ? (
-            '🔒 Estimated shape · market closed or no data'
-          ) : (
-            <>
-              <AlertTriangle className="w-2.5 h-2.5 text-amber-500 shrink-0" />
-              {delayLabel}
-            </>
-          )}
-        </span>
-
-        {/* Right — period tabs (only when historyUrl provided) */}
-        {historyUrl && (
+      {historyUrl && (
+        <div className={`flex items-center justify-end gap-2 px-3 py-1.5 text-[10px] border-t ${footBg}`}>
           <div className="flex items-center gap-0.5">
             {(['1D', '5D', '1M', '6M', 'YTD', '1Y', '5Y', 'MAX'] as const).map(p => (
-              <button
-                key={p}
-                onClick={e => { e.stopPropagation(); setActivePeriod(p); }}
+              <button key={p} onClick={e => { e.stopPropagation(); setActivePeriod(p); }}
                 className="text-[11px] font-bold px-2 py-0.5 rounded-md transition-all"
                 style={activePeriod === p
                   ? { background: dark ? '#1e3a5f' : '#e0eaff', color: '#5194F6' }
                   : { background: 'transparent', color: dark ? '#475569' : '#94a3b8' }
-                }
-              >
+                }>
                 {p}
               </button>
             ))}
           </div>
-        )}
-
-      </div>
+        </div>
+      )}
     </div>
   );
 };

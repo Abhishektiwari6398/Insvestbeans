@@ -1,9 +1,9 @@
-// GlobalView.tsx — Redesigned in DomesticView style
-// Data: same useGlobalMarkets hook — only design changed
 
 import Layout from "@/components/Layout";
-import CleanChart from "@/components/CleanChart";
 import TradingViewModal from "@/components/Tradingviewmodal";
+import { USMarketsChart }       from "@/components/Usmarketschart";
+import { EuropeanMarketsChart } from "@/components/Europeanmarketschart";
+import { AsiaPacificMarketsChart } from "@/components/Asiapacificmarketschart";
 import { useGlobalMarkets } from "@/hooks/useGlobalMarkets";
 import { IndexQuote, BondYield, RegionSummary, CandlePoint } from "@/services/globalMarkets/types";
 import {
@@ -36,36 +36,104 @@ interface MktInfo { name: string; short: string; flag: string; code: string; tz:
 const MARKETS: MktInfo[] = [
   { name:"Tokyo (TSE)",       short:"Tokyo",     flag:"🇯🇵", code:"JP", tz:"JST (UTC+9)",    localTime:"09:00–15:00", openUTC:0,   closeUTC:360,  color:"#e74c3c" },
   { name:"Shanghai (SSE)",    short:"Shanghai",  flag:"🇨🇳", code:"CN", tz:"CST (UTC+8)",    localTime:"09:30–15:00", openUTC:90,  closeUTC:420,  color:"#f39c12" },
-  { name:"Hong Kong (HKEX)",  short:"HK",        flag:"🇭🇰", code:"HK", tz:"HKT (UTC+8)",    localTime:"09:30–16:00", openUTC:90,  closeUTC:480,  color:"#e67e22" },
-  { name:"India (NSE/BSE)",   short:"India",     flag:"🇮🇳", code:"IN", tz:"IST (UTC+5:30)", localTime:"09:15–15:30", openUTC:225, closeUTC:570,  color:"#27ae60" },
-  { name:"Frankfurt (XETRA)", short:"Frankfurt", flag:"🇩🇪", code:"DE", tz:"CET (UTC+1)",    localTime:"09:00–17:30", openUTC:480, closeUTC:990,  color:"#2980b9" },
-  { name:"London (LSE)",      short:"London",    flag:"🇬🇧", code:"GB", tz:"GMT (UTC+0)",    localTime:"08:00–16:30", openUTC:480, closeUTC:990,  color:"#8e44ad" },
-  { name:"NYSE / NASDAQ",     short:"New York",  flag:"🇺🇸", code:"US", tz:"EST (UTC-5)",    localTime:"09:30–16:00", openUTC:870, closeUTC:1260, color:"#2563eb" },
+  { name:"Hong Kong (HKEX)",  short:"HK",        flag:"🇭🇰", code:"HK", tz:"HKT (UTC+8)",    localTime:"09:15–16:00", openUTC:75,  closeUTC:480,  color:"#e67e22" },
+  { name:"India (NSE/BSE)",   short:"India",     flag:"🇮🇳", code:"IN", tz:"IST (UTC+5:30)", localTime:"09:15–15:30", openUTC:225, closeUTC:600,  color:"#27ae60" },
+  { name:"Frankfurt (XETRA)", short:"Frankfurt", flag:"🇩🇪", code:"DE", tz:"CET/CEST",       localTime:"09:00–17:30", openUTC:480, closeUTC:990,  color:"#2980b9" },
+  { name:"London (LSE)",      short:"London",    flag:"🇬🇧", code:"GB", tz:"GMT/BST",        localTime:"08:00–16:30", openUTC:480, closeUTC:990,  color:"#8e44ad" },
+  { name:"NYSE / NASDAQ",     short:"New York",  flag:"🇺🇸", code:"US", tz:"EST/EDT",        localTime:"09:30–16:00", openUTC:870, closeUTC:1260, color:"#2563eb" },
 ];
 
+// DST-aware market open check using Intl
+const MKT_TZ: Record<string, string> = {
+  "JP": "Asia/Tokyo",
+  "CN": "Asia/Shanghai",
+  "HK": "Asia/Hong_Kong",
+  "IN": "Asia/Kolkata",
+  "DE": "Europe/Berlin",
+  "GB": "Europe/London",
+  "US": "America/New_York",
+};
+// localTime strings like "09:30–16:00"
 function mktSt(m: MktInfo): "open"|"pre"|"closed" {
-  const n = new Date(), day = n.getUTCDay();
-  if (day===0||day===6) return "closed";
-  const mins = n.getUTCHours()*60+n.getUTCMinutes();
-  if (mins>=m.openUTC&&mins<m.closeUTC) return "open";
-  if (mins>=m.openUTC-30&&mins<m.openUTC) return "pre";
+  const now = new Date();
+  const tz = MKT_TZ[m.code];
+  if (!tz) return "closed";
+  const parts = new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit", minute: "2-digit", hour12: false,
+    weekday: "short", timeZone: tz,
+  }).formatToParts(now);
+  const weekday = parts.find(p => p.type === "weekday")?.value ?? "";
+  if (weekday === "Sat" || weekday === "Sun") return "closed";
+  const h = parseInt(parts.find(p => p.type === "hour")?.value ?? "0");
+  const mn = parseInt(parts.find(p => p.type === "minute")?.value ?? "0");
+  const localMins = h * 60 + mn;
+  // Parse localTime "09:15–15:30"
+  const [openStr, closeStr] = m.localTime.split("–");
+  const [oh, om] = openStr.split(":").map(Number);
+  const [ch, cm] = closeStr.split(":").map(Number);
+  const openMin = oh * 60 + om;
+  const closeMin = ch * 60 + cm;
+  if (localMins >= openMin && localMins < closeMin) return "open";
+  if (localMins >= openMin - 30 && localMins < openMin) return "pre";
   return "closed";
 }
 
 function localNow(m: MktInfo): string {
-  const off: Record<string,number> = {"JST (UTC+9)":9,"CST (UTC+8)":8,"HKT (UTC+8)":8,"IST (UTC+5:30)":5.5,"CET (UTC+1)":1,"GMT (UTC+0)":0,"EST (UTC-5)":-5};
-  const d = new Date(Date.now()+(off[m.tz]??0)*3_600_000);
-  return d.getUTCHours().toString().padStart(2,"0")+":"+d.getUTCMinutes().toString().padStart(2,"0");
+  const tzMap: Record<string,string> = {
+    "JST (UTC+9)":    "Asia/Tokyo",
+    "CST (UTC+8)":    "Asia/Shanghai",
+    "HKT (UTC+8)":    "Asia/Hong_Kong",
+    "IST (UTC+5:30)": "Asia/Kolkata",
+    "CET (UTC+1)":    "Europe/Berlin",
+    "GMT (UTC+0)":    "Europe/London",
+    "EST (UTC-5)":    "America/New_York",
+  };
+  const tz = tzMap[m.tz];
+  if (!tz) return "--:--";
+  const parts = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: tz }).formatToParts(new Date());
+  const h = parts.find(p => p.type === "hour")?.value ?? "00";
+  const mn = parts.find(p => p.type === "minute")?.value ?? "00";
+  return `${h.padStart(2,"0")}:${mn.padStart(2,"0")}`;
 }
 
-// ── FIX: Correct tzOffset per region for chart X-axis ─────────────
-// These map to the primary exchange timezone in each region.
-// US  = EST  = UTC-5  (NYSE/NASDAQ: 09:30–16:00 EST)
-// EU  = CET  = UTC+1  (XETRA/LSE: 08:00–17:30 local)
-// Asia= CST  = UTC+8  (SSE/HKEX: 09:30–16:00 CST), JST=UTC+9 for Nikkei
-// We pass -5 for US, +1 for Europe, +8 for Asia (most markets)
-// Nikkei uses +9 but since MktSelector groups them, we use +8 as average.
-// Individual overrides can be added if needed.
+// ── DST-aware UTC offset for a given IANA timezone (in hours) ────────
+// Returns e.g. -4 for America/New_York in summer (EDT), -5 in winter (EST)
+// +2 for Europe/Berlin in summer (CEST), +1 in winter (CET)
+function getUTCOffset(ianaZone: string): number {
+  const now = new Date();
+  const fmt = (tz: string) =>
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: tz, hour: "numeric", minute: "numeric", hour12: false,
+    }).format(now);
+  const toMins = (s: string) => {
+    const parts = s.split(":");
+    return parseInt(parts[0]) * 60 + parseInt(parts[1] ?? "0");
+  };
+  let diff = toMins(fmt(ianaZone)) - toMins(fmt("UTC"));
+  if (diff > 720)  diff -= 1440;
+  if (diff < -720) diff += 1440;
+  return diff / 60;
+}
+
+// Per-symbol IANA timezone for correct DST-aware X-axis labels
+const SYMBOL_TZ: Record<string, string> = {
+  "^DJI":      "America/New_York",
+  "^GSPC":     "America/New_York",
+  "^IXIC":     "America/New_York",
+  "^FTSE":     "Europe/London",
+  "^GDAXI":    "Europe/Berlin",
+  "^FCHI":     "Europe/Paris",
+  "^N225":     "Asia/Tokyo",
+  "^HSI":      "Asia/Hong_Kong",
+  "000001.SS": "Asia/Shanghai",
+  "^NSEI":     "Asia/Kolkata",
+  "^BSESN":    "Asia/Kolkata",
+};
+
+function getSymbolTzOffset(symbol: string): number {
+  const tz = SYMBOL_TZ[symbol];
+  return tz ? getUTCOffset(tz) : 0;
+}
 
 const NAV_SECTIONS = [
   { id:"section-hours",   label:"Market Hours",   icon: Globe     },
@@ -241,10 +309,9 @@ function MktHoursSection() {
 // ══════════════════════════════════════════════════════════════════
 // MARKET SELECTOR
 // ══════════════════════════════════════════════════════════════════
-function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym, tzOffset = 0, regionSummary }: {
+function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym, regionSummary }: {
   sectionId:string; navId:string; title:string; markets:IndexQuote[]; icon?:any;
   onChart:(sym:string, name:string)=>void; autoSym?:string;
-  tzOffset?: number;
   regionSummary?: React.ReactNode;
 }) {
   const l = useIL();
@@ -254,6 +321,8 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym,
   const [chartLoading, setChartLoading]   = useState(false);
   const [fetchError,   setFetchError]     = useState(false);
   const fetchIdRef = useRef(0);
+  // Track last fetched symbol+period so we never overwrite with stale 1D candles
+  const lastFetchRef = useRef<string>("");
 
   useEffect(() => {
     if (!autoSym) return;
@@ -261,12 +330,20 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym,
     if (i !== -1) setSel(i);
   }, [autoSym, markets]);
 
+  // Only seed candles from markets[sel] when the selected market changes (not on every markets re-render)
+  // This prevents overwriting 5D/1M/etc candles with 1D data when parent re-renders
+  const prevSelRef = useRef(-1);
   useEffect(() => {
+    if (prevSelRef.current === sel) return; // sel didn't actually change
+    prevSelRef.current = sel;
+    lastFetchRef.current = "";  // reset so next fetchCandles always wins
     setChartCandles(markets[sel]?.candles ?? []);
-  }, [sel, markets]);
+    setPeriod("1D");  // reset to 1D when switching market
+  }, [sel]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchCandles = useCallback(async (symbol: string, p: Period) => {
     const id = ++fetchIdRef.current;
+    const key = `${symbol}_${p}`;
     setChartLoading(true);
     setFetchError(false);
     try {
@@ -277,6 +354,7 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym,
       const json = await res.json();
       if (id !== fetchIdRef.current) return;
       setChartCandles(json.candles ?? []);
+      lastFetchRef.current = key;  // mark what's now displayed
     } catch (e) {
       if (id !== fetchIdRef.current) return;
       console.error(`[MktSelector] history fetch failed ${symbol} ${p}:`, e);
@@ -290,7 +368,7 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym,
     const sym = markets[sel]?.symbol;
     if (!sym) return;
     fetchCandles(sym, period);
-  }, [sel, period, markets, fetchCandles]);
+  }, [sel, period, fetchCandles]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!markets.length) return (
     <div id={sectionId} className="mb-8 scroll-mt-24">
@@ -392,7 +470,8 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym,
             isPositive={isPos}
             candles={chartCandles}
             period={period}
-            tzOffset={tzOffset}
+            // tzOffset={getSymbolTzOffset(s.symbol)}
+            exchangeTimezone={SYMBOL_TZ[s.symbol] ?? "UTC"}
           />
         </div>
 
@@ -591,177 +670,192 @@ export default function GlobalView() {
 
             <MktHoursSection/>
 
-            {/* US Markets */}
-            {isLoading ? <div className={`h-96 rounded-xl animate-pulse mb-8 ${l?"bg-gray-100":"bg-[#1a2d3f]/40"}`}/> :
-              <MktSelector sectionId="section-us" navId="section-us-h" title="United States Markets"
-                markets={usM} icon={BarChart3} onChart={openChart} autoSym={tickerSym??undefined}
-                tzOffset={-5}  // ── FIX: EST = UTC-5 → shows 09:30 for NYSE open ──
-                regionSummary={
-                  <div>
-                    {regs.filter(r=>r.name==="United States").map((r:RegionSummary) => {
-                      const p = r.avgChange>=0;
-                      return (
-                        <Card key={r.name} className="overflow-hidden mb-4">
-                          <div className="h-0.5" style={{ background: p?"linear-gradient(to right,#0A3656,transparent)":"linear-gradient(to right,#dc2626,transparent)" }}/>
-                          <div className="p-4">
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <span className="text-2xl">{r.flag}</span>
-                                <div>
-                                  <p className={`font-extrabold text-sm ${tx.t1(l)}`}>{r.name} — Regional Summary</p>
-                                  <p className={`text-[11px] mt-0.5 ${tx.t3(l)}`}>{r.countries.join(", ")}</p>
-                                </div>
-                              </div>
-                              <span className={`text-base font-black ${p?"text-emerald-500":"text-red-500"}`}>{p?"+":""}{r.avgChange.toFixed(2)}%</span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border ${l?"bg-emerald-50 border-emerald-100":"bg-emerald-900/10 border-emerald-800/20"}`}>
-                                <span className={`text-xs ${tx.t3(l)}`}>Best</span>
-                                <span className={`text-xs font-bold ${l?"text-emerald-700":"text-emerald-400"}`}>{r.best.name} ({r.best.change.toFixed(2)}%)</span>
-                              </div>
-                              <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border ${l?"bg-red-50 border-red-100":"bg-red-900/10 border-red-800/20"}`}>
-                                <span className={`text-xs ${tx.t3(l)}`}>Worst</span>
-                                <span className={`text-xs font-bold ${l?"text-red-700":"text-red-400"}`}>{r.worst.name} ({r.worst.change.toFixed(2)}%)</span>
-                              </div>
-                            </div>
-                          </div>
-                        </Card>
-                      );
-                    })}
-                    {/* Bonds & VIX under US section */}
-                    <div id="section-bonds" className="scroll-mt-24">
-                      <SecHead id="section-bonds-h" icon={Landmark} title="Bonds & Volatility"/>
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <Card className="overflow-hidden">
-                          <div className={`px-4 py-3 border-b ${l?"bg-gray-50 border-gray-100":"bg-[#081017] border-[#1a2d3f]"}`}>
-                            <p className={`text-[10px] font-black uppercase tracking-widest ${tx.t3(l)}`}>Treasury Yields</p>
-                          </div>
-                          {isLoading ? <div className="p-4 space-y-2"><Skel h="h-10"/><Skel h="h-10"/><Skel h="h-10"/></div> :
-                           bnds.length>0 ? (
-                            <div className={`divide-y ${l?"divide-gray-50":"divide-[#111e28]"}`}>
-                              {bnds.map((b:BondYield, i:number) => {
-                                const p = b.change>=0;
-                                return (
-                                  <div key={i} className={`flex items-center justify-between px-4 py-3 ${tx.row(l)}`}>
+            {/* ── US Markets ───────────────────────────────────────── */}
+            <div id="section-us" className="mb-8 scroll-mt-24">
+              <SecHead id="section-us-h" icon={BarChart3} title="United States Markets" sub={`${usM.length} indices`}/>
+              {isLoading
+                ? <div className={`h-96 rounded-xl animate-pulse ${l?"bg-gray-100":"bg-[#1a2d3f]/40"}`}/>
+                : <USMarketsChart
+                    markets={usM}
+                    onChart={openChart}
+                    autoSym={tickerSym ?? undefined}
+                    regionSummary={
+                      <div>
+                        {regs.filter(r=>r.name==="United States").map((r:RegionSummary) => {
+                          const p = r.avgChange>=0;
+                          return (
+                            <Card key={r.name} className="overflow-hidden mb-4">
+                              <div className="h-0.5" style={{ background: p?"linear-gradient(to right,#0A3656,transparent)":"linear-gradient(to right,#dc2626,transparent)" }}/>
+                              <div className="p-4">
+                                <div className="flex items-start justify-between mb-3">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-2xl">{r.flag}</span>
                                     <div>
-                                      <p className={`font-bold text-sm ${tx.t1(l)}`}>{b.name}</p>
-                                      <p className={`text-[11px] font-semibold mt-0.5 ${p?"text-emerald-500":"text-red-500"}`}>{p?"+":""}{b.change.toFixed(3)}%</p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <span className={`text-xl font-black ${tx.t1(l)}`}>{b.yield.toFixed(3)}%</span>
-                                      {p ? <TrendingUp className="w-4 h-4 text-emerald-500"/> : <TrendingDown className="w-4 h-4 text-red-500"/>}
+                                      <p className={`font-extrabold text-sm ${tx.t1(l)}`}>{r.name} — Regional Summary</p>
+                                      <p className={`text-[11px] mt-0.5 ${tx.t3(l)}`}>{r.countries.join(", ")}</p>
                                     </div>
                                   </div>
+                                  <span className={`text-base font-black ${p?"text-emerald-500":"text-red-500"}`}>{p?"+":""}{r.avgChange.toFixed(2)}%</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border ${l?"bg-emerald-50 border-emerald-100":"bg-emerald-900/10 border-emerald-800/20"}`}>
+                                    <span className={`text-xs ${tx.t3(l)}`}>Best</span>
+                                    <span className={`text-xs font-bold ${l?"text-emerald-700":"text-emerald-400"}`}>{r.best.name} ({r.best.change.toFixed(2)}%)</span>
+                                  </div>
+                                  <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border ${l?"bg-red-50 border-red-100":"bg-red-900/10 border-red-800/20"}`}>
+                                    <span className={`text-xs ${tx.t3(l)}`}>Worst</span>
+                                    <span className={`text-xs font-bold ${l?"text-red-700":"text-red-400"}`}>{r.worst.name} ({r.worst.change.toFixed(2)}%)</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </Card>
+                          );
+                        })}
+                        {/* Bonds & VIX under US section */}
+                        <div id="section-bonds" className="scroll-mt-24">
+                          <SecHead id="section-bonds-h" icon={Landmark} title="Bonds & Volatility"/>
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <Card className="overflow-hidden">
+                              <div className={`px-4 py-3 border-b ${l?"bg-gray-50 border-gray-100":"bg-[#081017] border-[#1a2d3f]"}`}>
+                                <p className={`text-[10px] font-black uppercase tracking-widest ${tx.t3(l)}`}>Treasury Yields</p>
+                              </div>
+                              {isLoading ? <div className="p-4 space-y-2"><Skel h="h-10"/><Skel h="h-10"/><Skel h="h-10"/></div> :
+                               bnds.length>0 ? (
+                                <div className={`divide-y ${l?"divide-gray-50":"divide-[#111e28]"}`}>
+                                  {bnds.map((b:BondYield, i:number) => {
+                                    const p = b.change>=0;
+                                    return (
+                                      <div key={i} className={`flex items-center justify-between px-4 py-3 ${tx.row(l)}`}>
+                                        <div>
+                                          <p className={`font-bold text-sm ${tx.t1(l)}`}>{b.name}</p>
+                                          <p className={`text-[11px] font-semibold mt-0.5 ${p?"text-emerald-500":"text-red-500"}`}>{p?"+":""}{b.change.toFixed(3)}%</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <span className={`text-xl font-black ${tx.t1(l)}`}>{b.yield.toFixed(3)}%</span>
+                                          {p ? <TrendingUp className="w-4 h-4 text-emerald-500"/> : <TrendingDown className="w-4 h-4 text-red-500"/>}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : <p className={`p-8 text-center text-sm ${tx.t2(l)}`}>Unavailable</p>}
+                            </Card>
+                            <Card>
+                              <div className={`px-4 py-3 border-b ${l?"bg-gray-50 border-gray-100":"bg-[#081017] border-[#1a2d3f]"}`}>
+                                <p className={`text-[10px] font-black uppercase tracking-widest ${tx.t3(l)}`}>CBOE VIX — Volatility Index</p>
+                              </div>
+                              {isLoading ? <div className="p-6"><Skel h="h-32"/></div> :
+                               data?.vix ? (() => {
+                                const v = data.vix;
+                                const vs = VIX_S[v.sentiment] || VIX_S.low;
+                                const p = v.change>=0;
+                                return (
+                                  <div className={`m-4 rounded-xl border p-6 flex flex-col items-center gap-2 ${vs.bg}`}>
+                                    <p className={`text-[10px] font-bold uppercase tracking-widest ${tx.t3(l)}`}>VIX Index</p>
+                                    <div className={`text-5xl font-black ${tx.t1(l)}`}>{v.value.toFixed(2)}</div>
+                                    <p className={`font-bold text-sm ${p?"text-emerald-500":"text-red-500"}`}>{p?"+":""}{v.change.toFixed(2)} ({v.changePercent.toFixed(2)}%)</p>
+                                    <span className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest border ${vs.bg} ${vs.tc}`}>{v.sentiment.toUpperCase()} VOLATILITY</span>
+                                  </div>
                                 );
-                              })}
-                            </div>
-                          ) : <p className={`p-8 text-center text-sm ${tx.t2(l)}`}>Unavailable</p>}
-                        </Card>
-                        <Card>
-                          <div className={`px-4 py-3 border-b ${l?"bg-gray-50 border-gray-100":"bg-[#081017] border-[#1a2d3f]"}`}>
-                            <p className={`text-[10px] font-black uppercase tracking-widest ${tx.t3(l)}`}>CBOE VIX — Volatility Index</p>
+                               })() : <p className={`p-8 text-center text-sm ${tx.t2(l)}`}>VIX unavailable</p>}
+                            </Card>
                           </div>
-                          {isLoading ? <div className="p-6"><Skel h="h-32"/></div> :
-                           data?.vix ? (() => {
-                            const v = data.vix;
-                            const vs = VIX_S[v.sentiment] || VIX_S.low;
-                            const p = v.change>=0;
-                            return (
-                              <div className={`m-4 rounded-xl border p-6 flex flex-col items-center gap-2 ${vs.bg}`}>
-                                <p className={`text-[10px] font-bold uppercase tracking-widest ${tx.t3(l)}`}>VIX Index</p>
-                                <div className={`text-5xl font-black ${tx.t1(l)}`}>{v.value.toFixed(2)}</div>
-                                <p className={`font-bold text-sm ${p?"text-emerald-500":"text-red-500"}`}>{p?"+":""}{v.change.toFixed(2)} ({v.changePercent.toFixed(2)}%)</p>
-                                <span className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest border ${vs.bg} ${vs.tc}`}>{v.sentiment.toUpperCase()} VOLATILITY</span>
-                              </div>
-                            );
-                           })() : <p className={`p-8 text-center text-sm ${tx.t2(l)}`}>VIX unavailable</p>}
-                        </Card>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                }
-              />
-            }
+                    }
+                  />
+              }
+            </div>
 
-            {/* Europe */}
-            {isLoading ? <div className={`h-96 rounded-xl animate-pulse mb-8 ${l?"bg-gray-100":"bg-[#1a2d3f]/40"}`}/> :
-              <MktSelector sectionId="section-europe" navId="section-europe-h" title="European Markets"
-                markets={euM} icon={LineChart} onChart={openChart} autoSym={tickerSym??undefined}
-                tzOffset={1}  // ── FIX: CET = UTC+1 → shows 09:00 for XETRA open ──
-                regionSummary={
-                  regs.filter(r=>r.name==="Europe").map((r:RegionSummary) => {
-                    const p = r.avgChange>=0;
-                    return (
-                      <Card key={r.name} className="overflow-hidden">
-                        <div className="h-0.5" style={{ background: p?"linear-gradient(to right,#0A3656,transparent)":"linear-gradient(to right,#dc2626,transparent)" }}/>
-                        <div className="p-4">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <span className="text-2xl">{r.flag}</span>
-                              <div>
-                                <p className={`font-extrabold text-sm ${tx.t1(l)}`}>{r.name} — Regional Summary</p>
-                                <p className={`text-[11px] mt-0.5 ${tx.t3(l)}`}>{r.countries.join(", ")}</p>
+            {/* ── European Markets ─────────────────────────────────── */}
+            <div id="section-europe" className="mb-8 scroll-mt-24">
+              <SecHead id="section-europe-h" icon={LineChart} title="European Markets" sub={`${euM.length} indices`}/>
+              {isLoading
+                ? <div className={`h-96 rounded-xl animate-pulse ${l?"bg-gray-100":"bg-[#1a2d3f]/40"}`}/>
+                : <EuropeanMarketsChart
+                    markets={euM}
+                    onChart={openChart}
+                    autoSym={tickerSym ?? undefined}
+                    regionSummary={
+                      regs.filter(r=>r.name==="Europe").map((r:RegionSummary) => {
+                        const p = r.avgChange>=0;
+                        return (
+                          <Card key={r.name} className="overflow-hidden">
+                            <div className="h-0.5" style={{ background: p?"linear-gradient(to right,#0A3656,transparent)":"linear-gradient(to right,#dc2626,transparent)" }}/>
+                            <div className="p-4">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-2xl">{r.flag}</span>
+                                  <div>
+                                    <p className={`font-extrabold text-sm ${tx.t1(l)}`}>{r.name} — Regional Summary</p>
+                                    <p className={`text-[11px] mt-0.5 ${tx.t3(l)}`}>{r.countries.join(", ")}</p>
+                                  </div>
+                                </div>
+                                <span className={`text-base font-black ${p?"text-emerald-500":"text-red-500"}`}>{p?"+":""}{r.avgChange.toFixed(2)}%</span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border ${l?"bg-emerald-50 border-emerald-100":"bg-emerald-900/10 border-emerald-800/20"}`}>
+                                  <span className={`text-xs ${tx.t3(l)}`}>Best</span>
+                                  <span className={`text-xs font-bold ${l?"text-emerald-700":"text-emerald-400"}`}>{r.best.name} ({r.best.change.toFixed(2)}%)</span>
+                                </div>
+                                <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border ${l?"bg-red-50 border-red-100":"bg-red-900/10 border-red-800/20"}`}>
+                                  <span className={`text-xs ${tx.t3(l)}`}>Worst</span>
+                                  <span className={`text-xs font-bold ${l?"text-red-700":"text-red-400"}`}>{r.worst.name} ({r.worst.change.toFixed(2)}%)</span>
+                                </div>
                               </div>
                             </div>
-                            <span className={`text-base font-black ${p?"text-emerald-500":"text-red-500"}`}>{p?"+":""}{r.avgChange.toFixed(2)}%</span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border ${l?"bg-emerald-50 border-emerald-100":"bg-emerald-900/10 border-emerald-800/20"}`}>
-                              <span className={`text-xs ${tx.t3(l)}`}>Best</span>
-                              <span className={`text-xs font-bold ${l?"text-emerald-700":"text-emerald-400"}`}>{r.best.name} ({r.best.change.toFixed(2)}%)</span>
-                            </div>
-                            <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border ${l?"bg-red-50 border-red-100":"bg-red-900/10 border-red-800/20"}`}>
-                              <span className={`text-xs ${tx.t3(l)}`}>Worst</span>
-                              <span className={`text-xs font-bold ${l?"text-red-700":"text-red-400"}`}>{r.worst.name} ({r.worst.change.toFixed(2)}%)</span>
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
-                    );
-                  })[0] || null
-                }
-              />
-            }
+                          </Card>
+                        );
+                      })[0] || null
+                    }
+                  />
+              }
+            </div>
 
-            {/* Asia */}
-            {isLoading ? <div className={`h-96 rounded-xl animate-pulse mb-8 ${l?"bg-gray-100":"bg-[#1a2d3f]/40"}`}/> :
-              <MktSelector sectionId="section-asia" navId="section-asia-h" title="Asia Pacific Markets"
-                markets={asM} icon={Globe} onChart={openChart} autoSym={tickerSym??undefined}
-                tzOffset={8}  // ── FIX: CST/HKT = UTC+8 → shows 09:30 for SSE/HKEX open ──
-                regionSummary={
-                  regs.filter(r=>r.name==="Asia").map((r:RegionSummary) => {
-                    const p = r.avgChange>=0;
-                    return (
-                      <Card key={r.name} className="overflow-hidden">
-                        <div className="h-0.5" style={{ background: p?"linear-gradient(to right,#0A3656,transparent)":"linear-gradient(to right,#dc2626,transparent)" }}/>
-                        <div className="p-4">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <span className="text-2xl">{r.flag}</span>
-                              <div>
-                                <p className={`font-extrabold text-sm ${tx.t1(l)}`}>{r.name} — Regional Summary</p>
-                                <p className={`text-[11px] mt-0.5 ${tx.t3(l)}`}>{r.countries.join(", ")}</p>
+            {/* ── Asia Pacific Markets ─────────────────────────────── */}
+            <div id="section-asia" className="mb-8 scroll-mt-24">
+              <SecHead id="section-asia-h" icon={Globe} title="Asia Pacific Markets" sub={`${asM.length} indices`}/>
+              {isLoading
+                ? <div className={`h-96 rounded-xl animate-pulse ${l?"bg-gray-100":"bg-[#1a2d3f]/40"}`}/>
+                : <AsiaPacificMarketsChart
+                    markets={asM}
+                    onChart={openChart}
+                    autoSym={tickerSym ?? undefined}
+                    regionSummary={
+                      regs.filter(r=>r.name==="Asia").map((r:RegionSummary) => {
+                        const p = r.avgChange>=0;
+                        return (
+                          <Card key={r.name} className="overflow-hidden">
+                            <div className="h-0.5" style={{ background: p?"linear-gradient(to right,#0A3656,transparent)":"linear-gradient(to right,#dc2626,transparent)" }}/>
+                            <div className="p-4">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-2xl">{r.flag}</span>
+                                  <div>
+                                    <p className={`font-extrabold text-sm ${tx.t1(l)}`}>{r.name} — Regional Summary</p>
+                                    <p className={`text-[11px] mt-0.5 ${tx.t3(l)}`}>{r.countries.join(", ")}</p>
+                                  </div>
+                                </div>
+                                <span className={`text-base font-black ${p?"text-emerald-500":"text-red-500"}`}>{p?"+":""}{r.avgChange.toFixed(2)}%</span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border ${l?"bg-emerald-50 border-emerald-100":"bg-emerald-900/10 border-emerald-800/20"}`}>
+                                  <span className={`text-xs ${tx.t3(l)}`}>Best</span>
+                                  <span className={`text-xs font-bold ${l?"text-emerald-700":"text-emerald-400"}`}>{r.best.name} ({r.best.change.toFixed(2)}%)</span>
+                                </div>
+                                <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border ${l?"bg-red-50 border-red-100":"bg-red-900/10 border-red-800/20"}`}>
+                                  <span className={`text-xs ${tx.t3(l)}`}>Worst</span>
+                                  <span className={`text-xs font-bold ${l?"text-red-700":"text-red-400"}`}>{r.worst.name} ({r.worst.change.toFixed(2)}%)</span>
+                                </div>
                               </div>
                             </div>
-                            <span className={`text-base font-black ${p?"text-emerald-500":"text-red-500"}`}>{p?"+":""}{r.avgChange.toFixed(2)}%</span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border ${l?"bg-emerald-50 border-emerald-100":"bg-emerald-900/10 border-emerald-800/20"}`}>
-                              <span className={`text-xs ${tx.t3(l)}`}>Best</span>
-                              <span className={`text-xs font-bold ${l?"text-emerald-700":"text-emerald-400"}`}>{r.best.name} ({r.best.change.toFixed(2)}%)</span>
-                            </div>
-                            <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border ${l?"bg-red-50 border-red-100":"bg-red-900/10 border-red-800/20"}`}>
-                              <span className={`text-xs ${tx.t3(l)}`}>Worst</span>
-                              <span className={`text-xs font-bold ${l?"text-red-700":"text-red-400"}`}>{r.worst.name} ({r.worst.change.toFixed(2)}%)</span>
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
-                    );
-                  })[0] || null
-                }
-              />
-            }
+                          </Card>
+                        );
+                      })[0] || null
+                    }
+                  />
+              }
+            </div>
 
             {/* ── FIX: Events Calendar — next 365 days, clickable ── */}
             {evts.length > 0 && (

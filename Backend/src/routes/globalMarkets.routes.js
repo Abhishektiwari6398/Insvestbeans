@@ -55,9 +55,18 @@ async function yahooQuote(symbol) {
 
       const timestamps = result?.timestamp || [];
       const q          = result?.indicators?.quote?.[0] || {};
+
+      // ── Filter to regular session only — removes pre/after-hours candles ──
+      // Without this, a closed market shows a flat line + one spike at end
+      // (the after-hours print). regularStart/End are in epoch SECONDS from Yahoo.
+      const regularStart = result?.meta?.currentTradingPeriod?.regular?.start ?? 0;
+      const regularEnd   = result?.meta?.currentTradingPeriod?.regular?.end   ?? Infinity;
+
       const candles = timestamps.map((ts, i) => {
         const o = q.open?.[i], h = q.high?.[i], l = q.low?.[i], c = q.close?.[i];
         if (o == null || h == null || l == null || c == null) return null;
+        // Skip candles outside today's regular session (pre-market / after-hours)
+        if (regularStart > 0 && (ts < regularStart || ts > regularEnd)) return null;
         return { x: ts * 1000, y: [parseFloat(o.toFixed(2)), parseFloat(h.toFixed(2)), parseFloat(l.toFixed(2)), parseFloat(c.toFixed(2))] };
       }).filter(Boolean);
 
@@ -364,15 +373,42 @@ const KNOWN_EVENTS = [
   },
 ];
 
+// ── DST-aware market status using Intl API ──────────────────
+// Intl.DateTimeFormat handles DST automatically for each timezone.
+// No UTC offset math needed — it just works year-round.
 function getMarketStatus() {
   const now = new Date();
-  const h   = now.getUTCHours();
-  const d   = now.getUTCDay();
-  const weekday = d >= 1 && d <= 5;
+
+  const getLocalTime = (tz) => {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz, hour: "2-digit", minute: "2-digit",
+      hour12: false, weekday: "short",
+    }).formatToParts(now);
+    const weekday = parts.find(p => p.type === "weekday")?.value ?? "";
+    const h  = parseInt(parts.find(p => p.type === "hour")?.value   ?? "0");
+    const mn = parseInt(parts.find(p => p.type === "minute")?.value ?? "0");
+    return { weekday, mins: h * 60 + mn };
+  };
+
+  // NYSE/NASDAQ: 9:30 AM – 4:00 PM ET
+  const ny = getLocalTime("America/New_York");
+  const usOpen = ny.weekday !== "Sat" && ny.weekday !== "Sun"
+    && ny.mins >= 570 && ny.mins < 960;
+
+  // LSE/XETRA/Euronext: 8:00 AM – 4:30 PM London time
+  const lon = getLocalTime("Europe/London");
+  const euOpen = lon.weekday !== "Sat" && lon.weekday !== "Sun"
+    && lon.mins >= 480 && lon.mins < 990;
+
+  // Tokyo Stock Exchange: 9:00 AM – 3:30 PM JST (proxy for Asia region)
+  const tok = getLocalTime("Asia/Tokyo");
+  const asiaOpen = tok.weekday !== "Sat" && tok.weekday !== "Sun"
+    && tok.mins >= 540 && tok.mins < 930;
+
   return {
-    us:     weekday && h >= 13 && h < 20 ? "open" : "closed",
-    europe: weekday && h >= 7  && h < 15 ? "open" : "closed",
-    asia:   weekday && h >= 0  && h < 7  ? "open" : "closed",
+    us:     usOpen   ? "open" : "closed",
+    europe: euOpen   ? "open" : "closed",
+    asia:   asiaOpen ? "open" : "closed",
   };
 }
 
@@ -423,12 +459,20 @@ router.get("/global", async (req, res) => {
     );
 
     // ── Build Indices ──────────────────────────────────────
+    // Get real market status using DST-aware helper
+    const mktStatus = getMarketStatus();
+    const SYMBOL_REGION_MAP = {};
+    INDEX_SYMBOLS.us.forEach(s     => { SYMBOL_REGION_MAP[s.symbol] = "us"; });
+    INDEX_SYMBOLS.europe.forEach(s => { SYMBOL_REGION_MAP[s.symbol] = "europe"; });
+    INDEX_SYMBOLS.asia.forEach(s   => { SYMBOL_REGION_MAP[s.symbol] = "asia"; });
+
     let idx = 0;
     const buildRegion = (region) =>
       region.map(({ symbol, name }) => {
         const q = quotes[idx++];
         if (!q) return null;
-        return { symbol, name, ...q, timestamp: Date.now(), status: "closed" };
+        const regionKey = SYMBOL_REGION_MAP[symbol] ?? "us";
+        return { symbol, name, ...q, timestamp: Date.now(), status: mktStatus[regionKey] };
       }).filter(Boolean);
 
     const indices = {

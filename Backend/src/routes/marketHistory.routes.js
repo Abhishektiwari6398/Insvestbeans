@@ -98,9 +98,11 @@ async function fetchYahooHistory(symbol, period) {
       const timestamps = result.timestamp || [];
       const q          = result.indicators?.quote?.[0] || {};
 
-      // ── FIX: filter out pre-market / after-hours candles for intraday ──
-      // Yahoo sometimes returns candles outside regular trading hours.
-      // For 1D/5D we only show regular session: use meta.tradingPeriods if available.
+      // ── Filter out pre-market / after-hours candles ──────────────────
+      // For 1D only: strictly filter to today's regular session using
+      // meta.currentTradingPeriod.regular (start/end are in SECONDS).
+      // For 5D: do NOT use today's regularStart/End — it would delete all
+      // candles from previous days. Instead just filter out null values.
       const regularStart = result.meta?.currentTradingPeriod?.regular?.start ?? 0;
       const regularEnd   = result.meta?.currentTradingPeriod?.regular?.end   ?? Infinity;
 
@@ -112,9 +114,10 @@ async function fetchYahooHistory(symbol, period) {
           const c = q.close?.[i];
           if (o == null || h == null || l == null || c == null) return null;
 
-          // ── FIX: For 1D/5D, skip candles outside regular market hours ──
-          if ((period === "1D" || period === "5D") && regularStart > 0) {
-            // ts is in seconds; regularStart/End are also seconds
+          // ── For 1D ONLY: skip candles outside today's regular session ──
+          // 5D uses 15m interval across 5 trading days — do NOT apply
+          // single-day session filter, or previous days get wiped out.
+          if (period === "1D" && regularStart > 0) {
             if (ts < regularStart || ts > regularEnd) return null;
           }
 
