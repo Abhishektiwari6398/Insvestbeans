@@ -177,8 +177,9 @@ function makeTimeFormatter(p: string) {
     if (p === '1D') return `${hh}:${mm}`;
 
     if (p === '5D') {
+      // For 5D (15-min bars): show HH:MM always; on midnight boundary show date
       if (hh === '00' && mm === '00') return `${day} ${mon}`;
-      return `${day} ${mon} ${hh}:${mm}`;
+      return `${hh}:${mm}`;
     }
 
     if (p === '1M' || p === '6M' || p === 'YTD') return `${day} ${mon}`;
@@ -226,11 +227,13 @@ const CleanChart = ({
   const [pLow,       setPLow]        = useState(low);
   const [fetching,   setFetching]    = useState(false);
 
-  // ── Compute exchange offset ONCE per timezone ─────────────────
-  // Use exchangeTimezone if provided, else fall back to tzOffset
-  const offsetSeconds = exchangeTimezone !== 'UTC'
-    ? getOffsetSeconds(exchangeTimezone)
-    : (tzOffset ?? 0) * 3600;
+  // ── Always display in IST (Asia/Kolkata = UTC+5:30) ──────────
+  // Regardless of which exchange the symbol belongs to, we shift
+  // all timestamps to IST so the X-axis shows IST times.
+  // e.g. NYSE opens at 13:30 UTC → shown as 19:00 IST ✓
+  //      LSE opens at 08:00 UTC  → shown as 13:30 IST ✓
+  //      TSE opens at 00:00 UTC  → shown as 05:30 IST ✓
+  const offsetSeconds = getOffsetSeconds('Asia/Kolkata');
 
   useEffect(() => {
     if (!historyUrl) return;
@@ -326,6 +329,8 @@ const CleanChart = ({
         localization: {
           timeFormatter: makeTimeFormatter(period),
         },
+        tickMarkFormatter: (time: number, _tickMarkType: any, _locale: any) =>
+          makeTimeFormatter(period)(time),
       },
       handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true },
       handleScale:  { mouseWheel: false, pinch: false },
@@ -374,6 +379,8 @@ const CleanChart = ({
         localization: {
           timeFormatter: makeTimeFormatter(period),
         },
+        tickMarkFormatter: (time: number, _tickMarkType: any, _locale: any) =>
+          makeTimeFormatter(period)(time),
       },
     });
   }, [chartData, period, timeVisible, barSpacing, offsetSeconds]); // eslint-disable-line react-hooks/exhaustive-deps

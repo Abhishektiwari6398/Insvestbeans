@@ -57,16 +57,29 @@ async function yahooQuote(symbol) {
       const q          = result?.indicators?.quote?.[0] || {};
 
       // ── Filter to regular session only — removes pre/after-hours candles ──
-      // Without this, a closed market shows a flat line + one spike at end
-      // (the after-hours print). regularStart/End are in epoch SECONDS from Yahoo.
+      // KEY FIX: Yahoo's currentTradingPeriod.regular refers to the NEXT/CURRENT session.
+      // When market is CLOSED, regularStart is in the FUTURE (e.g. tonight's NYSE open).
+      // But the candle data returned is from the MOST RECENT completed session (yesterday).
+      // Using regularStart as filter would remove ALL candles → empty array → fallback chart.
+      //
+      // CORRECT APPROACH:
+      // - If market is open: use regularStart/End to filter out pre/after-hours
+      // - If market is closed: use ALL candles (they are already the last session's data)
+      //   Yahoo only returns the last completed session for range=1d on closed markets.
+      //
+      // How to detect: if regularStart > now → market is closed, session hasn't started yet
+      const nowSec       = Math.floor(Date.now() / 1000);
       const regularStart = result?.meta?.currentTradingPeriod?.regular?.start ?? 0;
       const regularEnd   = result?.meta?.currentTradingPeriod?.regular?.end   ?? Infinity;
+      // Market is "open session" if regularStart is in the past and regularEnd is in the future
+      const sessionActive = regularStart > 0 && regularStart <= nowSec && regularEnd >= nowSec;
 
       const candles = timestamps.map((ts, i) => {
         const o = q.open?.[i], h = q.high?.[i], l = q.low?.[i], c = q.close?.[i];
         if (o == null || h == null || l == null || c == null) return null;
-        // Skip candles outside today's regular session (pre-market / after-hours)
-        if (regularStart > 0 && (ts < regularStart || ts > regularEnd)) return null;
+        // Only filter by session window when the session is currently ACTIVE.
+        // When closed, all data is from the last completed session — keep everything.
+        if (sessionActive && (ts < regularStart || ts > regularEnd)) return null;
         return { x: ts * 1000, y: [parseFloat(o.toFixed(2)), parseFloat(h.toFixed(2)), parseFloat(l.toFixed(2)), parseFloat(c.toFixed(2))] };
       }).filter(Boolean);
 

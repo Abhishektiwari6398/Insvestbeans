@@ -99,12 +99,21 @@ async function fetchYahooHistory(symbol, period) {
       const q          = result.indicators?.quote?.[0] || {};
 
       // ── Filter out pre-market / after-hours candles ──────────────────
-      // For 1D only: strictly filter to today's regular session using
-      // meta.currentTradingPeriod.regular (start/end are in SECONDS).
-      // For 5D: do NOT use today's regularStart/End — it would delete all
-      // candles from previous days. Instead just filter out null values.
+      // ROOT CAUSE FIX: Yahoo's currentTradingPeriod.regular.start refers to the
+      // CURRENT or NEXT session start. When market is CLOSED, regularStart is in
+      // the FUTURE. Filtering with it removes ALL previous session candles → empty
+      // chart → fallback. 
+      //
+      // CORRECT LOGIC for 1D:
+      //   - Market OPEN (session active): filter to regularStart..regularEnd
+      //   - Market CLOSED: keep ALL candles (Yahoo already returns last session only)
+      //
+      // For 5D and beyond: never apply single-session filter.
+      const nowSec       = Math.floor(Date.now() / 1000);
       const regularStart = result.meta?.currentTradingPeriod?.regular?.start ?? 0;
       const regularEnd   = result.meta?.currentTradingPeriod?.regular?.end   ?? Infinity;
+      // Session is "active" only if regularStart is past AND regularEnd is future
+      const sessionActive = regularStart > 0 && regularStart <= nowSec && nowSec <= regularEnd;
 
       const candles = timestamps
         .map((ts, i) => {
@@ -114,10 +123,10 @@ async function fetchYahooHistory(symbol, period) {
           const c = q.close?.[i];
           if (o == null || h == null || l == null || c == null) return null;
 
-          // ── For 1D ONLY: skip candles outside today's regular session ──
-          // 5D uses 15m interval across 5 trading days — do NOT apply
-          // single-day session filter, or previous days get wiped out.
-          if (period === "1D" && regularStart > 0) {
+          // ── For 1D ONLY: filter pre/after-hours — but ONLY when market is open ──
+          // When closed, all returned candles are the last completed session — keep all.
+          // When open, filter to current session window to remove pre/after-hours noise.
+          if (period === "1D" && sessionActive) {
             if (ts < regularStart || ts > regularEnd) return null;
           }
 
