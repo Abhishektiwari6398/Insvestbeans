@@ -271,9 +271,13 @@ export function EuropeanMarketsChart({ markets, onChart, autoSym, regionSummary 
 
         {/* ── Footer: delay info + period tabs ─────────────────── */}
         <div className={`px-4 py-2 flex items-center justify-between ${tx.t3(l)} text-[10px] border-t ${l ? "border-gray-100" : "border-[#1a2d3f]"}`}>
-          <span className="hidden md:flex items-center gap-1 shrink-0">
+          <span className="hidden md:flex items-center gap-4 shrink-0">
             <Clock className="w-3 h-3"/>
-            Prices delayed 15 min · Yahoo Finance
+            Prices delayed 15 min · Yahoo 
+            <span className="hidden md:block flex items-center gap-4 shrink-0">
+           
+           2 Minute Candle Bar
+         </span>
           </span>
           <div className="flex items-center gap-0.5">
             {PERIODS.map(p => (
