@@ -482,10 +482,7 @@ function MktSelector({ sectionId, navId, title, markets, icon, onChart, autoSym,
             <Clock className="w-3 h-3"/>
             Prices delayed 15 min · Yahoo Finance
           </span>
-          <span className="hidden md:block flex items-center gap-1 shrink-0">
-           
-            2 minute candle bar
-          </span>
+        
 
           {/* Right — period tabs */}
           <div className="flex items-center gap-0.5">
