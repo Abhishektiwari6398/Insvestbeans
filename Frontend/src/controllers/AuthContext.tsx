@@ -32,7 +32,7 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ADMIN_EMAILS = ['admin@example.com', 'superadmin@example.com'].map(e => e.toLowerCase());
+
 
 function getErrorMessage(err: unknown): string {
   if (!err) return 'Unknown error';
@@ -50,7 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState<boolean>(true);
   const [authMethod, setAuthMethod] = useState<'jwt' | 'google' | null>(null);
 
-  const isAdmin = user ? (user.isAdmin === true || ADMIN_EMAILS.includes(user.email.toLowerCase())) : false;
+  const isAdmin = user ? (user.isAdmin === true ): false;
 
   const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
     window.dispatchEvent(new CustomEvent('show-toast', { 

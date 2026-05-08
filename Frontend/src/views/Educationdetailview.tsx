@@ -35,22 +35,15 @@ const ITEMS_PER_PAGE = 10;
 // any PDFs that were accidentally uploaded as images in a previous version.
 function resolvePdfUrl(pdfUrl: string): string {
   if (!pdfUrl) return '';
-  if (pdfUrl.startsWith('http')) {
-    // Fix any Cloudinary image URLs that should be raw (old bad uploads)
-    if (pdfUrl.includes('cloudinary.com') && pdfUrl.includes('/image/upload/')) {
-      return pdfUrl.replace('/image/upload/', '/raw/upload/fl_attachment/');
-    }
-    // Cloudinary raw uploads — add fl_attachment so browser downloads without 401
-    if (pdfUrl.includes('cloudinary.com') && pdfUrl.includes('/raw/upload/')) {
-      // Avoid double-adding
-      if (!pdfUrl.includes('fl_attachment')) {
-        return pdfUrl.replace('/raw/upload/', '/raw/upload/fl_attachment/');
-      }
-    }
-    return pdfUrl;
+  if (pdfUrl.includes('cloudinary.com') && pdfUrl.includes('/image/upload/')) {
+    return pdfUrl.replace('/image/upload/', '/raw/upload/fl_attachment/');
   }
-  // Legacy Supabase path
-  return `https://vhutfmztepdlgkqejpvh.supabase.co/storage/v1/object/public/Investbeans/${pdfUrl}`;
+  if (pdfUrl.includes('cloudinary.com') && pdfUrl.includes('/raw/upload/')) {
+    if (!pdfUrl.includes('fl_attachment')) {
+      return pdfUrl.replace('/raw/upload/', '/raw/upload/fl_attachment/');
+    }
+  }
+  return pdfUrl;
 }
 
 // ── Level badge styles ────────────────────────────────────────────────────────
