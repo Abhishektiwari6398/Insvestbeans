@@ -1,13 +1,4 @@
-/**
- * app.js — CHANGED LINES MARKED WITH ← CHANGED
- *
- * Fix: "413 Payload Too Large" on seed
- *   The seed endpoint sends the entire CATEGORY_DATA (~500KB JSON).
- *   express.json({ limit: "20kb" }) was rejecting it.
- *
- * Solution: raise global JSON limit to 5mb.
- *   (Seed is admin-only behind rate-limiting — no security risk)
- */
+
 
 import "dotenv/config";
 import express from "express";
